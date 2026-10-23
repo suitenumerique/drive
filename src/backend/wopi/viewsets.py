@@ -1,6 +1,5 @@
 """WOPI viewsets module."""
 
-import logging
 import uuid
 from datetime import timedelta
 from os.path import splitext
@@ -13,6 +12,7 @@ from django.db import transaction
 from django.http import StreamingHttpResponse
 from django.utils.timezone import now
 
+import structlog
 from lasuite.malware_detection import malware_detection
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -33,7 +33,7 @@ from wopi.utils import (
     signature,
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 HTTP_X_WOPI_LOCK = "HTTP_X_WOPI_LOCK"
@@ -188,9 +188,10 @@ class WopiViewSet(viewsets.ViewSet):
         if max_expected_size:
             if int(head_object["ContentLength"]) > int(max_expected_size):
                 logger.info(
-                    "get_file_content: file size %s exceeds X-WOPI-MaxExpectedSize header value %s",
-                    int(head_object["ContentLength"]),
-                    int(max_expected_size),
+                    "wopi_file_too_large",
+                    item_id=item.id,
+                    size=int(head_object["ContentLength"]),
+                    max_expected_size=int(max_expected_size),
                 )
                 return Response(status=412)
 
@@ -426,9 +427,7 @@ class WopiViewSet(viewsets.ViewSet):
                 extension.lower() for extension in settings.FILE_EXTENSIONS_ALLOWED
             }:
                 logger.info(
-                    "rename_file: file extension not allowed %r for filename %r",
-                    target_extension,
-                    new_filename_with_extension,
+                    "wopi_rename_extension_not_allowed", item_id=item.id, extension=target_extension
                 )
                 invalid_filename_error = "This file extension is not allowed"
 
@@ -496,7 +495,7 @@ class WopiViewSet(viewsets.ViewSet):
         # pylint: disable=broad-exception-caught
         except Exception as e:  # noqa
             capture_exception(e)
-            logger.warning("Error deleting old file for item %s in the storage: %s", item.id, e)
+            logger.warning("wopi_rename_old_file_deletion_failed", item_id=item.id, error=str(e))
 
         if "application/json" in request.META.get("HTTP_ACCEPT", ""):
             return Response(

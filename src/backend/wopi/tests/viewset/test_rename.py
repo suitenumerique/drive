@@ -289,11 +289,13 @@ def test_rename_file_rejects_disallowed_target_extension(console_logs):
     assert item.filename == "wopi_test"
     assert [log for log in console_logs if log["logger"] == "wopi.viewsets"] == [
         {
-            "event": "rename_file: file extension not allowed '.exe' for filename 'malware.exe'",
+            "event": "wopi_rename_extension_not_allowed",
             "level": "info",
             "logger": "wopi.viewsets",
             "request_id": ANY,
             "user_id": None,
+            "item_id": str(item.id),
+            "extension": ".exe",
         }
     ]
 
