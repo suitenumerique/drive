@@ -1,14 +1,13 @@
 """Service for exporting item folders as streaming ZIP archives."""
 
-import logging
-
 from django.core.files.storage import default_storage
 
+import structlog
 from zipstream import ZipStream
 
 from core import models
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 DEFAULT_STORAGE_READ_CHUNK_SIZE = 64 * 1024
 
@@ -25,7 +24,7 @@ def iter_storage_chunks(file_key, chunk_size=DEFAULT_STORAGE_READ_CHUNK_SIZE):
         # A database row references an object that is gone from storage:
         # aborting would make the folder export fail forever, so keep the
         # archive going with an empty entry for this file.
-        logger.warning("Export: object %s is missing from storage, skipped", file_key)
+        logger.warning("export_object_missing", file_key=file_key)
         return
     yield from response["Body"].iter_chunks(chunk_size)
 
