@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.25.3] - 2026-10-23
+
 ### Security
 
 - ⬆️(backend) upgrade djangorestframework to 3.18.3 to fix CVEs
@@ -626,7 +628,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.25.2...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.25.3...main
+[v0.25.3]: https://github.com/suitenumerique/drive/releases/v0.25.3
 [v0.25.2]: https://github.com/suitenumerique/drive/releases/v0.25.2
 [v0.25.1]: https://github.com/suitenumerique/drive/releases/v0.25.1
 [v0.25.0]: https://github.com/suitenumerique/drive/releases/v0.25.0
