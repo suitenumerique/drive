@@ -1,10 +1,9 @@
 """DeployCenter Entitlements Backend."""
 
-import logging
-
 from django.core.cache import cache
 
 import requests
+import structlog
 
 from core.api.serializers import (
     OrganizationUsageMetricSerializer,
@@ -19,7 +18,7 @@ from core.entitlements.backends.base import (
 )
 from core.models import User
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 ENTITLEMENTS_CACHE_KEY_PREFIX = "entitlements:user:"
 
@@ -94,7 +93,7 @@ class DeployCenterEntitlementsBackend(EntitlementsBackend):
         try:
             entitlements = self.fetch_entitlements(user)
         except requests.RequestException:
-            logger.exception("Failed to fetch entitlements for user %s", user.id)
+            logger.exception("entitlements_fetch_failed", user_id=user.id)
             raise
         cache.set(cache_key, entitlements, timeout=self.cache_timeout)
         return entitlements
