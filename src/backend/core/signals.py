@@ -9,6 +9,7 @@ from django.db import transaction
 from django.db.models import signals
 from django.dispatch import receiver
 
+from celery.signals import before_task_publish, task_prerun
 from dockerflow.logging import request_id_context
 
 from . import models
@@ -38,3 +39,15 @@ def file_access_post_save(sender, instance, created, **kwargs):  # pylint: disab
 def reset_request_id(**kwargs):  # pylint: disable=unused-argument
     """Forget the request id of the previous request, which heartbeats never replace."""
     request_id_context.set(None)
+
+
+@before_task_publish.connect(dispatch_uid="core.send_request_id")
+def send_request_id(headers, **kwargs):  # pylint: disable=unused-argument
+    """Send the request id of the current request along with the task."""
+    headers["request_id"] = request_id_context.get()
+
+
+@task_prerun.connect(dispatch_uid="core.restore_request_id")
+def restore_request_id(task, **kwargs):  # pylint: disable=unused-argument
+    """Log the task with the request id it was sent with."""
+    request_id_context.set(task.request.get("request_id"))

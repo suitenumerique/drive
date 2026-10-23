@@ -187,4 +187,4 @@ def test_logging_celery_task_request_id(console_logs):
     finally:
         task.pop_request()
 
-    assert console_logs[-1]["Fields"]["rid"] is None
+    assert console_logs[-1]["Fields"]["rid"] == "migrator-42"
