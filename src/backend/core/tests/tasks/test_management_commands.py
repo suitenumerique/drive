@@ -1,6 +1,5 @@
 """Tests for the management commands scheduled by celery beat."""
 
-import logging
 from datetime import timedelta
 from unittest import mock
 
@@ -108,7 +107,7 @@ def test_parse_crontab_standard_field_order():
     assert schedule.day_of_week == {5}
 
 
-def test_run_management_command_passes_args_and_logs_output(caplog):
+def test_run_management_command_passes_args_and_logs_output(console_logs):
     """The command runs with the configured arguments and its output is logged."""
     old = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE,
@@ -121,12 +120,18 @@ def test_run_management_command_passes_args_and_logs_output(caplog):
     models.Item.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(hours=9))
     models.Item.objects.filter(pk=recent.pk).update(created_at=timezone.now() - timedelta(hours=7))
 
-    with caplog.at_level(logging.INFO, logger="core.tasks.management_commands"):
-        run_management_command("clean_pending_items", "--hours=8")
+    console_logs.clear()
+    run_management_command("clean_pending_items", "--hours=8")
 
     # The row is only marked: purge_deleted_items removes it with its stored object
     old.refresh_from_db()
     recent.refresh_from_db()
     assert old.hard_deleted_at is not None
     assert recent.hard_deleted_at is None
-    assert "clean_pending_items: Cleaned 1 stale pending item(s)." in caplog.text
+    assert console_logs == [
+        {
+            "event": "clean_pending_items: Cleaned 1 stale pending item(s).",
+            "level": "info",
+            "logger": "core.tasks.management_commands",
+        }
+    ]
