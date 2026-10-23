@@ -180,6 +180,24 @@ def test_logging_celery_worker(console_logs):
     ]
 
 
+def test_logging_celery_task_arguments(console_logs):
+    """Celery logs should be written without the arguments of the tasks."""
+    context = {"id": "task-1", "name": "core.tasks.item.rename_file", "args": "['secret']"}
+
+    logging.getLogger("celery.worker.strategy").info(
+        "Task %(name)s[%(id)s] received", context, extra={"data": context}
+    )
+
+    assert console_logs == [
+        {
+            "event": "Task core.tasks.item.rename_file[task-1] received",
+            "level": "info",
+            "logger": "celery.worker.strategy",
+            "data": context,
+        }
+    ]
+
+
 def test_logging_celery_task(console_logs):
     """Logs of a task should carry the request id of the request that sent it."""
     task = process_item_purge
