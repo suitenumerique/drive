@@ -1,6 +1,5 @@
 """Tests for the user reconciliation CSV import task."""
 
-import logging
 import uuid
 from pathlib import Path
 
@@ -24,12 +23,19 @@ def make_import(filename):
     return models.UserReconciliationCsvImport.objects.create(file=csv_file)
 
 
-def test_user_reconciliation_csv_import_missing_job(caplog):
+def test_user_reconciliation_csv_import_missing_job(console_logs):
     """A missing import job logs a warning and returns without raising."""
-    with caplog.at_level(logging.WARNING):
-        user_reconciliation_csv_import_job(uuid.uuid4())
+    job_id = uuid.uuid4()
 
-    assert "no longer exists" in caplog.text
+    user_reconciliation_csv_import_job(job_id)
+
+    assert console_logs == [
+        {
+            "event": f"CSV import job {job_id} no longer exists; skipping.",
+            "level": "warning",
+            "logger": "core.tasks.user_reconciliation",
+        }
+    ]
 
 
 def test_user_reconciliation_csv_import_creates_entries():
