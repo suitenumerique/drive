@@ -1,6 +1,5 @@
 """Util to generate S3 authorization headers for object storage access control"""
 
-import logging
 import mimetypes
 import re
 import unicodedata
@@ -15,8 +14,9 @@ from django.core.files.storage import default_storage
 import boto3
 import botocore
 import magic
+import structlog
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def flat_to_nested(items):
@@ -212,8 +212,11 @@ def detect_mimetype(file_buffer: bytes, filename: str | None = None) -> str:
         # Use guess_file_type (Python 3.13+) instead of deprecated guess_type
         mimetype_from_extension, _ = mimetypes.guess_file_type(filename, strict=False)
 
-    logger.info("detect_mimetype: mimetype_from_content: %s", mimetype_from_content)
-    logger.info("detect_mimetype: mimetype_from_extension: %s", mimetype_from_extension)
+    logger.info(
+        "mimetype_detection",
+        mimetype_from_content=mimetype_from_content,
+        mimetype_from_extension=mimetype_from_extension,
+    )
 
     # Strategy: Prefer content-based detection, but use extension if:
     # 1. Content detection returns generic types (application/octet-stream, text/plain)
