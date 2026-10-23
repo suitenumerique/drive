@@ -877,6 +877,7 @@ class Base(Configuration):
         "corsheaders",
         "django_filters",
         "dockerflow.django",
+        "django_structlog",
         "rest_framework",
         "rest_framework_api_key",
         "parler",
@@ -1454,6 +1455,7 @@ class Base(Configuration):
     }
     # Personal data, which the access logs already hold
     DJANGO_STRUCTLOG_IP_LOGGING_ENABLED = False
+    DJANGO_STRUCTLOG_CELERY_ENABLED = True
 
     API_USERS_LIST_LIMIT = values.PositiveIntegerValue(
         default=5,
@@ -1783,6 +1785,7 @@ class Base(Configuration):
             sentry_sdk.set_tag("application", "backend")
             # Like django.request for the Django integration: its errors are already reported
             ignore_logger("django_structlog.middlewares.request")
+            ignore_logger("django_structlog.celery.receivers")
 
         if cls.OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION and cls.OIDC_ALLOW_DUPLICATE_EMAILS:
             raise ValueError(

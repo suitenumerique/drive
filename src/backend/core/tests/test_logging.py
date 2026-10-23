@@ -199,5 +199,19 @@ def test_logging_celery_task(console_logs):
         task.pop_request()
 
     assert console_logs == [
-        {"event": "Processing item purge", "level": "info", "logger": "core.tasks.item"}
+        {
+            "event": "task_started",
+            "level": "info",
+            "logger": "django_structlog.celery.receivers",
+            "request_id": "migrator-42",
+            "task": "core.tasks.item.process_item_purge",
+            "task_id": "task-1",
+        },
+        {
+            "event": "Processing item purge",
+            "level": "info",
+            "logger": "core.tasks.item",
+            "request_id": "migrator-42",
+            "task_id": "task-1",
+        },
     ]
