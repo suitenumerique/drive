@@ -1,8 +1,8 @@
 """Celery tasks for WOPI conversion."""
 
-import logging
-
 from django.contrib.auth import get_user_model
+
+import structlog
 
 from core import models
 from wopi.conversion.exceptions import ConversionProviderError
@@ -10,7 +10,7 @@ from wopi.conversion.services import perform_conversion
 
 from drive.celery_app import app
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Seconds to wait before re-checking a source still under malware analysis,
 # and how many times to wait before giving up (~10 minutes total, matching the
@@ -53,40 +53,35 @@ def convert_file(self, source_item_id, converted_item_id, user_id):
     try:
         source = models.Item.objects.get(id=source_item_id)
     except models.Item.DoesNotExist:
-        logger.error("convert_file: source item %s does not exist, aborting", source_item_id)
+        logger.error("file_conversion_source_not_found", item_id=source_item_id)
         return
 
     try:
         placeholder = models.Item.objects.get(id=converted_item_id)
     except models.Item.DoesNotExist:
-        logger.error(
-            "convert_file: placeholder item %s does not exist, aborting", converted_item_id
-        )
+        logger.error("file_conversion_placeholder_not_found", item_id=converted_item_id)
         return
 
     if placeholder.upload_state != models.ItemUploadStateChoices.CONVERTING:
         logger.error(
-            "convert_file: placeholder %s upload_state is %s, not converting; aborting",
-            placeholder.id,
-            placeholder.upload_state,
+            "file_conversion_placeholder_not_converting",
+            item_id=converted_item_id,
+            upload_state=placeholder.upload_state,
         )
         return
 
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
-        logger.error("convert_file: user %s does not exist, aborting", user_id)
+        logger.error("file_conversion_user_not_found", user_id=user_id)
         return
 
     if source.upload_state == models.ItemUploadStateChoices.ANALYZING:
-        logger.info(
-            "convert_file: source %s still analyzing, retrying conversion later",
-            source_item_id,
-        )
+        logger.info("file_conversion_postponed", item_id=source_item_id)
         raise self.retry(countdown=ANALYSIS_RETRY_COUNTDOWN, max_retries=ANALYSIS_MAX_RETRIES)
 
     try:
         perform_conversion(source, placeholder, user)
     except Exception:
-        logger.exception("convert_file: conversion failed for placeholder %s", placeholder.id)
+        logger.exception("file_conversion_failed", item_id=converted_item_id)
         raise
