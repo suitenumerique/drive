@@ -163,4 +163,7 @@ def test_logging_celery_worker(console_logs):
         celery_app.log.setup_logging_subsystem(loglevel="INFO")
         logging.getLogger("celery.app.trace").info("Task succeeded")
 
-    assert console_logs == []
+    assert len(console_logs) == 1
+    log = console_logs[0]
+    assert log["Type"] == "celery.app.trace"
+    assert log["Fields"]["msg"] == "Task succeeded"
