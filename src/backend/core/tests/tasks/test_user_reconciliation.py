@@ -31,9 +31,10 @@ def test_user_reconciliation_csv_import_missing_job(console_logs):
 
     assert console_logs == [
         {
-            "event": f"CSV import job {job_id} no longer exists; skipping.",
+            "event": "reconciliation_import_job_not_found",
             "level": "warning",
             "logger": "core.tasks.user_reconciliation",
+            "job_id": str(job_id),
         }
     ]
 

@@ -1,7 +1,6 @@
 """Processing tasks for user reconciliation CSV imports."""
 
 import csv
-import logging
 import traceback
 import uuid
 
@@ -9,13 +8,14 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import IntegrityError
 
+import structlog
 from botocore.exceptions import ClientError
 
 from core.models import UserReconciliation, UserReconciliationCsvImport
 
 from drive.celery_app import app
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def _process_row(row, job, counters):
@@ -96,7 +96,7 @@ def user_reconciliation_csv_import_job(job_id):
     try:
         job = UserReconciliationCsvImport.objects.get(id=job_id)
     except UserReconciliationCsvImport.DoesNotExist:
-        logger.warning("CSV import job %s no longer exists; skipping.", job_id)
+        logger.warning("reconciliation_import_job_not_found", job_id=job_id)
         return
 
     job.status = "running"
