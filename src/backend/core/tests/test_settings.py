@@ -3,11 +3,14 @@ Unit tests for the User model
 """
 
 import logging
+from unittest import mock
 from uuid import uuid4
 
 import pytest
+from celery.app.log import Logging
 from configurations import values
 
+from drive.celery_app import app as celery_app
 from drive.settings import Base, Feature, LoadTest, PreProduction, Production, Staging
 
 
@@ -148,3 +151,16 @@ def test_logging_uuid(console_logs):
     logging.getLogger("core.api").warning("item creation refused", extra={"uid": user_id})
 
     assert console_logs[0]["Fields"]["uid"] == str(user_id)
+
+
+def test_logging_celery_worker(console_logs):
+    """Celery workers should write the logs to the console."""
+    root = logging.getLogger()
+    with (
+        mock.patch.object(root, "handlers", list(root.handlers)),
+        mock.patch.object(Logging, "_setup", False),
+    ):
+        celery_app.log.setup_logging_subsystem(loglevel="INFO")
+        logging.getLogger("celery.app.trace").info("Task succeeded")
+
+    assert console_logs == []
