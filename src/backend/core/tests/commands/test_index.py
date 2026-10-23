@@ -2,7 +2,6 @@
 Unit test for `index` command.
 """
 
-import logging
 from operator import itemgetter
 from unittest import mock
 
@@ -13,6 +12,11 @@ import pytest
 
 from core import factories, models
 from core.services.search_indexers import SearchIndexer
+
+
+def command_logs(console_logs):
+    """Return the logs written by the index command."""
+    return [log for log in console_logs if log["logger"] == "drive.search.bootstrap_search"]
 
 
 @pytest.mark.django_db
@@ -68,7 +72,7 @@ def test_index():
 
 @pytest.mark.django_db
 @pytest.mark.usefixtures("indexer_settings")
-def test_index_improperly_configured(indexer_settings, caplog):
+def test_index_improperly_configured(indexer_settings, console_logs):
     """The command should raise an exception if the indexer is not configured"""
     indexer_settings.SEARCH_INDEXER_CLASS = None
 
@@ -79,10 +83,15 @@ def test_index_improperly_configured(indexer_settings, caplog):
             type=models.ItemTypeChoices.FILE,
         )
 
-    with caplog.at_level(logging.WARN):
-        with mock.patch.object(SearchIndexer, "push") as mock_push:
-            call_command("index")
+    with mock.patch.object(SearchIndexer, "push") as mock_push:
+        call_command("index")
 
     mock_push.assert_not_called()
 
-    assert "The indexer is not enabled or properly configured." in caplog.messages
+    assert command_logs(console_logs) == [
+        {
+            "event": "The indexer is not enabled or properly configured.",
+            "level": "warning",
+            "logger": "drive.search.bootstrap_search",
+        }
+    ]
