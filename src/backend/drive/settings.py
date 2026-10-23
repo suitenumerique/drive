@@ -61,7 +61,7 @@ def drop_celery_task_data(_logger, _method_name, event_dict):
 # Hand the structlog events to the standard loggers, so that the LOGGING
 # formatter writes them like any other log
 structlog.configure(
-    processors=[structlog.stdlib.render_to_log_kwargs],
+    processors=[structlog.stdlib.render_to_log_args_and_kwargs],
     logger_factory=structlog.stdlib.LoggerFactory(),
     wrapper_class=structlog.stdlib.BoundLogger,
     cache_logger_on_first_use=True,

@@ -28,6 +28,20 @@ def test_logging_core_logger(console_logs):
     ]
 
 
+def test_logging_structlog_event(console_logs):
+    """A structlog event should be written with its fields and positional arguments."""
+    structlog.get_logger("core.api").warning("item %s creation refused", "x", reason="quota")
+
+    assert console_logs == [
+        {
+            "event": "item x creation refused",
+            "level": "warning",
+            "logger": "core.api",
+            "reason": "quota",
+        }
+    ]
+
+
 def test_logging_extra_fields(console_logs):
     """The extra fields of a log should be written as text."""
     item_id = uuid4()
