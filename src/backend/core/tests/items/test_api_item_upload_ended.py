@@ -306,18 +306,22 @@ def test_api_item_upload_ended_mimetype_not_allowed(settings, console_logs):
     assert response.status_code == 400
     assert viewset_logs(console_logs) == [
         {
-            "event": f"upload_ended: detecting mimetype for file: {item.file_key}",
+            "event": "upload_ended_mimetype_detection",
             "level": "info",
             "logger": "core.api.viewsets",
             "request_id": mock.ANY,
             "user_id": str(user.pk),
+            "item_id": str(item.id),
+            "file_key": item.file_key,
         },
         {
-            "event": "upload_ended: mimetype not allowed text/plain for filename my_file.txt",
+            "event": "upload_ended_mimetype_not_allowed",
             "level": "info",
             "logger": "core.api.viewsets",
             "request_id": mock.ANY,
             "user_id": str(user.pk),
+            "item_id": str(item.id),
+            "mimetype": "text/plain",
         },
     ]
 
@@ -396,21 +400,23 @@ def test_api_upload_ended_mismatch_mimetype_with_object_storage(console_logs):
     response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
     assert viewset_logs(console_logs) == [
         {
-            "event": f"upload_ended: detecting mimetype for file: {item.file_key}",
+            "event": "upload_ended_mimetype_detection",
             "level": "info",
             "logger": "core.api.viewsets",
             "request_id": mock.ANY,
             "user_id": str(user.pk),
+            "item_id": str(item.id),
+            "file_key": item.file_key,
         },
         {
-            "event": (
-                "upload_ended: content type mismatch between object storage and item, "
-                "updating from text/html to application/pdf"
-            ),
+            "event": "upload_ended_content_type_mismatch",
             "level": "info",
             "logger": "core.api.viewsets",
             "request_id": mock.ANY,
             "user_id": str(user.pk),
+            "item_id": str(item.id),
+            "storage_content_type": "text/html",
+            "mimetype": "application/pdf",
         },
     ]
     assert response.status_code == 200
@@ -447,14 +453,14 @@ def test_api_upload_ended_file_size_exceeded(settings, console_logs):
     response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
     assert viewset_logs(console_logs) == [
         {
-            "event": (
-                f"upload_ended: file size (8) for file {item.file_key} higher than the allowed"
-                " max size"
-            ),
+            "event": "upload_ended_size_exceeded",
             "level": "info",
             "logger": "core.api.viewsets",
             "request_id": mock.ANY,
             "user_id": str(user.pk),
+            "item_id": str(item.id),
+            "size": 8,
+            "max_size": 0,
         }
     ]
     assert response.status_code == 400

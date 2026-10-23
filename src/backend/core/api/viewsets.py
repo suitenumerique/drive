@@ -2,7 +2,6 @@
 # pylint: disable=too-many-lines
 
 import json
-import logging
 import os
 import re
 import uuid
@@ -26,6 +25,7 @@ from django.utils.text import capfirst, slugify
 from django.utils.translation import gettext_lazy as _
 
 import rest_framework as drf
+import structlog
 from botocore.exceptions import ClientError
 from corsheaders.middleware import (
     ACCESS_CONTROL_ALLOW_METHODS,
@@ -78,7 +78,7 @@ from .filters import (
     UsageMetricFilter,
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 ITEM_FOLDER = "item"
 UUID_REGEX = r"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
@@ -632,11 +632,7 @@ class ItemViewSet(
             with open(template_path, "rb") as template_file:
                 template_content = template_file.read()
         except OSError as e:
-            logger.error(
-                "Error reading template file %s: %s",
-                template_path,
-                str(e),
-            )
+            logger.error("template_file_read_failed", path=template_path, error=str(e))
             raise drf.exceptions.ValidationError(
                 {"extension": _("Error reading template file.")},
                 code="template_file_read_error",
@@ -645,11 +641,7 @@ class ItemViewSet(
         try:
             default_storage.save(item.file_key, BytesIO(template_content))
         except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.error(
-                "Error uploading template file to storage for item %s: %s",
-                item.id,
-                str(e),
-            )
+            logger.error("template_file_upload_failed", item_id=item.id, error=str(e))
             item.soft_delete()
             item.delete()
             raise drf.exceptions.ValidationError(
@@ -909,16 +901,12 @@ class ItemViewSet(
             ].read()
 
         # Use improved MIME type detection combining magic bytes and file extension
-        logger.info("upload_ended: detecting mimetype for file: %s", item.file_key)
+        logger.info("upload_ended_mimetype_detection", item_id=item.id, file_key=item.file_key)
         mimetype = utils.detect_mimetype(file_head, filename=item.filename)
 
         if settings.RESTRICT_UPLOAD_FILE_TYPE and mimetype not in settings.FILE_MIMETYPE_ALLOWED:
             self._complete_item_deletion(item)
-            logger.info(
-                "upload_ended: mimetype not allowed %s for filename %s",
-                mimetype,
-                item.filename,
-            )
+            logger.info("upload_ended_mimetype_not_allowed", item_id=item.id, mimetype=mimetype)
             raise drf.exceptions.ValidationError(
                 detail="The file type is not allowed.",
                 code="file_type_not_allowed",
@@ -926,10 +914,10 @@ class ItemViewSet(
 
         if head_response["ContentType"] != mimetype:
             logger.info(
-                "upload_ended: content type mismatch between object storage and item,"
-                " updating from %s to %s",
-                head_response["ContentType"],
-                mimetype,
+                "upload_ended_content_type_mismatch",
+                item_id=item.id,
+                storage_content_type=head_response["ContentType"],
+                mimetype=mimetype,
             )
             try:
                 s3_client.copy_object(
@@ -946,11 +934,10 @@ class ItemViewSet(
             except ClientError as error:
                 # Log an exception but don't stop the action.
                 logger.exception(
-                    "Changing content type of item %s on object storage failed with error code %s"
-                    " and error message %s",
-                    item.id,
-                    error.response["Error"]["Code"],
-                    error.response["Error"]["Message"],
+                    "upload_ended_content_type_update_failed",
+                    item_id=item.id,
+                    error_code=error.response["Error"]["Code"],
+                    error=error.response["Error"]["Message"],
                 )
 
         with transaction.atomic():
@@ -997,9 +984,10 @@ class ItemViewSet(
         if file_size > settings.DATA_UPLOAD_MAX_MEMORY_SIZE:
             self._complete_item_deletion(item)
             logger.info(
-                "upload_ended: file size (%s) for file %s higher than the allowed max size",
-                file_size,
-                item.file_key,
+                "upload_ended_size_exceeded",
+                item_id=item.id,
+                size=file_size,
+                max_size=settings.DATA_UPLOAD_MAX_MEMORY_SIZE,
             )
             raise drf.exceptions.ValidationError(
                 detail="The file size is higher than the allowed max size.",
@@ -1770,7 +1758,7 @@ class ItemViewSet(
         # Extract the original URL from the request header
         original_url = request.META.get("HTTP_X_ORIGINAL_URL")
         if not original_url:
-            logger.debug("Missing HTTP_X_ORIGINAL_URL header in subrequest")
+            logger.debug("subrequest_original_url_missing")
             raise drf.exceptions.PermissionDenied()
 
         parsed_url = urlparse(original_url)
@@ -1782,21 +1770,19 @@ class ItemViewSet(
 
         if not match:
             logger.debug(
-                "Subrequest URL '%s' did not match pattern '%s'",
-                parsed_url.path,
-                pattern,
+                "subrequest_url_not_matching", path=parsed_url.path, pattern=pattern.pattern
             )
             raise drf.exceptions.PermissionDenied()
 
         try:
             url_params = match.groupdict()
         except (ValueError, AttributeError) as exc:
-            logger.debug("Failed to extract parameters from subrequest URL: %s", exc)
+            logger.debug("subrequest_url_parameters_invalid", error=str(exc))
             raise drf.exceptions.PermissionDenied() from exc
 
         pk = url_params.get("pk")
         if not pk:
-            logger.debug("item ID (pk) not found in URL parameters: %s", url_params)
+            logger.debug("subrequest_item_id_missing", url_params=url_params)
             raise drf.exceptions.PermissionDenied()
 
         # Fetch the item and check if the user has access
@@ -1805,16 +1791,16 @@ class ItemViewSet(
         try:
             item = queryset.get(pk=pk)
         except models.Item.DoesNotExist as exc:
-            logger.debug("item with ID '%s' does not exist", pk)
+            logger.debug("subrequest_item_not_found", item_id=pk)
             raise drf.exceptions.PermissionDenied() from exc
 
         user_abilities = item.get_abilities(request.user)
 
         if not user_abilities.get(self.action, False):
-            logger.debug("User '%s' lacks permission for item '%s'", request.user.id, pk)
+            logger.debug("subrequest_permission_denied", item_id=pk, action=self.action)
             raise drf.exceptions.PermissionDenied()
 
-        logger.debug("Subrequest authorization successful. Extracted parameters: %s", url_params)
+        logger.debug("subrequest_authorized", url_params=url_params)
         return url_params, user_abilities, request.user.id, item
 
     @drf.decorators.action(detail=True, methods=["get"], url_path="download")
@@ -1872,15 +1858,15 @@ class ItemViewSet(
         """
         url_params, _, _, item = self._authorize_subrequest(request, MEDIA_STORAGE_URL_PATTERN)
         if item.type != models.ItemTypeChoices.FILE:
-            logger.debug("Item '%s' is not a file", item.id)
+            logger.debug("media_auth_item_not_a_file", item_id=item.id)
             raise drf.exceptions.PermissionDenied()
 
         if item.upload_state == models.ItemUploadStateChoices.PENDING:
-            logger.debug("Item '%s' is not ready", item.id)
+            logger.debug("media_auth_item_not_ready", item_id=item.id)
             raise drf.exceptions.PermissionDenied()
 
         if url_params.get("preview") and not utils.is_previewable_item(item):
-            logger.debug("Item '%s' is not previewable", item.id)
+            logger.debug("media_auth_item_not_previewable", item_id=item.id, mimetype=item.mimetype)
             raise drf.exceptions.PermissionDenied()
 
         # Generate S3 authorization headers using the extracted URL parameters
@@ -2510,13 +2496,11 @@ class ConfigView(drf.views.APIView):
                 theme_customization = json.load(f)
         except FileNotFoundError:
             logger.error(
-                "Configuration file not found: %s",
-                settings.THEME_CUSTOMIZATION_FILE_PATH,
+                "theme_customization_file_not_found", path=settings.THEME_CUSTOMIZATION_FILE_PATH
             )
         except json.JSONDecodeError:
             logger.error(
-                "Configuration file is not a valid JSON: %s",
-                settings.THEME_CUSTOMIZATION_FILE_PATH,
+                "theme_customization_file_invalid", path=settings.THEME_CUSTOMIZATION_FILE_PATH
             )
         else:
             cache.set(
