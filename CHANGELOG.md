@@ -13,6 +13,7 @@ and this project adheres to
 - 🐛(backend) fix anonymous export of public folders
 - 🐛(backend) fix user's inactive token introspection failure
   (upgrade to `django-lasuite==0.1.0`)
+- ♿️(frontend) fix accessible names of icon buttons
 
 ## [v0.25.0] - 2026-10-19
 

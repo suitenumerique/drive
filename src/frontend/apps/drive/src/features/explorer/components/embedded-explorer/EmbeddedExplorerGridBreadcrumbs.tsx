@@ -289,6 +289,7 @@ export const BreadcrumbItemButton = ({
 };
 
 export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const shareModal = useModal();
   const icon = useMemo(() => {
@@ -335,6 +336,7 @@ export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
             variant="tertiary"
             size="small"
             icon={icon}
+            aria-label={t("explorer.rightPanel.share")}
             onClick={() => shareModal.open()}
             data-testid="share-button"
           />
