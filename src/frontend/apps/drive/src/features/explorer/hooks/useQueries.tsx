@@ -38,6 +38,15 @@ export const useInfiniteItemInvitations = (itemId: string) => {
   });
 };
 
+export const useItemAccessRequests = (itemId: string) => {
+  return useQuery({
+    queryKey: ["itemAccessRequests", itemId],
+    queryFn: () => getDriver().getItemAccessRequests(itemId),
+    staleTime: 0,
+    gcTime: 0,
+  });
+};
+
 export const useFirstLevelItems = () => {
   return useQuery({
     queryKey: ["firstLevelItems"],
