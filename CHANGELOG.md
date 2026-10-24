@@ -40,6 +40,8 @@ and this project adheres to
 - ✨(backend) deactivate the least recently used duplicates in the admin
 - ✨(backend) add SDK_ENABLED setting to gate the sdk relay
 - ✨(frontend) hide sdk pages when SDK_ENABLED is off
+- ✨(frontend) select the uploaded file after a single file upload
+- ✨(frontend) select the item created from the new menu
 
 ### Fixed
 

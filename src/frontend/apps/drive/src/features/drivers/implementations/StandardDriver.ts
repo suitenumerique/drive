@@ -440,7 +440,7 @@ export class StandardDriver extends Driver {
         throw new DOMException("Upload cancelled", "AbortError");
       }
 
-      await fetchAPI(
+      const uploadEndedResponse = await fetchAPI(
         `items/${item.id}/upload-ended/`,
         {
           method: "POST",
@@ -453,7 +453,9 @@ export class StandardDriver extends Driver {
 
       progressHandler?.(100);
 
-      return item;
+      // Return the item as finalized by upload-ended (url, mimetype, upload
+      // state...) rather than the pending one returned at creation.
+      return jsonToItem(await uploadEndedResponse.json());
     })();
 
     return { promise, abort };

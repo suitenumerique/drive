@@ -179,6 +179,13 @@ export const GlobalExplorerProvider = ({
 
   const { dropZone, cancelUploadsForDeletedItems } = useUploadZone({
     item: item!,
+    onSingleFileUploaded: (uploadedItem, parentId) => {
+      // Only select it if the user is still looking at the folder it was
+      // uploaded into, otherwise the selection bar would show a hidden item.
+      if (parentId === item?.id) {
+        selectionStore.setSelectedItems([uploadedItem]);
+      }
+    },
   });
 
   /**
