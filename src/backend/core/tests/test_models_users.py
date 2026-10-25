@@ -6,6 +6,7 @@ from unittest import mock
 
 from django.core import mail
 from django.core.exceptions import ValidationError
+from django.test.utils import override_settings
 
 import pytest
 
@@ -18,6 +19,27 @@ def test_models_users_str():
     """The str representation should be the email."""
     user = factories.UserFactory()
     assert str(user) == user.email
+
+
+def test_models_users_teams_default_empty():
+    """Without OIDC_TEAMS_CLAIM configured, a user belongs to no team."""
+    user = factories.UserFactory(claims={"groups": ["team-a", "team-b"]})
+    assert user.teams == []
+
+
+@override_settings(OIDC_TEAMS_CLAIM="groups")
+def test_models_users_teams_from_claim():
+    """User.teams should read the list from the configured OIDC claim."""
+    user = factories.UserFactory(claims={"groups": ["team-a", "team-b"]})
+    assert user.teams == ["team-a", "team-b"]
+
+
+@override_settings(OIDC_TEAMS_CLAIM="groups")
+def test_models_users_teams_claim_absent_or_null():
+    """A configured-but-missing (or null) claim should yield an empty list."""
+    assert factories.UserFactory(claims={}).teams == []
+    assert factories.UserFactory(claims={"groups": None}).teams == []
+    assert factories.UserFactory(claims=None).teams == []
 
 
 def test_models_users_id_unique():
