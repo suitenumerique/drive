@@ -38,7 +38,7 @@ dependencies = [
     "django-ltree==0.8.0",
     "django-parler==2.4",
     "django-prometheus==2.5.0",
-    "django-pydantic-field==0.5.4",
+    "django-pydantic-field==0.5.6",
     "django-redis==7.0.0",
     "django-storages[s3]==1.14.6",
     "django-timezone-field>=5.1",

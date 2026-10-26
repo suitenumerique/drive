@@ -546,16 +546,16 @@ wheels = [
 
 [[package]]
 name = "django-pydantic-field"
-version = "0.5.4"
+version = "0.5.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
     { name = "pydantic" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/42/3d/d2390f1383eb60b25c7b68b3493af566831b0db540e47ed85a395727bae2/django_pydantic_field-0.5.4.tar.gz", hash = "sha256:3c884299ea777e8221e4c0ff222e078960ba3576a3b6970636629524e5d6cf39", size = 22013, upload-time = "2026-02-22T13:47:30.633Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5b/3a/ffc778bfd04071465780fe065d27be2277cf4009f60143be071f0f22ae93/django_pydantic_field-0.5.6.tar.gz", hash = "sha256:222dc7ee7ffe5fed311b3121811e02cbf26b72c763273e83c4241b72f3d8d3e6", size = 25404, upload-time = "2026-10-22T00:55:33.231Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ab/88/1acbef013f172f9f03836d3c03639ae5604a46e9f1a921c6e623e60f8594/django_pydantic_field-0.5.4-py3-none-any.whl", hash = "sha256:5c080b5f0ea17ae11b5305d649778a87437c61a403894933337fe3e295f627a9", size = 36963, upload-time = "2026-02-22T13:47:29.613Z" },
+    { url = "https://files.pythonhosted.org/packages/75/e0/477662aa27197a0cedf07894e4e77578fd2e4bbda703a8308b6091df8cfb/django_pydantic_field-0.5.6-py3-none-any.whl", hash = "sha256:7bcdaac51ac163698b6170a65880086e74b461403c66ad5a8d4e64b0e295b08b", size = 37053, upload-time = "2026-10-22T00:55:32.193Z" },
 ]
 
 [[package]]
@@ -763,7 +763,7 @@ requires-dist = [
     { name = "django-ltree", specifier = "==0.8.0" },
     { name = "django-parler", specifier = "==2.4" },
     { name = "django-prometheus", specifier = "==2.5.0" },
-    { name = "django-pydantic-field", specifier = "==0.5.4" },
+    { name = "django-pydantic-field", specifier = "==0.5.6" },
     { name = "django-redis", specifier = "==7.0.0" },
     { name = "django-storages", extras = ["s3"], specifier = "==1.14.6" },
     { name = "django-timezone-field", specifier = ">=5.1" },
