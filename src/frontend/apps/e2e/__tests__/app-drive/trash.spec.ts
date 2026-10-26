@@ -1,4 +1,4 @@
-import test, { expect } from "@playwright/test";
+import test, { expect, Page } from "@playwright/test";
 import { clearDb, login } from "./utils-common";
 import {
   createFolderInCurrentFolder,
@@ -12,6 +12,19 @@ import {
   getRowItem,
 } from "./utils-embedded-grid";
 
+// Deleting an item first fetches its deletion info, then sends the DELETE.
+// Wait for the DELETE before leaving the page: opening the trash too early
+// cancels the deletion and the trash is loaded empty.
+const deleteItem = async (page: Page, itemName: string) => {
+  const deleted = page.waitForResponse(
+    (response) =>
+      /\/items\/[^/]+\/$/.test(new URL(response.url()).pathname) &&
+      response.request().method() === "DELETE",
+  );
+  await clickOnRowItemActions(page, itemName, "Delete");
+  expect((await deleted).ok()).toBeTruthy();
+};
+
 test("Checks that hard deleting an item from the trash refreshes the list", async ({
   page,
 }) => {
@@ -22,7 +35,7 @@ test("Checks that hard deleting an item from the trash refreshes the list", asyn
 
   const folderName = "Folder to hard delete";
   await createFolderInCurrentFolder(page, folderName);
-  await clickOnRowItemActions(page, folderName, "Delete");
+  await deleteItem(page, folderName);
 
   await clickToTrash(page);
   await expectRowItem(page, folderName);
@@ -46,7 +59,7 @@ test("Checks that hard deleting an item from the trash via the selection bar ref
 
   const folderName = "Folder to hard delete from bar";
   await createFolderInCurrentFolder(page, folderName);
-  await clickOnRowItemActions(page, folderName, "Delete");
+  await deleteItem(page, folderName);
 
   await clickToTrash(page);
   await expectRowItem(page, folderName);
@@ -80,7 +93,7 @@ test("Checks that double-clicking a deleted folder in the trash shows a folder m
 
   const folderName = "Folder in trash";
   await createFolderInCurrentFolder(page, folderName);
-  await clickOnRowItemActions(page, folderName, "Delete");
+  await deleteItem(page, folderName);
 
   await clickToTrash(page);
   const row = await getRowItem(page, folderName);
@@ -109,7 +122,7 @@ test("Checks that double-clicking a deleted file in the trash shows a file messa
 
   const fileName = "File in trash";
   await createFileFromTemplate(page, fileName);
-  await clickOnRowItemActions(page, fileName, "Delete");
+  await deleteItem(page, fileName);
 
   await clickToTrash(page);
   const row = await getRowItem(page, fileName);
