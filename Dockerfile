@@ -4,7 +4,7 @@
 FROM ghcr.io/astral-sh/uv:0.13.4 AS uv
 
 # ---- base image to inherit from ----
-FROM python:3.13.14-alpine AS base
+FROM python:3.13.17-alpine AS base
 
 # Upgrade system packages to install security updates
 RUN apk --no-cache upgrade && \
