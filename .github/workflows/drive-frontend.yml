@@ -118,6 +118,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      # The browsers and their system libraries come from the official
+      # Playwright image. Installing those libraries with apt depends on the
+      # Ubuntu mirror, which is sometimes slow enough to stall the job for
+      # up to an hour. The image tag follows the @playwright/test version so
+      # upgrades keep both in sync. The pull runs in the background, during
+      # the next steps.
+      - name: Start pulling the Playwright image
+        run: |
+          VERSION=$(jq -r '.devDependencies["@playwright/test"]' src/frontend/apps/e2e/package.json)
+          IMAGE="mcr.microsoft.com/playwright:v${VERSION}-noble"
+          echo "PLAYWRIGHT_IMAGE=${IMAGE}" >> "$GITHUB_ENV"
+          nohup docker pull --quiet "${IMAGE}" > /tmp/playwright-pull.log 2>&1 &
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -135,29 +148,6 @@ jobs:
         with:
           path: "src/backend/core/templates/mail"
           key: mail-templates-${{ hashFiles('src/mail/mjml') }}
-
-      - name: Get Playwright version
-        id: playwright-version
-        run: |
-          VERSION=$(node -p "require('./src/frontend/apps/e2e/package.json').devDependencies['@playwright/test'] || require('./src/frontend/apps/e2e/package.json').dependencies['@playwright/test']")
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ steps.playwright-version.outputs.version }}
-
-      - name: Install Playwright Browsers (cache miss)
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        working-directory: src/frontend/apps/e2e
-        run: npx playwright install --with-deps ${{ matrix.browser }}
-
-      - name: Install Playwright system deps (cache hit)
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        working-directory: src/frontend/apps/e2e
-        run: npx playwright install-deps ${{ matrix.browser }}
 
       - name: Build the drive SDK
         working-directory: src/frontend/packages/sdk
@@ -182,9 +172,31 @@ jobs:
       - name: Serve frontend (stock nginx + prod vhost)
         run: make ci-serve-frontend-build
 
+      # Only the browsers run in the container: the tests stay on the runner
+      # because they reset the database with make and docker compose. With
+      # the host network, localhost in the browsers is the runner's localhost.
+      # The server comes from the cached node_modules, mounted read only.
+      - name: Start the Playwright browser server
+        run: |
+          docker run --detach --name playwright-server --init \
+            --network host --ipc=host --user pwuser \
+            -v "${PWD}:${PWD}:ro" -w "${PWD}/src/frontend/apps/e2e" \
+            "${PLAYWRIGHT_IMAGE}" \
+            yarn playwright run-server --host 127.0.0.1 --port 53333
+          timeout 60 sh -c 'until docker logs playwright-server 2>&1 | grep -q "Listening on"; do sleep 1; done' \
+            || { docker logs playwright-server; exit 1; }
+
+      # Playwright reads this variable and connects to the server instead of
+      # launching local browsers.
       - name: Run e2e tests
         working-directory: src/frontend/apps/e2e
+        env:
+          PW_TEST_CONNECT_WS_ENDPOINT: ws://127.0.0.1:53333/
         run: yarn test --project=${{ matrix.browser }} --shard=${{ matrix.shard }}
+
+      - name: Show the Playwright browser server logs
+        if: failure()
+        run: docker logs playwright-server
 
       - uses: actions/upload-artifact@v4
         if: always()
