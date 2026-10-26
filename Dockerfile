@@ -148,6 +148,9 @@ ARG DRIVE_STATIC_ROOT=/data/static
 # Remove git, we don't need it in the production image
 RUN apk del git
 
+# Remove pip, the application runs from the uv virtualenv
+RUN pip uninstall -y pip
+
 # Gunicorn
 RUN mkdir -p /usr/local/etc/gunicorn
 COPY docker/files/usr/local/etc/gunicorn/drive.py /usr/local/etc/gunicorn/drive.py
