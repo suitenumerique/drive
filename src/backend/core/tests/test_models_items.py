@@ -437,7 +437,7 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
         ),
     ],
 )
-def test_models_items_get_abilities_editor(  # noqa: PLR0913
+def test_models_items_get_abilities_editor(  # noqa: PLR0913, PLR0917
     is_authenticated,
     reach,
     item_type,

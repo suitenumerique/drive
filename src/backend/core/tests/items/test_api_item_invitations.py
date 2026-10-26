@@ -347,7 +347,7 @@ def test_api_item_invitations_create_authenticated_outsider():
     ),
 )
 @pytest.mark.parametrize("via", VIA)
-def test_api_item_invitations_create_privileged_members(  # noqa: PLR0913
+def test_api_item_invitations_create_privileged_members(  # noqa: PLR0913, PLR0917
     via, inviting, invited, response_code, mock_user_teams, settings
 ):
     """

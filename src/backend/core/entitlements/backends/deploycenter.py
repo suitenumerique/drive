@@ -28,7 +28,7 @@ class DeployCenterEntitlementsBackend(EntitlementsBackend):
     """Entitlements backend that checks permissions via a DeployCenter service."""
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         base_url,
         service_id,

@@ -509,8 +509,7 @@ class WopiViewSet(viewsets.ViewSet):
                 delete_object_args[S3_VERSION_ID] = version_id
 
             s3_client.delete_object(**delete_object_args)
-        # pylint: disable=broad-exception-caught
-        except Exception as e:  # noqa
+        except Exception as e:  # noqa  # pylint: disable=broad-exception-caught
             capture_exception(e)
             logger.warning("Error deleting old file for item %s in the storage: %s", item.id, e)
 

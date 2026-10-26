@@ -72,7 +72,7 @@ def record_database_pool(**_kwargs):
             continue
         try:
             stats = connection.pool.pop_stats()
-        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+        except Exception:  # pylint: disable=broad-exception-caught
             # a measurement never fails a request
             logger.debug("could not read the database pool stats", exc_info=True)
             continue

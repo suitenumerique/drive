@@ -58,7 +58,7 @@ class CeleryQueueCollector:
                     for priority in channel.priority_steps
                 ]
                 return sum(channel.client.llen(key) for key in keys)
-        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+        except Exception:  # pylint: disable=broad-exception-caught
             logger.debug("could not read the celery queue length", exc_info=True)
             return None
 
