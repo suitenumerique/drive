@@ -1,12 +1,15 @@
 """Fixtures for tests in the drive core application"""
 
 import base64
+import json
+import logging
 from unittest import mock
 
 from django.core.cache import cache
 
 import pytest
 import responses
+import structlog
 from cryptography.fernet import Fernet
 
 from core import factories
@@ -41,6 +44,24 @@ def posthog_capture_mock(settings):
     settings.POSTHOG_KEY = "test-key"
     with mock.patch("core.utils.analytics.posthog.capture") as capture:
         yield capture
+
+
+@pytest.fixture
+def console_logs():
+    """Collect the lines written by the console handler, as formatted in production."""
+    handler = logging.getHandlerByName("console")
+    lines = []
+    # Forget the context that a previous test of this process left behind
+    structlog.contextvars.clear_contextvars()
+
+    def emit(record):
+        line = json.loads(handler.format(record))
+        # The timestamp changes on each run
+        del line["timestamp"]
+        lines.append(line)
+
+    with mock.patch.object(handler, "emit", side_effect=emit):
+        yield lines
 
 
 @pytest.fixture
