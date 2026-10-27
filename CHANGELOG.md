@@ -32,6 +32,10 @@ and this project adheres to
 - 🐛(frontend) show the full item title in a tooltip when truncated
 - 🐛(backend) fix the upload mimetype allowlist
 
+### Changed
+
+- 🔊(backend) log as JSON with django-structlog
+
 ## [v0.25.3] - 2026-10-23
 
 ### Security
