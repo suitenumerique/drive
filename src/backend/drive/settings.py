@@ -21,10 +21,12 @@ from django.utils.translation import gettext_lazy as _
 import dj_database_url
 import posthog
 import sentry_sdk
+import structlog
 from boto3.s3.transfer import TransferConfig
 from configurations import Configuration, values
 from lasuite.configuration.values import SecretFileValue
 from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.logging import ignore_logger
 
 # pylint: disable=too-many-lines
 
@@ -47,6 +49,23 @@ def get_release():
         return pyproject_data["project"]["version"]
     except (FileNotFoundError, KeyError):
         return "NA"  # Default: not available
+
+
+def drop_celery_task_data(_logger, _method_name, event_dict):
+    """Drop the task context that Celery adds to its logs, whose arguments can hold user data."""
+    if event_dict["_record"].name.startswith("celery."):
+        event_dict.pop("data", None)
+    return event_dict
+
+
+# Hand the structlog events to the standard loggers, so that the LOGGING
+# formatter writes them like any other log
+structlog.configure(
+    processors=[structlog.stdlib.render_to_log_args_and_kwargs],
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    wrapper_class=structlog.stdlib.BoundLogger,
+    cache_logger_on_first_use=True,
+)
 
 
 class Base(Configuration):
@@ -846,6 +865,8 @@ class Base(Configuration):
         "django.contrib.auth.middleware.AuthenticationMiddleware",
         "django.contrib.messages.middleware.MessageMiddleware",
         "dockerflow.django.middleware.DockerflowMiddleware",
+        # After DockerflowMiddleware, which answers the heartbeats without logging them here
+        "django_structlog.middlewares.RequestMiddleware",
     ]
 
     AUTHENTICATION_BACKENDS = [
@@ -863,6 +884,7 @@ class Base(Configuration):
         "corsheaders",
         "django_filters",
         "dockerflow.django",
+        "django_structlog",
         "rest_framework",
         "rest_framework_api_key",
         "parler",
@@ -1128,6 +1150,8 @@ class Base(Configuration):
     CELERY_BROKER_URL = values.Value("redis://redis:6379/0")
     CELERY_BROKER_TRANSPORT_OPTIONS = values.DictValue({})
     CELERY_TASK_ROUTES = values.DictValue({})
+    # Keep the LOGGING handlers in the workers instead of Celery's own
+    CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 
     # Session
     SESSION_ENGINE = "django.contrib.sessions.backends.cache"
@@ -1384,15 +1408,30 @@ class Base(Configuration):
         "version": 1,
         "disable_existing_loggers": False,
         "formatters": {
-            "simple": {
-                "format": "{asctime} {name} {levelname} {message}",
-                "style": "{",
+            "json": {
+                "()": structlog.stdlib.ProcessorFormatter,
+                "foreign_pre_chain": [
+                    structlog.contextvars.merge_contextvars,
+                    structlog.stdlib.ExtraAdder(),
+                    drop_celery_task_data,
+                    structlog.stdlib.add_logger_name,
+                    structlog.stdlib.add_log_level,
+                    structlog.processors.TimeStamper(fmt="iso", utc=True),
+                ],
+                "processors": [
+                    structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                    structlog.processors.format_exc_info,
+                    structlog.processors.JSONRenderer(default=str),
+                ],
             },
         },
         "handlers": {
             "console": {
                 "class": "logging.StreamHandler",
-                "formatter": "simple",
+                "formatter": "json",
+            },
+            "null": {
+                "class": "logging.NullHandler",
             },
         },
         # Override root logger to send it to console
@@ -1404,7 +1443,6 @@ class Base(Configuration):
         },
         "loggers": {
             "core": {
-                "handlers": ["console"],
                 "level": values.Value(
                     "INFO",
                     environ_name="LOGGING_LEVEL_LOGGERS_APP",
@@ -1412,8 +1450,20 @@ class Base(Configuration):
                 ),
                 "propagate": True,
             },
+            # Replaced by the request logs of django-structlog
+            "request.summary": {
+                "handlers": ["null"],
+                "propagate": False,
+            },
+            "django.request": {
+                "handlers": ["null"],
+                "propagate": False,
+            },
         },
     }
+    # Personal data, which the access logs already hold
+    DJANGO_STRUCTLOG_IP_LOGGING_ENABLED = False
+    DJANGO_STRUCTLOG_CELERY_ENABLED = True
 
     API_USERS_LIST_LIMIT = values.PositiveIntegerValue(
         default=5,
@@ -1741,6 +1791,9 @@ class Base(Configuration):
                 traces_sample_rate=cls.SENTRY_TRACES_SAMPLE_RATE,
             )
             sentry_sdk.set_tag("application", "backend")
+            # Like django.request for the Django integration: its errors are already reported
+            ignore_logger("django_structlog.middlewares.request")
+            ignore_logger("django_structlog.celery.receivers")
 
         if cls.OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION and cls.OIDC_ALLOW_DUPLICATE_EMAILS:
             raise ValueError(
