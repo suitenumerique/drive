@@ -1,3 +1,4 @@
+import { Upload } from "@gouvfr-lasuite/ui-components/icons";
 import { useCallback, useEffect } from "react";
 import { toast } from "react-toastify";
 import { Item } from "@/features/drivers/types";
@@ -352,7 +353,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
           type={canUpload ? "info" : "error"}
           onDrop={dismissDragToast}
         >
-          <span className="material-icons">cloud_upload</span>
+          <Upload aria-hidden="true" />
           <span>
             {t(
               `explorer.actions.upload.toast${canUpload ? "" : "_no_rights"}`,

@@ -1,4 +1,5 @@
 import { Button, useModal } from "@gouvfr-lasuite/ui-components";
+import { Zoom } from "@gouvfr-lasuite/ui-components/icons";
 import { ExplorerSearchModal } from "@/features/explorer/components/modals/search/ExplorerSearchModal";
 import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
@@ -36,7 +37,7 @@ export const ExplorerSearchButton = ({
       <Button
         variant="tertiary"
         aria-label={t("explorer.tree.search")}
-        icon={<span className="material-icons">search</span>}
+        icon={<Zoom aria-hidden="true" />}
         onClick={searchModal.open}
       />
     </>

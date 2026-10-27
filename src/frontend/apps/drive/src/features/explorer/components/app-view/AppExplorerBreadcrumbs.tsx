@@ -31,6 +31,7 @@ import { useAppRestrictionUpdated } from "./useAppRestrictionUpdated";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useItemActionMenuItems } from "../../hooks/useItemActionMenuItems";
 import { Item, ItemType } from "@/features/drivers/types";
+import { ChevronLeft, MoreVertical } from "@gouvfr-lasuite/ui-components/icons";
 
 export const AppExplorerBreadcrumbs = () => {
   const { item, onNavigate } = useGlobalExplorer();
@@ -166,11 +167,7 @@ export const ExplorerBreadcrumbsMobile = () => {
               >
                 <Button
                   variant="tertiary"
-                  icon={
-                    <span className="material-icons" aria-hidden="true">
-                      more_vert
-                    </span>
-                  }
+                  icon={<MoreVertical aria-hidden="true" />}
                   aria-label={t("explorer.breadcrumbs.more_actions")}
                   onClick={() => setIsCreateMenuOpen(true)}
                 />
@@ -212,11 +209,7 @@ export const ExplorerBreadcrumbsMobile = () => {
               <Button
                 variant="bordered"
                 color="neutral"
-                icon={
-                  <span className="material-icons" aria-hidden="true">
-                    chevron_left
-                  </span>
-                }
+                icon={<ChevronLeft aria-hidden="true" />}
                 aria-label={t("explorer.breadcrumbs.back")}
                 onClick={() => {
                   if (parent?.id === DefaultRoute.SHARED_WITH_ME) {
@@ -264,11 +257,7 @@ export const ExplorerBreadcrumbsMobile = () => {
             trigger={
               <Button
                 variant="tertiary"
-                icon={
-                  <span className="material-icons" aria-hidden="true">
-                    more_vert
-                  </span>
-                }
+                icon={<MoreVertical aria-hidden="true" />}
                 aria-label={t("explorer.grid.actions.button_aria_label", {
                   name: item.title,
                 })}

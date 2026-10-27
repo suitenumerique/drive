@@ -1,6 +1,7 @@
 import { Item, ItemUploadState } from "@/features/drivers/types";
 import { ItemIcon } from "../icons/ItemIcon";
 import { Button, IconSize } from "@gouvfr-lasuite/ui-components";
+import { Shared, XMark } from "@gouvfr-lasuite/ui-components/icons";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
 import { useItemActionMenuItems } from "../../hooks/useItemActionMenuItems";
 import { useAppRestrictionUpdated } from "../app-view/useAppRestrictionUpdated";
@@ -37,13 +38,27 @@ export const ExplorerRightPanelContent = ({
   );
 };
 
+const RightPanelCloseButton = () => {
+  const { setRightPanelOpen } = useGlobalExplorer();
+  const { t } = useTranslation();
+
+  return (
+    <Button
+      size="small"
+      variant="tertiary"
+      icon={<XMark size={16} aria-hidden="true" />}
+      aria-label={t("explorer.rightPanel.close")}
+      onClick={() => setRightPanelOpen(false)}
+    />
+  );
+};
+
 const RightPanelSelectionContent = ({
   item,
   onShare,
 }: ExplorerRightPanelContentProps & {
   onShare: (item: Item) => void;
 }) => {
-  const { setRightPanelOpen } = useGlobalExplorer();
   const selectedItems = useSelectedItems();
   const { t } = useTranslation();
 
@@ -58,17 +73,7 @@ const RightPanelSelectionContent = ({
     return (
       <div className="explorer__right-panel__empty-selection">
         <div className="explorer__right-panel__multiple-selection__close">
-          <Button
-            size="small"
-            variant="tertiary"
-            icon={
-              <span className="material-icons" aria-hidden="true">
-                close
-              </span>
-            }
-            aria-label={t("explorer.rightPanel.close")}
-            onClick={() => setRightPanelOpen(false)}
-          />
+          <RightPanelCloseButton />
         </div>
         <img
           src={emptySelection.src}
@@ -85,17 +90,7 @@ const RightPanelSelectionContent = ({
     return (
       <div className="explorer__right-panel__multiple-selection">
         <div className="explorer__right-panel__multiple-selection__close">
-          <Button
-            size="small"
-            variant="tertiary"
-            icon={
-              <span className="material-icons" aria-hidden="true">
-                close
-              </span>
-            }
-            aria-label={t("explorer.rightPanel.close")}
-            onClick={() => setRightPanelOpen(false)}
-          />
+          <RightPanelCloseButton />
         </div>
         <img src={multipleSelection.src} alt={selectedItems[0].title} />
         <div className="explorer__right-panel__multiple-selection__text">
@@ -111,17 +106,7 @@ const RightPanelSelectionContent = ({
         <div className="explorer__right-panel__section p">
           <div className="explorer__right-panel__item-title">
             <div className="explorer__right-panel__item-title__close">
-              <Button
-                size="small"
-                variant="tertiary"
-                icon={
-                  <span className="material-icons" aria-hidden="true">
-                    close
-                  </span>
-                }
-                aria-label={t("explorer.rightPanel.close")}
-                onClick={() => setRightPanelOpen(false)}
-              />
+              <RightPanelCloseButton />
             </div>
             <div className="explorer__right-panel__item-title__icon">
               <ItemIcon
@@ -154,7 +139,10 @@ const RightPanelSelectionContent = ({
                 firstSelectedItem?.nb_accesses > 1 ? (
                   <Button
                     variant="secondary"
-                    icon={<span className="material-icons">group</span>}
+                    icon={<Shared aria-hidden="true" />}
+                    aria-label={t("explorer.rightPanel.share_count", {
+                      count: firstSelectedItem.nb_accesses,
+                    })}
                     onClick={() => onShare(firstSelectedItem)}
                   >
                     {firstSelectedItem?.nb_accesses}

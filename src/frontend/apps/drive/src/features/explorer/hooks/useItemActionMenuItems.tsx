@@ -209,7 +209,7 @@ export const useItemActionMenuItems = ({
           } catch (err) {
             addToast(
               <ToasterItem type="error">
-                <span className="material-icons">content_copy</span>
+                <Copy aria-hidden="true" />
                 <span>
                   {getCanUploadErrorDescription(err) ??
                     t("explorer.item.actions.duplicate_error")}

@@ -1,4 +1,5 @@
 import { Button } from "@gouvfr-lasuite/ui-components";
+import { More } from "@gouvfr-lasuite/ui-components/icons";
 import { Item } from "@/features/drivers/types";
 import clsx from "clsx";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
@@ -40,11 +41,7 @@ export const ExplorerTreeItemActions = ({
                 name: item.title,
               })}
               className="explorer__tree__item__actions__button-more"
-              icon={
-                <span className="material-icons more" aria-hidden="true">
-                  more_horiz
-                </span>
-              }
+              icon={<More size={16} aria-hidden="true" />}
             />
           }
         />
