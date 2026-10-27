@@ -1,4 +1,5 @@
 import { Button, useModal } from "@gouvfr-lasuite/ui-components";
+import { ArrowRight, Trash, XMark } from "@gouvfr-lasuite/ui-components/icons";
 import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import {
@@ -43,11 +44,7 @@ export const ExplorerSelectionBar = () => {
       <div className="explorer__selection-bar__actions">
         <Button
           onClick={handleClearSelection}
-          icon={
-            <span className="material-icons" aria-hidden="true">
-              close
-            </span>
-          }
+          icon={<XMark size={16} aria-hidden="true" />}
           variant="tertiary"
           size="small"
           aria-label={t("explorer.selectionBar.reset_selection")}
@@ -81,7 +78,7 @@ export const ExplorerSelectionBarActions = () => {
     } else {
       addToast(
         <ToasterItem type="error">
-          <span className="material-icons">delete</span>
+          <Trash aria-hidden="true" />
           <span>{t("explorer.actions.delete.low_rights_toast")}</span>
         </ToasterItem>,
       );
@@ -116,22 +113,14 @@ export const ExplorerSelectionBarActions = () => {
       <Button
         onClick={handleDelete}
         disabled={isPending}
-        icon={
-          <span className="material-icons" aria-hidden="true">
-            delete
-          </span>
-        }
+        icon={<Trash size={16} aria-hidden="true" />}
         variant="tertiary"
         size="small"
         aria-label={t("explorer.selectionBar.delete")}
       />
       <Button
         onClick={moveModal.open}
-        icon={
-          <span className="material-icons" aria-hidden="true">
-            arrow_forward
-          </span>
-        }
+        icon={<ArrowRight size={16} aria-hidden="true" />}
         variant="tertiary"
         size="small"
         aria-label={t("explorer.selectionBar.move")}

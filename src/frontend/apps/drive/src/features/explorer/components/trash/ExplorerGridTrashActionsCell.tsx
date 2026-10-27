@@ -14,6 +14,7 @@ import {
   Decision,
   useModal,
 } from "@gouvfr-lasuite/ui-components";
+import { More, Trash } from "@gouvfr-lasuite/ui-components/icons";
 import undoIcon from "@/assets/icons/undo.svg";
 import cancelIcon from "@/assets/icons/cancel.svg";
 
@@ -33,7 +34,7 @@ export const ExplorerGridTrashActionsCell = (
   const handleRestore = async () => {
     addToast(
       <ToasterItem>
-        <span className="material-icons">delete</span>
+        <Trash aria-hidden="true" />
         <span>{t("explorer.actions.restore.toast", { count: 1 })}</span>
       </ToasterItem>,
     );
@@ -46,7 +47,7 @@ export const ExplorerGridTrashActionsCell = (
     }
     addToast(
       <ToasterItem>
-        <span className="material-icons">delete</span>
+        <Trash aria-hidden="true" />
         <span>{t("explorer.actions.hard_delete.toast", { count: 1 })}</span>
       </ToasterItem>,
     );
@@ -78,16 +79,13 @@ export const ExplorerGridTrashActionsCell = (
         <Button
           onClick={() => setIsOpen(!isOpen)}
           variant="tertiary"
+          size="nano"
           className="c__language-picker"
           aria-label={t("explorer.grid.actions.button_aria_label", {
             name: item.title,
           })}
-          icon={
-            <span className="material-icons" aria-hidden="true">
-              more_horiz
-            </span>
-          }
-        ></Button>
+          icon={<More size={16} aria-hidden="true" />}
+        />
       </DropdownMenu>
       {hardDeleteConfirmationModal.isOpen && (
         <HardDeleteConfirmationModal

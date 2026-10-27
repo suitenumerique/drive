@@ -77,15 +77,15 @@ export const getToastErrorIndicator = (page: Page): Locator =>
 
 export const getToastToggleButton = (page: Page): Locator =>
   page
-    .locator(".file-upload-toast__description")
+    .locator(".file-upload-toast__description__actions")
     .getByRole("button")
-    .filter({ has: page.locator("span.material-icons", { hasText: /keyboard_arrow/ }) });
+    .first();
 
 export const getToastCloseButton = (page: Page): Locator =>
   page
-    .locator(".file-upload-toast__description")
+    .locator(".file-upload-toast__description__actions")
     .getByRole("button")
-    .filter({ has: page.locator("span.material-icons", { hasText: "close" }) });
+    .last();
 
 export const getFilesList = (page: Page): Locator =>
   page.locator(".file-upload-toast__files");

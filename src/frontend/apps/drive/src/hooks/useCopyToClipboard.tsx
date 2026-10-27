@@ -1,3 +1,4 @@
+import { Checkmark2, ErrorFilled } from "@gouvfr-lasuite/ui-components/icons";
 import {
   addToast,
   ToasterItem,
@@ -15,7 +16,7 @@ export const useClipboard = () => {
         .then(() => {
           addToast(
             <ToasterItem>
-              <span className="material-icons">check</span>
+              <Checkmark2 aria-hidden="true" />
               <span>{successMessage ?? t("clipboard.success")}</span>
             </ToasterItem>
           );
@@ -23,7 +24,7 @@ export const useClipboard = () => {
         .catch(() => {
           addToast(
             <ToasterItem type="error">
-              <span className="material-icons">error</span>
+              <ErrorFilled aria-hidden="true" />
               <span>{errorMessage ?? t("clipboard.error")}</span>
             </ToasterItem>
           );

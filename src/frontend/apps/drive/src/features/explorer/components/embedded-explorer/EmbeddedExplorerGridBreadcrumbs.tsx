@@ -13,6 +13,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { Icon, IconSize, Button } from "@gouvfr-lasuite/ui-components";
 import { RestrictedBreadcrumbIcon } from "@/features/ui/components/breadcrumbs/RestrictedBreadcrumbIcon";
+import { ArrowDropDown } from "@gouvfr-lasuite/ui-components/icons";
 import { NavigationItem } from "../GlobalExplorerContext";
 import { useItemActionMenuItems } from "../../hooks/useItemActionMenuItems";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
@@ -346,7 +347,7 @@ export const LastItemBreadcrumb = ({
             isActive={true}
             item={item}
             onClick={() => setIsOpen(true)}
-            rightIcon={<span className="material-icons">arrow_drop_down</span>}
+            rightIcon={<ArrowDropDown aria-hidden="true" />}
           />
         }
       />

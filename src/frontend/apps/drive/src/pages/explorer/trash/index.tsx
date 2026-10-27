@@ -16,6 +16,7 @@ import {
 } from "@gouvfr-lasuite/ui-components";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { Trash } from "@gouvfr-lasuite/ui-components/icons";
 import undoIcon from "@/assets/icons/undo_blue.svg";
 import cancelIcon from "@/assets/icons/cancel_blue.svg";
 import {
@@ -96,7 +97,7 @@ export const TrashPageSelectionBarActions = () => {
   const handleRestore = async () => {
     addToast(
       <ToasterItem>
-        <span className="material-icons">delete</span>
+        <Trash aria-hidden="true" />
         <span>
           {t("explorer.actions.restore.toast", { count: selectedItems.length })}
         </span>
@@ -112,7 +113,7 @@ export const TrashPageSelectionBarActions = () => {
     }
     addToast(
       <ToasterItem>
-        <span className="material-icons">delete</span>
+        <Trash aria-hidden="true" />
         <span>{t("explorer.actions.hard_delete.toast", { count: 1 })}</span>
       </ToasterItem>,
     );
