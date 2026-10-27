@@ -1899,6 +1899,24 @@ class Development(Base):
     DEBUG = True
     LOAD_E2E_URLS = True
 
+    # Lines readable in a terminal, instead of the JSON of the deployed logs
+    LOGGING = {
+        **Base.LOGGING,
+        "formatters": {
+            "console": {
+                **Base.LOGGING["formatters"]["json"],
+                "processors": [
+                    structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                    structlog.dev.ConsoleRenderer(),
+                ],
+            },
+        },
+        "handlers": {
+            **Base.LOGGING["handlers"],
+            "console": {"class": "logging.StreamHandler", "formatter": "console"},
+        },
+    }
+
     SESSION_COOKIE_NAME = "drive_sessionid"
 
     USE_SWAGGER = True
