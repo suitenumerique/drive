@@ -329,6 +329,12 @@ export const ItemShareModal = ({
     onRestrictionUpdated,
   );
 
+  // An expired link reads as restricted, but the backend keeps its past date
+  // when the payload omits it: reopening the link must drop it as well.
+  const isLinkExpired =
+    !!item?.link_expires_at && new Date(item.link_expires_at) <= new Date();
+  const linkExpirationReset = isLinkExpired ? { link_expires_at: null } : {};
+
   return (
     <DragEventBarrier>
       <ShareModal
@@ -511,6 +517,22 @@ export const ItemShareModal = ({
         showLinkRole={true}
         linkReach={item?.computed_link_reach ?? item?.link_reach}
         linkRole={item?.computed_link_role ?? item?.link_role}
+        linkExpiresAt={
+          item?.link_expires_at ? new Date(item.link_expires_at) : null
+        }
+        onUpdateLinkExpiresAt={(value) => {
+          updateLinkConfiguration.mutate({
+            itemId: itemId,
+            // The backend requires the reach and role on every link update,
+            // even partial ones, so the current ones are sent back as is.
+            link_reach:
+              item?.computed_link_reach ??
+              item?.link_reach ??
+              LinkReach.RESTRICTED,
+            link_role: item?.computed_link_role ?? item?.link_role,
+            link_expires_at: value?.toISOString() ?? null,
+          });
+        }}
         topLinkReachMessage={linkReachTopMessage}
         topLinkRoleMessage={linkRoleTopMessage}
         onUpdateLinkRole={(value) => {
@@ -521,6 +543,7 @@ export const ItemShareModal = ({
               item?.link_reach ??
               LinkReach.RESTRICTED,
             link_role: value as LinkRole,
+            ...linkExpirationReset,
           });
         }}
         onUpdateLinkReach={(value) => {
@@ -534,6 +557,7 @@ export const ItemShareModal = ({
             itemId: itemId,
             link_reach: value as LinkReach,
             link_role: linkRole,
+            ...linkExpirationReset,
           });
         }}
         allowFileImport={config.ALLOW_SHARE_IMPORT_FILE ?? false}
