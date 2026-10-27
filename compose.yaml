@@ -33,6 +33,8 @@ services:
       - RUSTFS_ACCESS_KEY=drive
       - RUSTFS_SECRET_KEY=password
       - RUSTFS_CORS_ALLOWED_ORIGINS=http://localhost:3000
+      - RUSTFS_SCANNER_ENABLED=${RUSTFS_SCANNER_ENABLED:-false}
+      - RUSTFS_HEAL_AUTO_HEAL_ENABLE=${RUSTFS_HEAL_AUTO_HEAL_ENABLE:-false}
     ports:
       - "9000:9000"
       - "9001:9001"
