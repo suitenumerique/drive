@@ -4,6 +4,7 @@ import os
 
 from celery import Celery
 from configurations.importer import install
+from django_structlog.celery.steps import DjangoStructLogInitStep
 
 # Set the default Django settings module for the 'celery' program.
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "drive.settings")
@@ -15,6 +16,8 @@ install(check_options=True)
 from django.conf import settings  # pylint: disable=wrong-import-position
 
 app = Celery("drive")
+# Log the tasks with the context of the request that sent them
+app.steps["worker"].add(DjangoStructLogInitStep)
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.
