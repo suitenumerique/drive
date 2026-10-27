@@ -1,8 +1,13 @@
 """Tests for the logging configuration."""
 
+import hashlib
 import logging
+from io import BytesIO
 from unittest import mock
 from uuid import uuid4
+
+from django.core.cache import cache
+from django.core.files.storage import default_storage
 
 import pytest
 import structlog
@@ -11,8 +16,9 @@ from celery.signals import before_task_publish, task_prerun
 from rest_framework.test import APIClient
 
 from core import factories
-from core.models import ItemTypeChoices
+from core.models import ItemTypeChoices, ItemUploadStateChoices, RoleChoices
 from core.tasks.item import process_item_purge
+from wopi.tasks.configure_wopi import WOPI_CONFIGURATION_CACHE_KEY
 
 from drive.celery_app import app as celery_app
 
@@ -125,6 +131,50 @@ def test_logging_request_api_error(console_logs):
         "request_id": mock.ANY,
         "user_id": str(user.pk),
     }
+
+
+def test_logging_request_wopi_session(console_logs):
+    """A WOPI session should be logged with the same id from its token to the editor requests."""
+    cache.set(
+        WOPI_CONFIGURATION_CACHE_KEY,
+        {
+            "mimetypes": {
+                "application/vnd.oasis.opendocument.text": {
+                    "launch_url": "https://vendorA.com/launch_url",
+                    "client": "vendorA",
+                },
+            },
+            "extensions": {},
+            "vendorA": {"proof_keys": {}},
+        },
+    )
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        type=ItemTypeChoices.FILE,
+        filename="wopi_test.odt",
+        mimetype="application/vnd.oasis.opendocument.text",
+        update_upload_state=ItemUploadStateChoices.READY,
+        users=[(user, RoleChoices.EDITOR)],
+    )
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+    client = APIClient()
+    client.force_login(user)
+
+    access_token = client.get(f"/api/v1.0/items/{item.id}/wopi/").json()["access_token"]
+    APIClient().get(
+        f"/api/v1.0/wopi/files/{item.id}/",
+        HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        HTTP_X_WOPI_SESSIONID="editor-session-1",
+    )
+
+    wopi_session = hashlib.sha256(access_token.encode()).hexdigest()[:12]
+    finished = [line for line in console_logs if line["event"] == "request_finished"]
+    assert finished[0]["request"] == f"GET /api/v1.0/items/{item.id}/wopi/"
+    assert finished[0]["wopi_session"] == wopi_session
+    assert "wopi_client_session" not in finished[0]
+    assert finished[1]["request"] == f"GET /api/v1.0/wopi/files/{item.id}/"
+    assert finished[1]["wopi_session"] == wopi_session
+    assert finished[1]["wopi_client_session"] == "editor-session-1"
 
 
 def test_logging_request_exception(client, console_logs):
