@@ -1284,6 +1284,9 @@ class Item(TreeModel, BaseModel):
         help_text=_("Malware detection info when the analysis status is unsafe."),
     )
 
+    # Keep the path required, TreeModel declares it nullable
+    path = PathField(unique=True)
+
     label_size = 7
 
     objects = ItemManager()
