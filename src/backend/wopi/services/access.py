@@ -3,6 +3,7 @@ Services for WOPI access
 https://learn.microsoft.com/en-us/microsoft-365/cloud-storage-partner-program/rest/concepts#access-token
 """
 
+import hashlib
 from dataclasses import dataclass
 from datetime import timedelta
 from secrets import token_urlsafe
@@ -13,7 +14,16 @@ from django.contrib.auth.models import AbstractUser, AnonymousUser
 from django.core.cache import cache
 from django.utils import timezone
 
+import structlog
+
 from core.models import Item, User
+
+
+def bind_wopi_session(token: str):
+    """Bind a short hash of the access token to the logs, to follow one editor session."""
+    structlog.contextvars.bind_contextvars(
+        wopi_session=hashlib.sha256(token.encode()).hexdigest()[:12]
+    )
 
 
 class AccessError(Exception):
@@ -87,6 +97,7 @@ class AccessUserItemService:
         access_user_item = AccessUserItem(item=item, user=user)
         token_eol = timezone.now() + timedelta(seconds=effective_ttl)
         cache.set(token, access_user_item.to_dict(), timeout=effective_ttl)
+        bind_wopi_session(token)
         return token, int(round(token_eol.timestamp())) * 1000
 
     def get_access_user_item(self, token: str) -> AccessUserItem:
@@ -94,4 +105,5 @@ class AccessUserItemService:
         data = cache.get(token)
         if data is None:
             raise AccessUserItemNotFoundError("Resource not found")
+        bind_wopi_session(token)
         return AccessUserItem.from_dict(data)

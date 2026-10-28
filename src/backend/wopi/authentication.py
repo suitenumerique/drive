@@ -1,5 +1,6 @@
 """Authentication for WOPI requests."""
 
+import structlog
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
@@ -27,6 +28,10 @@ class WopiAccessTokenAuthentication(BaseAuthentication):
         """
         Authenticate the request.
         """
+        # The session of the WOPI client, to find the same editor session in its logs
+        if session_id := request.headers.get("X-WOPI-SessionId"):
+            structlog.contextvars.bind_contextvars(wopi_client_session=session_id)
+
         # First check if the access token is present in the request
         access_token = get_access_token(request)
         if not access_token:

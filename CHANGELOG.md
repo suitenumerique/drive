@@ -13,6 +13,10 @@ and this project adheres to
 - ✨(frontend) restrict and reopen folder access from the share modal
 - 🔊(backend) log rejected WOPI requests
 
+### Changed
+
+- 🔊(backend) log as JSON with django-structlog
+
 ## [v0.25.3] - 2026-10-23
 
 ### Security
