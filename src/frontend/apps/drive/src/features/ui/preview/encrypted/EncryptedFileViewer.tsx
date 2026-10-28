@@ -15,6 +15,8 @@ import { useItem } from "@/features/explorer/hooks/useQueries";
 import { useDecryptedContent } from "@/features/items/hooks/useDecryptedContent";
 import { Item } from "@/features/drivers/types";
 import { useTranslation } from "react-i18next";
+import { OOEditor } from "@/features/encryption/oo-bridge/OOEditor";
+import { MIME_TO_DOC_TYPE } from "@/features/encryption/oo-bridge/types";
 import {
   DecryptionFailurePanel,
   decryptionFailureOf,
@@ -158,6 +160,26 @@ export const EncryptedFileViewer = ({
     getEffectiveMimetype(
       file as unknown as Parameters<typeof getEffectiveMimetype>[0],
     ) ?? file.mimetype;
+
+  // Office files: use OnlyOffice client-side editor (handles its own decryption).
+  // Use the OO bridge's own MIME_TO_DOC_TYPE as the source of truth: it covers
+  // formats like text/plain and text/csv that getMimeCategory classifies as OTHER.
+  // Dispatched to a child component so the office and non-office paths
+  // each have a stable hook order. Calling the OO branch as an early
+  // `return` here while the non-office branch calls
+  // `useDecryptedContent` would break the rules of hooks the moment a
+  // user navigates from an office file to an image (or vice versa).
+  const isOfficeFormat = effectiveMimetype in MIME_TO_DOC_TYPE;
+
+  if (isOfficeFormat) {
+    const itemLike = {
+      ...file,
+      id: file.id,
+      title: file.title,
+      is_encrypted: true,
+    };
+    return <OOEditor item={itemLike as unknown as Item} />;
+  }
 
   return (
     <DecryptedFileContent

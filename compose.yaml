@@ -334,6 +334,38 @@ services:
       # Enable debug
       - ./docker/onlyoffice/log4js/production.json:/etc/onlyoffice/documentserver/log4js/production.json
 
+  collaboration-relay:
+    user: "${DOCKER_USER:-1000}"
+    build:
+      context: ./src/frontend/servers/collaboration
+      dockerfile: Dockerfile
+      target: dev # The production stage ships compiled JavaScript only; tsx is in this one
+    # Bind-mount the relay source so edits on the host hot-reload through
+    # `tsx watch` without rebuilding the image. Its node_modules is installed
+    # by `make build-frontend`.
+    volumes:
+      - ./src/frontend/servers/collaboration:/app
+    command: ["npx", "tsx", "watch", "relay.ts"]
+    ports:
+      - "4100:4100"
+    environment:
+      RELAY_PORT: "4100"
+      DRIVE_API_URL: "http://app-dev:8000"
+      # The host user has no home in the image: npm needs a writable one.
+      HOME: /tmp
+      npm_config_cache: /tmp/npm-cache
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:4100/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+
 networks:
   default: {}
   lasuite:

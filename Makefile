@@ -142,6 +142,8 @@ build-frontend: cache ?=
 build-frontend: ## build the frontend container
 	$(COMPOSE) build frontend-dev $(cache)
 	@$(FRONTEND_YARN) install --frozen-lockfile
+	$(COMPOSE) build collaboration-relay $(cache)
+	@$(COMPOSE_RUN) collaboration-relay npm ci
 .PHONY: build-frontend-development
 
 down: ## stop and remove containers, networks, images, and volumes
@@ -205,7 +207,12 @@ backend-exec-command: ## execute a command in the backend container
 run: ## start the development server and frontend development
 run: run-backend
 	$(COMPOSE) up --force-recreate -d frontend-dev
+	$(COMPOSE) up --force-recreate -d collaboration-relay
 .PHONY: run
+
+install-onlyoffice: ## Download OnlyOffice client-side assets for encrypted file editing
+	@bash scripts/install-onlyoffice.sh
+.PHONY: install-onlyoffice
 
 status: ## an alias for "docker compose ps"
 	@$(COMPOSE) ps
