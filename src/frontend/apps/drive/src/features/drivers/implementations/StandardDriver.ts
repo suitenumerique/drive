@@ -229,6 +229,7 @@ export class StandardDriver extends Driver {
     // clients can later detect a key-rotation mismatch.
     let perUserVersions: Record<string, number | null> | undefined;
     let isEncryptionRoot: boolean | undefined; // present iff the move toggles the flag
+    let maintenanceKey: string | null = null; // re-anchor only: the new root's escrow copy
 
     if (sourceEncrypted && targetEncrypted && sourceIsRoot) {
       // Case 4: self-rooted source attaches under destination chain.
@@ -382,11 +383,21 @@ export class StandardDriver extends Driver {
           };
         }
       }
-      const { encryptedKeys } = await vaultClient.shareKeys(
-        entryKey,
-        recipients,
-        chainToItem.length > 0 ? chainToItem : undefined,
-      );
+      // The re-anchored item becomes a root owned by its creator: the vault
+      // escrows `K_item` for that owner's organization. Without a creator it
+      // would escrow for the caller's, perhaps another organization: no copy,
+      // the root waits for a backfill.
+      const { encryptedKeys, maintenanceKey: newRootMaintenanceKey } =
+        await vaultClient.shareKeys(
+          entryKey,
+          recipients,
+          chainToItem.length > 0 ? chainToItem : undefined,
+          oldKeyChain.item_creator_sub ?? undefined,
+        );
+      maintenanceKey =
+        newRootMaintenanceKey && oldKeyChain.item_creator_sub
+          ? toBase64(newRootMaintenanceKey)
+          : null;
       perUserEncryptedKeys = {};
       // Versions travel as matched pairs with the per-user wraps —
       // the backend stores each wrap with its key version,
@@ -423,6 +434,7 @@ export class StandardDriver extends Driver {
       ...(perUserVersions
         ? { encryption_public_key_versions: perUserVersions }
         : {}),
+      ...(maintenanceKey ? { maintenance_key: maintenanceKey } : {}),
     };
     await fetchAPI(
       `items/${id}/move/`,
@@ -880,6 +892,7 @@ export class StandardDriver extends Driver {
       encryptionPublicKeyVersionPerUser: Record<string, number | null>;
       encryptedKeysForDescendants: Record<string, string>;
       fileKeyMapping?: Record<string, string>;
+      maintenanceKey?: string | null;
     },
   ): Promise<Item> {
     // Wire format is snake_case (consistent with the rest of the
@@ -892,6 +905,9 @@ export class StandardDriver extends Driver {
           data.encryptionPublicKeyVersionPerUser,
         encrypted_keys_for_descendants: data.encryptedKeysForDescendants,
         file_key_mapping: data.fileKeyMapping ?? {},
+        ...(data.maintenanceKey
+          ? { maintenance_key: data.maintenanceKey }
+          : {}),
       }),
     });
     const json = await response.json();
@@ -935,6 +951,16 @@ export class StandardDriver extends Driver {
   async getKeyChain(itemId: string): Promise<KeyChain> {
     const response = await fetchAPI(`items/${itemId}/key-chain/`);
     return response.json();
+  }
+
+  async storeMaintenanceKey(
+    itemId: string,
+    maintenanceKey: string,
+  ): Promise<void> {
+    await fetchAPI(`items/${itemId}/maintenance-key/`, {
+      method: "PATCH",
+      body: JSON.stringify({ maintenance_key: maintenanceKey }),
+    });
   }
 
   async acceptEncryptionAccess(

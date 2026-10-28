@@ -330,6 +330,7 @@ def test_models_items_get_abilities_forbidden(
         "convert": False,
         "encrypt": False,
         "encryption_upload_url": False,
+        "maintenance_key": False,
         "key_chain": False,
         "remove_encryption": False,
     }
@@ -385,6 +386,7 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
         "convert": False,
         "encrypt": False,
         "encryption_upload_url": False,
+        "maintenance_key": False,
         "key_chain": is_authenticated,
         "remove_encryption": False,
     }
@@ -495,6 +497,7 @@ def test_models_items_get_abilities_editor(  # noqa: PLR0913
         "convert": False,
         "encrypt": False,
         "encryption_upload_url": is_authenticated,
+        "maintenance_key": is_authenticated,
         "key_chain": is_authenticated,
         "remove_encryption": False,
     }
@@ -570,6 +573,7 @@ def test_models_items_not_root_get_abilities_owner(
         "convert": False,
         "encrypt": True,
         "encryption_upload_url": True,
+        "maintenance_key": True,
         "key_chain": True,
         "remove_encryption": True,
     }
@@ -607,6 +611,7 @@ def test_models_items_not_root_get_abilities_owner(
         "convert": False,
         "encrypt": False,
         "encryption_upload_url": False,
+        "maintenance_key": False,
         "key_chain": False,
         "remove_encryption": False,
     }
@@ -672,6 +677,7 @@ def test_models_items_not_root_get_abilities_administrator(
         "convert": False,
         "encrypt": True,
         "encryption_upload_url": True,
+        "maintenance_key": True,
         "key_chain": True,
         "remove_encryption": True,
     }
@@ -749,6 +755,7 @@ def test_models_items_not_root_get_abilities_editor_user(
         "convert": False,
         "encrypt": False,
         "encryption_upload_url": True,
+        "maintenance_key": True,
         "key_chain": True,
         "remove_encryption": False,
     }
@@ -807,6 +814,7 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         "convert": False,
         "encrypt": False,
         "encryption_upload_url": access_from_link,
+        "maintenance_key": access_from_link,
         "key_chain": True,
         "remove_encryption": False,
     }
@@ -870,6 +878,7 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "convert": False,
         "encrypt": True,
         "encryption_upload_url": True,
+        "maintenance_key": True,
         "key_chain": True,
         "remove_encryption": True,
     }
@@ -906,6 +915,7 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "convert": False,
         "encrypt": False,
         "encryption_upload_url": False,
+        "maintenance_key": False,
         "key_chain": False,
         "remove_encryption": False,
     }

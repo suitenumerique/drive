@@ -142,6 +142,19 @@ export type Entitlements = {
   };
 };
 
+/**
+ * The encryption root behind a key chain, when the caller's entry key is that
+ * root's key: with it, an empty share of the entry key backfills the root's
+ * missing maintenance escrow copy (see features/encryption/maintenanceEscrow).
+ */
+export type MaintenanceEscrow = {
+  root_item_id: string;
+  /** The root's creator: their organization decides the maintenance key. */
+  owner_sub: string | null;
+  has_maintenance_key: boolean;
+  can_store: boolean;
+};
+
 export type KeyChain = {
   user_access_item_id: string;
   encrypted_key_for_user: string;
@@ -157,6 +170,9 @@ export type KeyChain = {
    * land on the item itself for hybrids.
    */
   encryption_tree_root_item_id: string | null;
+  /** The item's creator: the owner when the item is re-anchored as its own root. */
+  item_creator_sub: string | null;
+  maintenance_escrow: MaintenanceEscrow | null;
   chain: Array<{ item_id: string; encrypted_symmetric_key: string }>;
 };
 
@@ -270,6 +286,7 @@ export abstract class Driver {
       encryptionPublicKeyVersionPerUser: Record<string, number | null>;
       encryptedKeysForDescendants: Record<string, string>;
       fileKeyMapping?: Record<string, string>;
+      maintenanceKey?: string | null;
     },
   ): Promise<Item>;
   abstract removeEncryption(
@@ -297,6 +314,11 @@ export abstract class Driver {
     },
   ): Promise<void>;
   abstract getKeyChain(itemId: string): Promise<KeyChain>;
+  /** Store a backfilled maintenance escrow copy on an encryption root. */
+  abstract storeMaintenanceKey(
+    itemId: string,
+    maintenanceKey: string,
+  ): Promise<void>;
   /** Give a pending member the key of `itemId`, which the caller holds, wrapped for them. */
   abstract acceptEncryptionAccess(
     itemId: string,

@@ -231,6 +231,9 @@ export function useRecursiveEncryptionJob({
   const recipientLabelsRef = useRef<Record<string, RecipientLabel>>({});
   // For encrypt mode, the root's per-user wrapped key map (committed).
   const rootEncryptedKeysRef = useRef<Record<string, ArrayBuffer>>({});
+  // For encrypt mode, the root key's maintenance escrow copy, when the vault
+  // returns one (the escrow is on and covers the root's owner, the encrypting user).
+  const rootMaintenanceKeyRef = useRef<ArrayBuffer | undefined>(undefined);
   // Current user's wrapped copy of the root key — entry key passed to the
   // vault when minting descendant keys via encryptWithoutKey.
   const currentUserRootWrappedRef = useRef<ArrayBuffer | null>(null);
@@ -262,6 +265,7 @@ export function useRecursiveEncryptionJob({
       pendingUserIdsRef.current = [];
       recipientLabelsRef.current = {};
       rootEncryptedKeysRef.current = {};
+      rootMaintenanceKeyRef.current = undefined;
       currentUserRootWrappedRef.current = null;
       folderWrappedKeysRef.current = new Map();
       parentEntryKeyRef.current = null;
@@ -565,6 +569,7 @@ export function useRecursiveEncryptionJob({
           publicKeys: publicKeysRef.current,
           recipientLabels: recipientLabelsRef.current,
           rootEncryptedKeysRef,
+          rootMaintenanceKeyRef,
           currentUserRootWrappedRef,
           folderWrappedKeysRef,
           signal: controller.signal,
@@ -665,6 +670,9 @@ export function useRecursiveEncryptionJob({
           encryptionPublicKeyVersionPerUser,
           encryptedKeysForDescendants,
           fileKeyMapping,
+          maintenanceKey: rootMaintenanceKeyRef.current
+            ? toBase64(rootMaintenanceKeyRef.current)
+            : null,
         });
       } else if (mode === "encrypt-into-chain") {
         const fileKeyMapping: Record<string, string> = {};
@@ -820,6 +828,7 @@ type EncryptPipelineArgs = {
   publicKeys: Record<string, ArrayBuffer>;
   recipientLabels: Record<string, RecipientLabel>;
   rootEncryptedKeysRef: React.MutableRefObject<Record<string, ArrayBuffer>>;
+  rootMaintenanceKeyRef: React.MutableRefObject<ArrayBuffer | undefined>;
   currentUserRootWrappedRef: React.MutableRefObject<ArrayBuffer | null>;
   folderWrappedKeysRef: React.MutableRefObject<Map<string, ArrayBuffer>>;
   signal: AbortSignal;
@@ -837,6 +846,7 @@ async function encryptPipeline({
   publicKeys,
   recipientLabels,
   rootEncryptedKeysRef,
+  rootMaintenanceKeyRef,
   currentUserRootWrappedRef,
   folderWrappedKeysRef,
   signal,
@@ -852,12 +862,14 @@ async function encryptPipeline({
     // Pass a labeled recipient map; the vault resolves + trust-checks each key
     // itself (binding + TOFU) and uses only the subs. `publicKeys` is keyed by
     // userId; labels come from the sourced access rows.
-    const { encryptedKeys } = await vaultClient.encryptWithoutKey(
-      new ArrayBuffer(0),
-      toRecipients(Object.keys(publicKeys), recipientLabels),
-    );
+    const { encryptedKeys, maintenanceKey } =
+      await vaultClient.encryptWithoutKey(
+        new ArrayBuffer(0),
+        toRecipients(Object.keys(publicKeys), recipientLabels),
+      );
     if (signal.aborted) throw abortError();
     rootEncryptedKeysRef.current = encryptedKeys;
+    rootMaintenanceKeyRef.current = maintenanceKey;
     const currentUserWrapped = encryptedKeys[currentUserId];
     if (!currentUserWrapped) {
       throw new Error(
@@ -906,6 +918,7 @@ async function encryptPipeline({
       publicKeys,
       recipientLabels,
       rootEncryptedKeysRef,
+      rootMaintenanceKeyRef,
       currentUserRootWrappedRef,
       folderWrappedKeysRef,
       signal: poolSignal,
@@ -925,6 +938,7 @@ type StageOneEncryptArgs = {
   publicKeys: Record<string, ArrayBuffer>;
   recipientLabels: Record<string, RecipientLabel>;
   rootEncryptedKeysRef: React.MutableRefObject<Record<string, ArrayBuffer>>;
+  rootMaintenanceKeyRef: React.MutableRefObject<ArrayBuffer | undefined>;
   currentUserRootWrappedRef: React.MutableRefObject<ArrayBuffer | null>;
   folderWrappedKeysRef: React.MutableRefObject<Map<string, ArrayBuffer>>;
   signal: AbortSignal;
@@ -941,6 +955,7 @@ async function stageOneEncryption({
   publicKeys,
   recipientLabels,
   rootEncryptedKeysRef,
+  rootMaintenanceKeyRef,
   currentUserRootWrappedRef,
   folderWrappedKeysRef,
   signal,
@@ -973,16 +988,20 @@ async function stageOneEncryption({
       // (often several MB) and is discarded after this call. Pass a labeled
       // recipient map; the vault resolves + trust-checks each key (binding +
       // TOFU) and uses only the subs.
-      const { encryptedContent: ct, encryptedKeys } =
-        await vaultClient.encryptWithoutKey(
-          plaintext,
-          toRecipients(Object.keys(publicKeys), recipientLabels),
-          {
-            optimizeMemory: true,
-          },
-        );
+      const {
+        encryptedContent: ct,
+        encryptedKeys,
+        maintenanceKey,
+      } = await vaultClient.encryptWithoutKey(
+        plaintext,
+        toRecipients(Object.keys(publicKeys), recipientLabels),
+        {
+          optimizeMemory: true,
+        },
+      );
       encryptedContent = ct;
       rootEncryptedKeysRef.current = encryptedKeys;
+      rootMaintenanceKeyRef.current = maintenanceKey;
       wrappedKey = new ArrayBuffer(0);
     } else {
       const entryKey = currentUserRootWrappedRef.current;

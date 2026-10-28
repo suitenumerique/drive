@@ -85,6 +85,7 @@ import {
 import { useAuth } from "@/features/auth/Auth";
 import { downloadDecryptedFile } from "@/features/items/hooks/useDecryptedContent";
 import { ModalRecursiveRemoveEncryption } from "@/features/encryption/ModalRecursiveRemoveEncryption";
+import { backfillMaintenanceCopy } from "@/features/encryption/maintenanceEscrow";
 import styles from "./OOEditor.module.scss";
 
 // The OnlyOffice DocsAPI is loaded as a global from the static assets
@@ -1062,6 +1063,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         setState("decrypting");
         const driver = getDriver();
         const keyChain = await driver.getKeyChain(item.id);
+        void backfillMaintenanceCopy(keyChain);
 
         const itemUrl = item.url!;
         const response = await fetch(itemUrl, {

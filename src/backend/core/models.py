@@ -1372,6 +1372,17 @@ class Item(TreeModel, BaseModel):
             "is wrapped per user in ItemEncryptionKeyWrap instead) and for unencrypted items."
         ),
     )
+    maintenance_wrapped_item_key = models.TextField(
+        null=True,
+        blank=True,
+        help_text=_(
+            "Set on encryption roots only: the root's symmetric key wrapped by the "
+            "encryption vault for the maintenance key covering its owner's organization, "
+            "base64. Opened only offline by that organization's custodians for a batch "
+            "recovery, never a recipient. Nested items need none: their keys chain from "
+            "the root's."
+        ),
+    )
 
     label_size = 7
 

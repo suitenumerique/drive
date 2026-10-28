@@ -363,6 +363,18 @@ class ItemMetadata(drf.metadata.SimpleMetadata):
 # =============================================================================
 
 
+def describe_maintenance_escrow(root, user):
+    """What a holder entering the tree at its root needs to refresh or backfill
+    the root's maintenance escrow copy: the root's owner, whose organization
+    decides the maintenance key, and whether they may store the copy."""
+    return {
+        "root_item_id": str(root.pk),
+        "owner_sub": root.creator.sub if root.creator else None,
+        "has_maintenance_key": bool(root.maintenance_wrapped_item_key),
+        "can_store": bool(root.get_abilities(user).get("maintenance_key")),
+    }
+
+
 def check_encrypt_on_move(data, *, source_is_encrypted, target_is_encrypted):
     """Encrypt-on-move (plaintext into an encrypted folder): the plaintext source picks
     up the chain wrap inline, no /encrypt/ round trip, no per-user wraps."""
@@ -433,6 +445,17 @@ def check_encrypted_move(data, *, item, user, target_is_encrypted):
         )
 
     is_encryption_root_flag = data.get("is_encryption_root")
+    # Only a re-anchor makes a new root, and only a root carries the escrow copy.
+    if data.get("maintenance_key") and is_encryption_root_flag is not True:
+        raise drf.exceptions.ValidationError(
+            {
+                "maintenance_key": _(
+                    "Only an item re-anchored as its own encryption root carries a "
+                    "maintenance escrow copy."
+                )
+            },
+            code="item_move_maintenance_key_not_root",
+        )
     if is_encryption_root_flag is True:
         check_re_anchor(
             data,
@@ -615,7 +638,8 @@ def apply_moved_encryption_state(item, data, *, moves_within_chain):
         # /encrypt/.
         item.is_encrypted = True
         item.encrypted_symmetric_key = None
-        update_fields += ["is_encrypted", "encrypted_symmetric_key"]
+        item.maintenance_wrapped_item_key = data.get("maintenance_key")
+        update_fields += ["is_encrypted", "encrypted_symmetric_key", "maintenance_wrapped_item_key"]
         write_key_wraps(
             item,
             data.get("per_user_encrypted_keys"),
@@ -636,7 +660,9 @@ def apply_moved_encryption_state(item, data, *, moves_within_chain):
         # walking the chain).
         item.is_encrypted = True
         item.encrypted_symmetric_key = encrypted_symmetric_key
-        update_fields += ["is_encrypted", "encrypted_symmetric_key"]
+        # No longer a root: the destination root's copy covers it through the chain.
+        item.maintenance_wrapped_item_key = None
+        update_fields += ["is_encrypted", "encrypted_symmetric_key", "maintenance_wrapped_item_key"]
 
     elif moves_within_chain:
         # Same-tree chain rewrap.
@@ -841,7 +867,7 @@ def clear_subtree_encryption(*, item, file_key_mapping, effective_descendants, f
 
     `file_key_mapping` maps str(file item id) to the filename under which its
     plaintext was uploaded (a new object key: objects are never overwritten). The
-    per-user wrapped keys on the root's accesses are cleared.
+    per-user wrapped keys on the root's accesses and its maintenance copy are cleared.
     `file_metadata` maps str(file item id) to fields to set with the new filename
     (the plaintext's `mimetype` and `size`), when the caller already knows them.
 
@@ -861,10 +887,11 @@ def clear_subtree_encryption(*, item, file_key_mapping, effective_descendants, f
             setattr(target, name, value)
             fields.append(name)
 
-    update_fields = ["is_encrypted", "encrypted_symmetric_key"]
+    update_fields = ["is_encrypted", "encrypted_symmetric_key", "maintenance_wrapped_item_key"]
     switch_file(item, update_fields)
     item.is_encrypted = False
     item.encrypted_symmetric_key = None
+    item.maintenance_wrapped_item_key = None
     item.save(update_fields=update_fields)
 
     for descendant in effective_descendants.iterator():
@@ -2529,6 +2556,17 @@ class ItemViewSet(
             file_key_mapping=file_key_mapping,
             effective_descendants=effective_descendants,
         )
+        # The copy is for the organization of the root's owner (its creator), but the
+        # vault escrows a new key for the caller's: from an administrator encrypting
+        # someone else's item it would be another organization's. Left empty, it is
+        # backfilled for the creator by the next holder opening the tree.
+        item.maintenance_wrapped_item_key = (
+            serializer.validated_data["maintenance_key"]
+            if item.creator_id is not None and item.creator_id == request.user.id
+            else None
+        )
+        item.save(update_fields=["maintenance_wrapped_item_key"])
+
         # Per-user wraps sit on THIS item, the encryption root: /key-chain/
         # walks from the target item upward to the user's wrap, and expects
         # that entry point to be the root. They are stored apart from the
@@ -2777,6 +2815,12 @@ class ItemViewSet(
                 "encryption_tree_root_item_id": (
                     str(encryption_tree_root_pk) if encryption_tree_root_pk else None
                 ),
+                "item_creator_sub": item.creator.sub if item.creator else None,
+                "maintenance_escrow": (
+                    describe_maintenance_escrow(entry_point_item, user)
+                    if entry_point_item.pk == encryption_tree_root_pk
+                    else None
+                ),
                 "chain": chain,
             },
             status=drf.status.HTTP_200_OK,
@@ -2857,6 +2901,66 @@ class ItemViewSet(
             {"user_id": str(pending_user.id)},
             item=item,
         )
+
+        return drf.response.Response(status=drf.status.HTTP_204_NO_CONTENT)
+
+    @drf.decorators.action(detail=True, methods=["patch"], url_path="maintenance-key")
+    def maintenance_key(self, request, *args, **kwargs):
+        """Store a maintenance escrow copy on an encryption root, when it brings something.
+
+        Accepted when the root has no copy (encrypted before the escrow was enabled,
+        or before its owner's domain was covered: the frontend backfills it with an
+        empty share), or when the stored copy names another maintenance key (the
+        owner's organization moved to a new one). A copy for the key already stored
+        is refused: it only differs by the randomness of its wrap.
+
+        The backend cannot check that the copy is for the right key, nor that it
+        wraps the root's key: the key list lives on the encryption service and only
+        the custodians can open a copy. A forged header can therefore replace a good
+        copy, but only by someone who can already edit the tree, so it corrupts the
+        tree for them alone, outside the maintenance process.
+        """
+        item = self.get_object()
+
+        if not item.is_encrypted or item.encrypted_symmetric_key is not None:
+            return drf.response.Response(
+                {"detail": _("Only an encryption root carries a maintenance escrow copy.")},
+                status=drf.status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = serializers.MaintenanceKeySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        new_copy = serializer.validated_data["maintenance_key"]
+        old_copy = item.maintenance_wrapped_item_key
+
+        if old_copy:
+            if serializers.maintenance_key_id(new_copy) == serializers.maintenance_key_id(old_copy):
+                return drf.response.Response(
+                    {
+                        "detail": _("The root already carries a copy for this maintenance key."),
+                        "code": "maintenance_key_already_stored",
+                    },
+                    status=drf.status.HTTP_409_CONFLICT,
+                )
+            # Filling an empty copy is a backfill any writer may run. Replacing one
+            # could swap a copy the custodians can open for one they cannot: an owner
+            # or an administrator only, and on the record.
+            if item.get_role(request.user) not in PRIVILEGED_ROLES:
+                raise drf.exceptions.PermissionDenied(
+                    _("Only an owner or an administrator can replace a maintenance escrow copy.")
+                )
+            logger.warning(
+                "Maintenance escrow copy of item %s replaced by user %s: key %s, was %s",
+                item.pk,
+                request.user.pk,
+                serializers.maintenance_key_id(new_copy),
+                serializers.maintenance_key_id(old_copy),
+            )
+
+        # `update_fields` keeps `updated_at` as it is: a copy is no edit of the item,
+        # and the batch import compares `updated_at` with the export's.
+        item.maintenance_wrapped_item_key = new_copy
+        item.save(update_fields=["maintenance_wrapped_item_key"])
 
         return drf.response.Response(status=drf.status.HTTP_204_NO_CONTENT)
 

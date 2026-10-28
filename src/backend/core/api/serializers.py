@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import logging
 from datetime import timedelta
@@ -348,6 +350,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     is_wopi_supported = serializers.SerializerMethodField()
     target = RestrictionTargetSerializer(read_only=True, allow_null=True)
     is_encryption_root = serializers.SerializerMethodField(read_only=True)
+    has_maintenance_key = serializers.SerializerMethodField(read_only=True)
     is_inside_encrypted_subtree = serializers.SerializerMethodField(read_only=True)
     is_pending_encryption_for_user = serializers.SerializerMethodField(read_only=True)
     encryption_public_key_version_for_user = serializers.SerializerMethodField(read_only=True)
@@ -410,6 +413,15 @@ class ListItemSerializer(serializers.ModelSerializer):
         """
         return bool(item.is_encrypted and item.encrypted_symmetric_key is None)
 
+    def get_has_maintenance_key(self, item):
+        """Whether an encryption root carries its maintenance escrow copy, null for any
+        other item. The copy itself is never exposed: only the custodians of the
+        maintenance key can use it, offline.
+        """
+        if not self.get_is_encryption_root(item):
+            return None
+        return bool(item.maintenance_wrapped_item_key)
+
     def get_is_inside_encrypted_subtree(self, item):
         """True when any ancestor of this item is encrypted.
 
@@ -463,6 +475,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "depth",
             "is_encrypted",
             "is_encryption_root",
+            "has_maintenance_key",
             "is_inside_encrypted_subtree",
             "is_pending_encryption_for_user",
             "encryption_public_key_version_for_user",
@@ -506,6 +519,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "depth",
             "is_encrypted",
             "is_encryption_root",
+            "has_maintenance_key",
             "is_inside_encrypted_subtree",
             "is_pending_encryption_for_user",
             "encryption_public_key_version_for_user",
@@ -736,6 +750,7 @@ class ItemSerializer(ListItemSerializer):
             "depth",
             "is_encrypted",
             "is_encryption_root",
+            "has_maintenance_key",
             "is_inside_encrypted_subtree",
             "is_favorite",
             "link_role",
@@ -780,6 +795,7 @@ class ItemSerializer(ListItemSerializer):
             "depth",
             "is_encrypted",
             "is_encryption_root",
+            "has_maintenance_key",
             "is_inside_encrypted_subtree",
             "is_favorite",
             "is_restricted",
@@ -1172,6 +1188,36 @@ class InvitationSerializer(serializers.ModelSerializer):
 # Suppress the warning about not implementing `create` and `update` methods
 # since we don't use a model and only rely on the serializer for validation
 # pylint: disable=abstract-method
+MAINTENANCE_COPY_VERSION = 0x01
+# A version byte, then the 16-byte id of the maintenance key, then the wrap itself.
+MAINTENANCE_COPY_HEADER_BYTES = 1 + 16
+
+
+def validate_maintenance_key(value):
+    """Check the shape of a maintenance escrow copy as the encryption vault writes it.
+
+    Only the shape: the copy can be opened by nobody but the custodians of the
+    maintenance key, offline, so a well-formed but wrong copy is caught at recovery.
+    """
+    if value is None:
+        return value
+    try:
+        raw = base64.b64decode(value, validate=True)
+    except (binascii.Error, ValueError) as error:
+        raise serializers.ValidationError(_("Must be base64.")) from error
+    if len(raw) <= MAINTENANCE_COPY_HEADER_BYTES or raw[0] != MAINTENANCE_COPY_VERSION:
+        raise serializers.ValidationError(_("Not a maintenance escrow copy."))
+    return value
+
+
+def maintenance_key_id(value):
+    """The id of the maintenance key a copy is for (bytes 2 to 17), in hexadecimal."""
+    try:
+        return base64.b64decode(value)[1:MAINTENANCE_COPY_HEADER_BYTES].hex()
+    except (binascii.Error, ValueError):
+        return "unreadable"
+
+
 class MoveItemSerializer(serializers.Serializer):
     """
     Serializer for validating input data to move an item within the tree structure.
@@ -1246,6 +1292,10 @@ class MoveItemSerializer(serializers.Serializer):
         child=serializers.CharField(),
         required=False,
     )
+    # Re-anchor only: the maintenance escrow copy of `K_item`, now a root key.
+    maintenance_key = serializers.CharField(
+        required=False, allow_null=True, validators=[validate_maintenance_key]
+    )
 
 
 BATCH_SHARE_MAX_ROWS = 100  # Keep in sync with the ui-kit share import modal max rows
@@ -1292,6 +1342,16 @@ class SDKRelayEventSerializer(serializers.Serializer):
 
 
 # pylint: disable=abstract-method
+# pylint: disable=abstract-method
+class MaintenanceKeySerializer(serializers.Serializer):
+    """Payload for PATCH /items/{id}/maintenance-key/: a refreshed or backfilled
+    maintenance escrow copy of an encryption root's key."""
+
+    maintenance_key = serializers.CharField(
+        required=True, allow_blank=False, validators=[validate_maintenance_key]
+    )
+
+
 class AcceptEncryptionAccessSerializer(serializers.Serializer):
     """Payload for PUT /items/{id}/encryption-key-wraps/ — used to "accept"
     a pending collaborator by wrapping the item's key for their
@@ -1384,6 +1444,16 @@ class EncryptItemSerializer(serializers.Serializer):
             "Mapping of file item UUID to the new filename (S3 key component) where "
             "the encrypted content was uploaded. The backend atomically updates "
             "the filename; old S3 objects are cleaned up after commit."
+        ),
+    )
+    maintenance_key = serializers.CharField(
+        required=False,
+        allow_null=True,
+        default=None,
+        validators=[validate_maintenance_key],
+        help_text=(
+            "The new root key's maintenance escrow copy, base64, when the encryption "
+            "service runs the escrow and covers the owner."
         ),
     )
 

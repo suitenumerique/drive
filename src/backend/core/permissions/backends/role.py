@@ -197,6 +197,7 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
             "favorite": self.can_favorite(),
             "key_chain": self.can_get_key_chain(),
             "link_configuration": self.can_manage(),
+            "maintenance_key": self.can_upload_encrypted_content(),
             "invite_owner": self.can_invite_owner(),
             "link_select_options": self.link_select_options(),
             "move": self.can_move(),
