@@ -3863,6 +3863,7 @@ class ConfigView(drf.views.APIView):
             "DATA_UPLOAD_MAX_MEMORY_SIZE",
             "ENCRYPTION_FEATURE_ENABLED",
             "ENCRYPTION_INTERFACE_URL",
+            "ENCRYPTION_ONLYOFFICE_SANDBOX_URL",
             "ENCRYPTION_VAULT_URL",
             "ENVIRONMENT",
             "FRONTEND_THEME",

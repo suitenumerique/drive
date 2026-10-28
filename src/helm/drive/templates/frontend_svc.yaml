@@ -17,5 +17,9 @@ spec:
       targetPort: {{ .Values.frontend.service.targetPort }}
       protocol: TCP
       name: http
+    - port: {{ .Values.frontend.service.sandboxPort }}
+      targetPort: sandbox
+      protocol: TCP
+      name: sandbox
   selector:
     {{- include "drive.common.selectorLabels" (list . $component) | nindent 4 }}

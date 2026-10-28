@@ -85,6 +85,8 @@ openspec/
 
 # OnlyOffice client-side assets (downloaded via scripts/install-onlyoffice.sh)
 src/frontend/apps/drive/public/onlyoffice/
+# The OnlyOffice sandbox page, built by scripts/build-onlyoffice-sandbox.mjs
+src/frontend/apps/drive/public/onlyoffice-sandbox/
 
 # Various
 .turbo

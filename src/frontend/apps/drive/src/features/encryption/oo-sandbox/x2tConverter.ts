@@ -6,7 +6,7 @@
  * browser via WebAssembly — no server involved.
  */
 
-import { EXTENSION_TO_X2T_TYPE } from "./types";
+import { EXTENSION_TO_X2T_TYPE } from "../oo-bridge/types";
 
 // x2t WASM module interface (Emscripten)
 interface X2TModule {

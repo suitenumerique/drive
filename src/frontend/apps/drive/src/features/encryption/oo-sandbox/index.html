@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex, nofollow" />
+    <!--
+      The same policy as the one the server sends (conf/default.conf), kept
+      here so development, where the page is served without it, runs under
+      it too. OnlyOffice needs inline scripts, eval and WebAssembly; every
+      fetch stays on this origin.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' data: blob:; worker-src 'self' blob:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
+    <title>OnlyOffice</title>
+    <style>
+      html,
+      body,
+      #oo-editor-placeholder {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+      /* OnlyOffice sizes its frame itself: fill the page. */
+      iframe[name="frameEditor"] {
+        display: block;
+        width: 100% !important;
+        height: 100% !important;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- OnlyOffice replaces this element with its own iframe[name="frameEditor"]. -->
+    <div id="oo-editor-placeholder"></div>
+    <script src="host.js"></script>
+  </body>
+</html>

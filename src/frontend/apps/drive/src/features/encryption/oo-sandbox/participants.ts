@@ -12,7 +12,7 @@
  * comments.
  */
 
-import type { OOParticipant, OOParticipantList } from "./types";
+import type { OOParticipant, OOParticipantList } from "../oo-bridge/types";
 
 export interface LocalUser {
   driveId: string;

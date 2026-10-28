@@ -58,6 +58,9 @@ spec:
             - name: http
               containerPort: {{ .Values.frontend.service.targetPort }}
               protocol: TCP
+            - name: sandbox
+              containerPort: {{ .Values.frontend.service.sandboxPort }}
+              protocol: TCP
           {{- if .Values.frontend.probes.liveness }}
           livenessProbe:
             {{- include "drive.probes.abstract" (merge .Values.frontend.probes.liveness (dict "targetPort" .Values.frontend.service.targetPort )) | nindent 12 }}

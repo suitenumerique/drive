@@ -219,6 +219,7 @@ export type ApiConfig = {
   DATA_UPLOAD_MAX_MEMORY_SIZE?: number;
   ENCRYPTION_FEATURE_ENABLED?: boolean;
   ENCRYPTION_INTERFACE_URL?: string | null;
+  ENCRYPTION_ONLYOFFICE_SANDBOX_URL?: string | null;
   ENCRYPTION_VAULT_URL?: string | null;
   POSTHOG_KEY?: string;
   POSTHOG_HOST?: string;

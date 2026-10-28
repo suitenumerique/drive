@@ -1,4 +1,4 @@
-import type { OOChange, OOMessage } from "./types";
+import type { OOChange, OOMessage } from "../oo-bridge/types";
 
 let patchIndex = 0;
 

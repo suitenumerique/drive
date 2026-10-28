@@ -1,0 +1,54 @@
+{{- /* The editor of encrypted documents, served by the frontend on its own origin. */}}
+{{- if .Values.ingressOnlyofficeSandbox.enabled -}}
+{{- $fullName := include "drive.fullname" . -}}
+{{- if and .Values.ingressOnlyofficeSandbox.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
+  {{- if not (hasKey .Values.ingressOnlyofficeSandbox.annotations "kubernetes.io/ingress.class") }}
+  {{- $_ := set .Values.ingressOnlyofficeSandbox.annotations "kubernetes.io/ingress.class" .Values.ingressOnlyofficeSandbox.className}}
+  {{- end }}
+{{- end }}
+{{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
+apiVersion: networking.k8s.io/v1
+{{- else if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion -}}
+apiVersion: networking.k8s.io/v1beta1
+{{- else -}}
+apiVersion: extensions/v1beta1
+{{- end }}
+kind: Ingress
+metadata:
+  name: {{ $fullName }}-onlyoffice-sandbox
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "drive.labels" . | nindent 4 }}
+  {{- with .Values.ingressOnlyofficeSandbox.annotations }}
+  annotations:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if and .Values.ingressOnlyofficeSandbox.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
+  ingressClassName: {{ .Values.ingressOnlyofficeSandbox.className }}
+  {{- end }}
+  {{- if .Values.ingressOnlyofficeSandbox.tls.enabled }}
+  tls:
+    - secretName: {{ .Values.ingressOnlyofficeSandbox.tls.secretName | default (printf "%s-onlyoffice-sandbox-tls" $fullName) | quote }}
+      hosts:
+        - {{ .Values.ingressOnlyofficeSandbox.host | quote }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingressOnlyofficeSandbox.host | quote }}
+      http:
+        paths:
+          - path: /
+            {{- if semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion }}
+            pathType: Prefix
+            {{- end }}
+            backend:
+              {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+              service:
+                name: {{ include "drive.frontend.fullname" . }}
+                port:
+                  number: {{ .Values.frontend.service.sandboxPort }}
+              {{- else }}
+              serviceName: {{ include "drive.frontend.fullname" . }}
+              servicePort: {{ .Values.frontend.service.sandboxPort }}
+              {{- end }}
+{{- end }}

@@ -1115,6 +1115,12 @@ class Base(Configuration):
     ENCRYPTION_INTERFACE_URL = values.Value(
         None, environ_name="ENCRYPTION_INTERFACE_URL", environ_prefix=None
     )
+    # The page running the OnlyOffice editor of encrypted documents, served on its
+    # own origin (the frontend image's sandbox port): unset, those documents
+    # are not opened in the editor.
+    ENCRYPTION_ONLYOFFICE_SANDBOX_URL = values.Value(
+        None, environ_name="ENCRYPTION_ONLYOFFICE_SANDBOX_URL", environ_prefix=None
+    )
     # The user's account settings (e.g. LaSuite Accounts), shown as "Manage
     # account" in the user menu. When set, encryption is managed there and the
     # menu shows no encryption entry of its own.

@@ -3,24 +3,85 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  // Keep position:relative so the `relayFailed` cloud_off badge
-  // (absolutely positioned bottom-left) still anchors to us rather
-  // than escaping up to the page.
+  // Anchors the `relayFailed` badge.
   position: relative;
 
-  // The editor area sits below the (optional) save-error banner and
-  // fills the remaining height. Overlays (loading, crash) are
-  // absolutely positioned inside this wrapper, not the outer
-  // container, so the banner is never covered.
+  // Below the optional save-error banner, filling the rest. Overlays sit
+  // inside it, so the banner is never covered.
   .editorArea {
     flex: 1 1 auto;
     min-height: 0;
     position: relative;
   }
 
-  :global(iframe[name="frameEditor"]) {
-    width: 100% !important;
-    height: 100% !important;
+  .frameHost {
+    position: absolute;
+    inset: 0;
+  }
+
+  .sandboxFrame {
+    display: block;
+    width: 100%;
+    height: 100%;
     border: none;
   }
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--c--globals--spacings--base);
+  background: var(--c--contextuals--background--surface--primary);
+}
+
+.overlayTop {
+  z-index: 20;
+}
+
+.overlayText {
+  color: var(--c--contextuals--content--semantic--neutral--secondary);
+}
+
+.saveError {
+  flex-shrink: 0;
+  padding: var(--c--globals--spacings--xs) var(--c--globals--spacings--base) 0;
+}
+
+.hint {
+  max-width: 480px;
+  text-align: left;
+}
+
+.hintTitle {
+  display: block;
+  margin-bottom: var(--c--globals--spacings--3xs);
+}
+
+.hintText {
+  margin: 0 0 var(--c--globals--spacings--3xs);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.relayFailed {
+  position: absolute;
+  bottom: var(--c--globals--spacings--xs);
+  left: var(--c--globals--spacings--xs);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--c--globals--spacings--3xs);
+  padding: var(--c--globals--spacings--3xs) var(--c--globals--spacings--xs);
+  border-radius: 4px;
+  font-size: var(--c--globals--font--sizes--s);
+  background: var(--c--contextuals--background--semantic--error--tertiary);
+  color: var(--c--contextuals--content--semantic--error--primary);
+  pointer-events: none;
 }

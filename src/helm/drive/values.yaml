@@ -50,6 +50,21 @@ ingress:
   ## @param ingress.customBackends Add custom backends to ingress
   customBackends: []
 
+## @param ingressOnlyofficeSandbox.enabled whether to enable the Ingress of the OnlyOffice sandbox, the editor of encrypted documents, or not
+## @param ingressOnlyofficeSandbox.className IngressClass to use for the Ingress
+## @param ingressOnlyofficeSandbox.host Host for the Ingress, on another origin than Drive's (its URL goes in ENCRYPTION_ONLYOFFICE_SANDBOX_URL)
+## @param ingressOnlyofficeSandbox.annotations Annotations to add to the Ingress
+## @param ingressOnlyofficeSandbox.tls.enabled Whether to enable TLS for the Ingress
+## @param ingressOnlyofficeSandbox.tls.secretName Secret name for TLS config
+ingressOnlyofficeSandbox:
+  enabled: false
+  className: null
+  host: onlyoffice-encryption.example.com
+  annotations: {}
+  tls:
+    enabled: true
+    secretName: null
+
 ## @param ingressAdmin.enabled whether to enable the Ingress or not
 ## @param ingressAdmin.className IngressClass to use for the Ingress
 ## @param ingressAdmin.host Host for the Ingress
@@ -581,10 +596,12 @@ frontend:
   ## @param frontend.service.port frontend Service listening port
   ## @param frontend.service.targetPort frontend container listening port
   ## @param frontend.service.annotations Annotations to add to the frontend Service
+  ## @param frontend.service.sandboxPort frontend Service and container port of the OnlyOffice sandbox
   service:
     type: ClusterIP
     port: 80
     targetPort: 8080
+    sandboxPort: 8081
     annotations: {}
 
   ## @param frontend.probes Configure probe for frontend

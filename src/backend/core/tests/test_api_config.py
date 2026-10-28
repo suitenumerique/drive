@@ -25,6 +25,7 @@ pytestmark = pytest.mark.django_db
     DATA_UPLOAD_MAX_MEMORY_SIZE=2048,
     ENCRYPTION_FEATURE_ENABLED=True,
     ENCRYPTION_INTERFACE_URL="http://encryption.test/",
+    ENCRYPTION_ONLYOFFICE_SANDBOX_URL="http://onlyoffice-encryption.test/onlyoffice-sandbox/index.html",
     ENCRYPTION_VAULT_URL="http://data.encryption.test/",
     FRONTEND_THEME="test-theme",
     FRONTEND_MORE_LINK="https://test.com",
@@ -74,6 +75,9 @@ def test_api_config(is_authenticated):
         "DATA_UPLOAD_MAX_MEMORY_SIZE": 2048,
         "ENCRYPTION_FEATURE_ENABLED": True,
         "ENCRYPTION_INTERFACE_URL": "http://encryption.test/",
+        "ENCRYPTION_ONLYOFFICE_SANDBOX_URL": (
+            "http://onlyoffice-encryption.test/onlyoffice-sandbox/index.html"
+        ),
         "ENCRYPTION_VAULT_URL": "http://data.encryption.test/",
         "ENVIRONMENT": "test",
         "FRONTEND_THEME": "test-theme",

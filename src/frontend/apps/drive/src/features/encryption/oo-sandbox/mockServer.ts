@@ -1,4 +1,8 @@
-import type { MockServerCallbacks, OOChange, OOMessage } from "./types";
+import type {
+  MockServerCallbacks,
+  OOChange,
+  OOMessage,
+} from "../oo-bridge/types";
 import {
   getParticipants,
   getOOInternalUserId,
