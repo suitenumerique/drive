@@ -12,7 +12,7 @@ import {
   clickToSharedWithMe,
   navigateToFolder,
 } from "./utils-navigate";
-import { createFolderInCurrentFolder } from "./utils-item";
+import { createFolderInCurrentFolder, getNewButton } from "./utils-item";
 import { shareCurrentItemWithWebkitUser } from "./utils/share-utils";
 import { expectRowItem } from "./utils-embedded-grid";
 import { expectExplorerBreadcrumbs } from "./utils-explorer";
@@ -71,7 +71,7 @@ const createViaNewMenu = async (
   page: Page,
   opts: { menuItem: string; inputLabel: string; name: string },
 ) => {
-  await page.getByRole("button", { name: "New" }).click();
+  await getNewButton(page).click();
   await page.getByRole("menuitem", { name: opts.menuItem }).click();
   await page.getByRole("textbox", { name: opts.inputLabel }).fill(opts.name);
   await page.getByRole("button", { name: "Create" }).click();
