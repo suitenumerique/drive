@@ -11,6 +11,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(backend) keep the file on a WOPI rename to its current name
+- ♿️(frontend) associate file list headers with their cells
 
 ## [v0.26.0] - 2026-11-04
 

@@ -5,6 +5,7 @@ type SortColumnId = NonNullable<SortState>["columnId"];
 
 export type ColumnHeaderProps = {
   label: string;
+  labelId: string;
   columnId: SortColumnId;
   sortState: SortState;
   onSort: (columnId: SortColumnId) => void;
@@ -13,6 +14,7 @@ export type ColumnHeaderProps = {
 
 export const ColumnHeader = ({
   label,
+  labelId,
   columnId,
   sortState,
   onSort,
@@ -20,9 +22,16 @@ export const ColumnHeader = ({
 }: ColumnHeaderProps) => {
   return (
     <div className="c__datagrid__header fs-h5 c__datagrid__header--sortable explorer__grid__header">
-      <span className="explorer__grid__header__label">{label}</span>
+      <span id={labelId} className="explorer__grid__header__label">
+        {label}
+      </span>
       {sortable && (
-        <SortColumnButton columnId={columnId} sortState={sortState} onSort={onSort} />
+        <SortColumnButton
+          columnId={columnId}
+          columnLabel={label}
+          sortState={sortState}
+          onSort={onSort}
+        />
       )}
     </div>
   );

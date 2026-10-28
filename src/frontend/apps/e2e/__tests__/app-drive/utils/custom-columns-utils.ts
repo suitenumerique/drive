@@ -60,10 +60,20 @@ const clickSortAndWaitForStateChange = async (
   });
 };
 
-const SORT_TRANSITIONS: Record<string, string> = {
-  "Sort ascending": "Sort descending",
-  "Sort descending": "Reset sorting",
-  "Reset sorting": "Sort ascending",
+const nextSortLabel = (label: string | null): string | undefined => {
+  const ascending = label?.match(/^Sort (.+) ascending$/);
+  if (ascending) {
+    return `Sort ${ascending[1]} descending`;
+  }
+  const descending = label?.match(/^Sort (.+) descending$/);
+  if (descending) {
+    return `Reset ${descending[1]} sorting`;
+  }
+  const reset = label?.match(/^Reset (.+) sorting$/);
+  if (reset) {
+    return `Sort ${reset[1]} ascending`;
+  }
+  return undefined;
 };
 
 /**
@@ -75,7 +85,7 @@ export const clickNameSortButton = async (page: Page) => {
     ".explorer__grid__header button[aria-label]",
   );
   const ariaLabel = await sortButton.getAttribute("aria-label");
-  const nextLabel = SORT_TRANSITIONS[ariaLabel ?? ""];
+  const nextLabel = nextSortLabel(ariaLabel);
   if (nextLabel) {
     await clickSortAndWaitForStateChange(sortButton, nextLabel);
   } else {
@@ -91,7 +101,7 @@ export const clickColumnSortButton = async (page: Page, slot: 1 | 2) => {
   // Second button in the header = sort button (first = dropdown trigger)
   const sortButton = header.locator(".explorer__grid__header button").nth(1);
   const ariaLabel = await sortButton.getAttribute("aria-label");
-  const nextLabel = SORT_TRANSITIONS[ariaLabel ?? ""];
+  const nextLabel = nextSortLabel(ariaLabel);
   if (nextLabel) {
     await clickSortAndWaitForStateChange(sortButton, nextLabel);
   } else {
