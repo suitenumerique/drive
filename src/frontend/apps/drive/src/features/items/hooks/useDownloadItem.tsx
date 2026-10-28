@@ -3,6 +3,7 @@ import { ModalSize, useModals } from "@gouvfr-lasuite/ui-components";
 import { downloadFile } from "../utils";
 import { useAuth } from "@/features/auth/Auth";
 import { useTranslation } from "react-i18next";
+import { ErrorFilled } from "@gouvfr-lasuite/ui-components/icons";
 import {
   addToast,
   ToasterItem,
@@ -18,7 +19,7 @@ export const useDownloadItem = () => {
     if (!item?.url || !item?.title) {
       addToast(
         <ToasterItem type="error">
-          <span className="material-icons">error</span>
+          <ErrorFilled aria-hidden="true" />
           <span>{t("file_download_modal.error.no_url_or_title")}</span>
         </ToasterItem>,
       );

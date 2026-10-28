@@ -12,6 +12,7 @@ import { CircularProgress } from "@/features/ui/components/circular-progress/Cir
 import { formatSize } from "@/features/explorer/utils/utils";
 import { ToastContentProps } from "react-toastify";
 import { ItemIcon } from "../icons/ItemIcon";
+import { ChevronDown, ChevronUp, XMark } from "@gouvfr-lasuite/ui-components/icons";
 import {
   UploadingState,
   UploadingStep,
@@ -107,9 +108,11 @@ export const FileRow = ({
             <CircularProgress progress={meta.progress} />
             {hovered && (
               <div className="file-upload-toast__files__item__cancel-overlay">
-                <span className="material-icons file-upload-toast__files__item__cancel-icon">
-                  close
-                </span>
+                <XMark
+                  size={16}
+                  aria-hidden="true"
+                  className="file-upload-toast__files__item__cancel-icon"
+                />
               </div>
             )}
           </div>
@@ -270,9 +273,11 @@ export const FileUploadToast = (
                 variant="tertiary"
                 size="small"
                 icon={
-                  <span className="material-icons">
-                    {isOpen ? "keyboard_arrow_up" : "keyboard_arrow_down"}
-                  </span>
+                  isOpen ? (
+                    <ChevronUp size={16} aria-hidden="true" />
+                  ) : (
+                    <ChevronDown size={16} aria-hidden="true" />
+                  )
                 }
                 onClick={() => setIsOpen(!isOpen)}
               ></Button>
@@ -283,14 +288,14 @@ export const FileUploadToast = (
                 onClick={props.closeToast}
                 variant="tertiary"
                 size="small"
-                icon={<span className="material-icons">close</span>}
+                icon={<XMark size={16} aria-hidden="true" />}
               ></Button>
             ) : (
               <Button
                 onClick={() => setIsCancelModalOpen(true)}
                 variant="tertiary"
                 size="small"
-                icon={<span className="material-icons">close</span>}
+                icon={<XMark size={16} aria-hidden="true" />}
               ></Button>
             )}
           </div>

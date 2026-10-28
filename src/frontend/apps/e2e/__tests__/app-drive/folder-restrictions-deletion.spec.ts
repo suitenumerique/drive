@@ -223,7 +223,7 @@ for (const mobile of [false, true]) {
     // 3. Navigate back via the mobile back button or desktop parent breadcrumb.
     // Verify the actual parent route and its listing of the restricted entry.
     if (mobile)
-      await breadcrumbs.getByRole("button", { name: "chevron_left" }).click();
+      await breadcrumbs.getByRole("button", { name: "Previous" }).click();
     else await breadcrumbs.getByText(names.parent, { exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/items/${folders.parent.id}$`));
     await expect(await getRowItem(page, names.accessible)).toBeVisible();

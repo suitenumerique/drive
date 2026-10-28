@@ -147,7 +147,7 @@ export async function openSharing(
   } else if (entry === "mobile breadcrumb") {
     await page
       .locator(".explorer__content__breadcrumbs--mobile")
-      .getByRole("button", { name: "more_vert" })
+      .getByRole("button", { name: /^More actions for / })
       .click();
     await page.getByRole("menuitem", { name: "Share", exact: true }).click();
   } else if (entry === "favorites") {
@@ -159,7 +159,7 @@ export async function openSharing(
     await clickOnRowItemActions(page, title, "Info");
     await page
       .getByTestId("right-panel")
-      .getByRole("button", { name: /group|Share/ })
+      .getByRole("button", { name: /^Share/ })
       .click();
   }
   await expect(shareModal(page)).toBeVisible();

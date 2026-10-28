@@ -31,6 +31,7 @@ import { useAppRestrictionUpdated } from "./useAppRestrictionUpdated";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useItemActionMenuItems } from "../../hooks/useItemActionMenuItems";
 import { Item, ItemType } from "@/features/drivers/types";
+import { ChevronLeft, MoreVertical } from "@gouvfr-lasuite/ui-components/icons";
 
 export const AppExplorerBreadcrumbs = () => {
   const { item, onNavigate } = useGlobalExplorer();
@@ -88,7 +89,8 @@ export const AppExplorerBreadcrumbs = () => {
               }
             />
             <Button
-              icon={<img src={createFolderSvg.src} alt="Create Folder" />}
+              icon={<img src={createFolderSvg.src} alt="" />}
+              aria-label={t("explorer.tree.create.folder")}
               variant="tertiary"
               data-testid="create-folder-button"
               size="small"
@@ -165,7 +167,8 @@ export const ExplorerBreadcrumbsMobile = () => {
               >
                 <Button
                   variant="tertiary"
-                  icon={<span className="material-icons">more_vert</span>}
+                  icon={<MoreVertical aria-hidden="true" />}
+                  aria-label={t("explorer.breadcrumbs.more_actions")}
                   onClick={() => setIsCreateMenuOpen(true)}
                 />
               </DropdownMenu>
@@ -206,7 +209,8 @@ export const ExplorerBreadcrumbsMobile = () => {
               <Button
                 variant="bordered"
                 color="neutral"
-                icon={<span className="material-icons">chevron_left</span>}
+                icon={<ChevronLeft aria-hidden="true" />}
+                aria-label={t("explorer.breadcrumbs.back")}
                 onClick={() => {
                   if (parent?.id === DefaultRoute.SHARED_WITH_ME) {
                     router.push("/explorer/items/shared-with-me");
@@ -253,7 +257,10 @@ export const ExplorerBreadcrumbsMobile = () => {
             trigger={
               <Button
                 variant="tertiary"
-                icon={<span className="material-icons">more_vert</span>}
+                icon={<MoreVertical aria-hidden="true" />}
+                aria-label={t("explorer.grid.actions.button_aria_label", {
+                  name: item.title,
+                })}
                 onClick={() => setIsActionMenuOpen(true)}
               />
             }

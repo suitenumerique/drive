@@ -12,6 +12,7 @@ import {
 } from "@/features/ui/components/breadcrumbs/Breadcrumbs";
 import { useTranslation } from "react-i18next";
 import { Icon, IconSize, Button } from "@gouvfr-lasuite/ui-components";
+import { ArrowDropDown } from "@gouvfr-lasuite/ui-components/icons";
 import { NavigationItem } from "../GlobalExplorerContext";
 import { useItemActionMenuItems } from "../../hooks/useItemActionMenuItems";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
@@ -304,6 +305,7 @@ export const LastItemBreadcrumb = ({
   item: Item;
   onRestrictionUpdated?: (item: Item) => void | Promise<void>;
 }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const { getMenuItems, modals, openShareModal } = useItemActionMenuItems({
     onRestrictionUpdated,
@@ -343,7 +345,7 @@ export const LastItemBreadcrumb = ({
             isActive={true}
             item={item}
             onClick={() => setIsOpen(true)}
-            rightIcon={<span className="material-icons">arrow_drop_down</span>}
+            rightIcon={<ArrowDropDown aria-hidden="true" />}
           />
         }
       />
@@ -352,6 +354,7 @@ export const LastItemBreadcrumb = ({
           variant="tertiary"
           size="small"
           icon={icon}
+          aria-label={t("explorer.rightPanel.share")}
           onClick={() => openShareModal(item)}
           data-testid="share-button"
         />

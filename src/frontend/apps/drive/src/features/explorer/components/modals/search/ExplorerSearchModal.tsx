@@ -8,6 +8,7 @@ import {
   QuickSearchItemTemplate,
   SmartScroller,
 } from "@gouvfr-lasuite/ui-components";
+import { Enter } from "@gouvfr-lasuite/ui-components/icons";
 import { useTranslation } from "react-i18next";
 
 import { useEffect, useRef, useState } from "react";
@@ -202,9 +203,10 @@ const SearchItem = ({ item }: { item: Item }) => {
   return (
     <QuickSearchItemTemplate
       right={
-        <span className="material-icons explorer__search__modal__item__right-icon">
-          keyboard_return
-        </span>
+        <Enter
+          aria-hidden="true"
+          className="explorer__search__modal__item__right-icon"
+        />
       }
       left={
         <div

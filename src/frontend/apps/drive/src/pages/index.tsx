@@ -24,6 +24,7 @@ import { Feedback } from "@/features/feedback/Feedback";
 import { useRedirectAfterLogin } from "@/hooks/useRedirectAfterLogin";
 import { LeftPanelFooter } from "@/features/layouts/components/explorer/ExplorerLayout";
 import { useMessagesWidget } from "@/features/feedback/useMessagesWidget";
+import { Lab, Lock } from "@gouvfr-lasuite/ui-components/icons";
 
 export default function HomePage() {
   const { t } = useTranslation();
@@ -38,7 +39,7 @@ export default function HomePage() {
     if (failure === "alpha") {
       addToast(
         <ToasterItem type="error">
-          <span className="material-icons">science</span>
+          <Lab aria-hidden="true" />
           <span>{t("authentication.error.alpha")}</span>
         </ToasterItem>,
       );
@@ -46,7 +47,7 @@ export default function HomePage() {
     if (failure === "user_cannot_access_app") {
       addToast(
         <ToasterItem type="error">
-          <span className="material-icons">lock</span>
+          <Lock aria-hidden="true" />
           <span>{t("authentication.error.user_cannot_access_app")}</span>
         </ToasterItem>,
       );

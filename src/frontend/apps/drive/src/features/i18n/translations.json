@@ -183,7 +183,9 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Spaces",
-          "all_folders": "All folders"
+          "all_folders": "All folders",
+          "back": "Previous",
+          "more_actions": "More actions"
         },
         "modal": {
           "move": {
@@ -223,8 +225,10 @@
             "text": "No files selected",
             "alt": "No files selected image"
           },
+          "close": "Close",
           "sharing": "Sharing",
           "share": "Share",
+          "share_count": "Share, {{count}} members",
           "format": "Format",
           "updated_at": "Updated at",
           "created_at": "Created at",
@@ -634,6 +638,7 @@
         "my_files": "My files"
       },
       "anonymous_dropdown_menu": {
+        "button": "More actions",
         "copy_link": "Copy link",
         "languages": "Languages"
       },
@@ -900,7 +905,9 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Espaces",
-          "all_folders": "Tous les dossiers"
+          "all_folders": "Tous les dossiers",
+          "back": "Précédent",
+          "more_actions": "Plus d'actions"
         },
         "modal": {
           "move": {
@@ -940,8 +947,10 @@
             "text": "Aucun fichier sélectionné",
             "alt": "Image d'un fichier sélectionné"
           },
+          "close": "Fermer",
           "sharing": "Partage",
           "share": "Partager",
+          "share_count": "Partager, {{count}} membres",
           "format": "Format",
           "updated_at": "Modification",
           "created_at": "Création",
@@ -1333,7 +1342,7 @@
             "move": "Déplacer",
             "download": "Télécharger",
             "rename": "Renommer",
-            "favorite": "Favoris",
+            "favorite": "Ajouter aux favoris",
             "unfavorite": "Retirer des favoris",
             "duplicate": "Dupliquer",
             "duplicate_error": "Une erreur est survenue lors de la duplication.",
@@ -1351,6 +1360,7 @@
         "my_files": "Mes fichiers"
       },
       "anonymous_dropdown_menu": {
+        "button": "Plus d'actions",
         "copy_link": "Copier le lien",
         "languages": "Langue"
       },
@@ -1617,7 +1627,9 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Werkruimten",
-          "all_folders": "Alle mappen"
+          "all_folders": "Alle mappen",
+          "back": "Vorige",
+          "more_actions": "Meer acties"
         },
         "modal": {
           "move": {
@@ -1657,8 +1669,10 @@
             "text": "Geen bestanden geselecteerd",
             "alt": "Geen bestanden geselecteerd afbeelding"
           },
+          "close": "Sluiten",
           "sharing": "Delen",
           "share": "Deel",
+          "share_count": "Deel, {{count}} leden",
           "format": "Formaat",
           "updated_at": "Bijgewerkt op",
           "created_at": "Gecreëerd op",
@@ -2050,7 +2064,7 @@
             "move": "Verplaats",
             "download": "Download",
             "rename": "Hernoem",
-            "favorite": "Favoriet",
+            "favorite": "Toevoegen aan favorieten",
             "unfavorite": "Verwijder uit favorieten",
             "duplicate": "Dupliceer",
             "duplicate_error": "Er is een fout opgetreden bij het dupliceren.",
@@ -2068,6 +2082,7 @@
         "my_files": "Mijn bestanden"
       },
       "anonymous_dropdown_menu": {
+        "button": "Meer acties",
         "copy_link": "Kopieer link",
         "languages": "Talen"
       },
