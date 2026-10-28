@@ -171,21 +171,40 @@ def test_logging_request_wopi_session(console_logs):
     client = APIClient()
     client.force_login(user)
 
-    access_token = client.get(f"/api/v1.0/items/{item.id}/wopi/").json()["access_token"]
+    data = client.get(f"/api/v1.0/items/{item.id}/wopi/").json()
     APIClient().get(
         f"/api/v1.0/wopi/files/{item.id}/",
-        HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        HTTP_AUTHORIZATION=f"Bearer {data['access_token']}",
         HTTP_X_WOPI_SESSIONID="editor-session-1",
     )
 
-    token_hash = hashlib.sha256(access_token.encode()).hexdigest()[:12]
-    finished = [line for line in console_logs if line["event"] == "request_finished"]
-    assert finished[0]["request"] == f"GET /api/v1.0/items/{item.id}/wopi/"
-    assert finished[0]["wopi_token_hash"] == token_hash
-    assert "wopi_client_session_id" not in finished[0]
-    assert finished[1]["request"] == f"GET /api/v1.0/wopi/files/{item.id}/"
-    assert finished[1]["wopi_token_hash"] == token_hash
-    assert finished[1]["wopi_client_session_id"] == "editor-session-1"
+    token_hash = hashlib.sha256(data["access_token"].encode()).hexdigest()[:12]
+    assert f"&usid={token_hash}&" in data["launch_url"]
+    assert [line for line in console_logs if line["event"] == "request_finished"] == [
+        {
+            "event": "request_finished",
+            "level": "info",
+            "logger": "django_structlog.middlewares.request",
+            "code": 200,
+            "duration_ms": mock.ANY,
+            "request": f"GET /api/v1.0/items/{item.id}/wopi/",
+            "request_id": mock.ANY,
+            "user_id": str(user.pk),
+            "wopi_token_hash": token_hash,
+        },
+        {
+            "event": "request_finished",
+            "level": "info",
+            "logger": "django_structlog.middlewares.request",
+            "code": 200,
+            "duration_ms": mock.ANY,
+            "request": f"GET /api/v1.0/wopi/files/{item.id}/",
+            "request_id": mock.ANY,
+            "user_id": str(user.pk),
+            "wopi_client_session_id": "editor-session-1",
+            "wopi_token_hash": token_hash,
+        },
+    ]
 
 
 def test_logging_request_exception(client, console_logs):
