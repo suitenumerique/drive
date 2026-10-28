@@ -1509,6 +1509,45 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    MENSHEN_ENABLED = values.BooleanValue(
+        False, environ_name="MENSHEN_ENABLED", environ_prefix=None
+    )
+    MENSHEN_SERVER_URL = values.Value(None, environ_name="MENSHEN_SERVER_URL", environ_prefix=None)
+    MENSHEN_CLIENT_ID = values.Value(None, environ_name="MENSHEN_CLIENT_ID", environ_prefix=None)
+    MENSHEN_CLIENT_SECRET = SecretFileValue(
+        None, environ_name="MENSHEN_CLIENT_SECRET", environ_prefix=None
+    )
+
+    # Scope an exchanged token must carry to reach an external API action, by resource
+    # and action, following La Suite's "service:resource:action" convention. An action
+    # serving several methods maps each of them to its own scope. An action left out of
+    # this mapping is never reachable with an exchanged token.
+    #
+    # Example:
+    #
+    # MENSHEN_REQUIRED_SCOPES = values.DictValue(
+    #     default={
+    #         "items": {
+    #             "list": "drive:item:list",
+    #             "retrieve": "drive:item:retrieve",
+    #             "create": "drive:item:create",
+    #             "children": {
+    #                 "GET": "drive:item:list-children",
+    #                 "POST": "drive:item:create-children",
+    #             },
+    #             "upload_ended": "drive:item:upload-ended",
+    #         },
+    #     },
+    #     environ_name="MENSHEN_REQUIRED_SCOPES",
+    #     environ_prefix=None,
+    # )
+
+    MENSHEN_REQUIRED_SCOPES = values.DictValue(
+        default={},
+        environ_name="MENSHEN_REQUIRED_SCOPES",
+        environ_prefix=None,
+    )
+
     OIDC_RS_PRIVATE_KEY_STR = values.Value(
         default=None,
         environ_name="OIDC_RS_PRIVATE_KEY_STR",
@@ -1910,6 +1949,15 @@ class Base(Configuration):
                 "OIDC_ALLOW_DUPLICATE_EMAILS cannot be set to True simultaneously. "
             )
 
+        if cls.MENSHEN_ENABLED and (
+            cls.MENSHEN_CLIENT_ID is None
+            or cls.MENSHEN_CLIENT_SECRET is None
+            or cls.MENSHEN_SERVER_URL is None
+        ):
+            raise ValueError(
+                "MENSHEN_ENABLED requires values for MENSHEN_CLIENT_ID, MENSHEN_CLIENT_SECRET and MENSHEN_SERVER_URL"
+            )
+        
         if cls.RESTRICT_UPLOAD_FILE_TYPE not in UploadScreeningMode:
             raise ValueError(
                 "RESTRICT_UPLOAD_FILE_TYPE must be one of off, allowlist or denylist, "
