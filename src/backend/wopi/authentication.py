@@ -30,7 +30,7 @@ class WopiAccessTokenAuthentication(BaseAuthentication):
         """
         # The session of the WOPI client, to find the same editor session in its logs
         if session_id := request.headers.get("X-WOPI-SessionId"):
-            structlog.contextvars.bind_contextvars(wopi_client_session=session_id)
+            structlog.contextvars.bind_contextvars(wopi_client_session_id=session_id)
 
         # First check if the access token is present in the request
         access_token = get_access_token(request)

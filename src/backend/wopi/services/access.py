@@ -19,11 +19,14 @@ import structlog
 from core.models import Item, User
 
 
+def hash_access_token(token: str) -> str:
+    """Return a short hash of the access token, safe to write in the logs."""
+    return hashlib.sha256(token.encode()).hexdigest()[:12]
+
+
 def bind_wopi_session(token: str):
     """Bind a short hash of the access token to the logs, to follow one editor session."""
-    structlog.contextvars.bind_contextvars(
-        wopi_session=hashlib.sha256(token.encode()).hexdigest()[:12]
-    )
+    structlog.contextvars.bind_contextvars(wopi_token_hash=hash_access_token(token))
 
 
 class AccessError(Exception):
