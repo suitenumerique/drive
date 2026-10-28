@@ -221,6 +221,19 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
     [props.onSort],
   );
 
+  const columnSort = (
+    columnId: "title" | ColumnType | undefined,
+  ): "ascending" | "descending" | undefined => {
+    if (
+      props.viewSortable === false ||
+      !columnId ||
+      props.sortState?.columnId !== columnId
+    ) {
+      return undefined;
+    }
+    return props.sortState.direction === "asc" ? "ascending" : "descending";
+  };
+
   const handleSortColumn = useCallback(
     (id: string) => props.onSort?.(id as ColumnType),
     [props.onSort],
@@ -433,9 +446,17 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
           <table ref={tableRef} tabIndex={0} onKeyDown={onKeyDown}>
             <thead>
               <tr>
-                {/* This one stands for the mobile column */}
-                <th></th>
-                <th className="explorer__grid__th--title">
+                {/* Shown only on a narrow screen, in place of the desktop columns. */}
+                <th scope="col">
+                  <span className="explorer__grid__sr-only">
+                    {t("explorer.grid.name")}
+                  </span>
+                </th>
+                <th
+                  scope="col"
+                  className="explorer__grid__th--title"
+                  aria-sort={columnSort("title")}
+                >
                   <ColumnHeader
                     label={t("explorer.grid.name")}
                     columnId="title"
@@ -446,7 +467,15 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
                 </th>
                 {!props.isCompact && (
                   <>
-                    <th className="explorer__grid__th--info-col-1">
+                    <th
+                      scope="col"
+                      className="explorer__grid__th--info-col-1"
+                      aria-sort={
+                        props.column1Config?.sortable === false
+                          ? undefined
+                          : columnSort(props.prefs?.column1)
+                      }
+                    >
                       {props.prefs && props.column1Config ? (
                         <CustomizableColumnHeader
                           slot="column1"
@@ -464,7 +493,15 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
                         </div>
                       )}
                     </th>
-                    <th className="explorer__grid__th--info-col-2">
+                    <th
+                      scope="col"
+                      className="explorer__grid__th--info-col-2"
+                      aria-sort={
+                        props.column2Config?.sortable === false
+                          ? undefined
+                          : columnSort(props.prefs?.column2)
+                      }
+                    >
                       {props.prefs && props.column2Config ? (
                         <CustomizableColumnHeader
                           slot="column2"
@@ -481,7 +518,11 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
                   </>
                 )}
                 {!props.isCompact && (
-                  <th className="explorer__grid__th--actions"></th>
+                  <th scope="col" className="explorer__grid__th--actions">
+                    <span className="explorer__grid__sr-only">
+                      {t("explorer.grid.actions_column")}
+                    </span>
+                  </th>
                 )}
               </tr>
             </thead>

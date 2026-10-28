@@ -22,7 +22,12 @@ export const ColumnHeader = ({
     <div className="c__datagrid__header fs-h5 c__datagrid__header--sortable explorer__grid__header">
       <span className="explorer__grid__header__label">{label}</span>
       {sortable && (
-        <SortColumnButton columnId={columnId} sortState={sortState} onSort={onSort} />
+        <SortColumnButton
+          columnId={columnId}
+          columnLabel={label}
+          sortState={sortState}
+          onSort={onSort}
+        />
       )}
     </div>
   );

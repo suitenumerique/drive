@@ -91,6 +91,7 @@ export const CustomizableColumnHeader = ({
       {sortable && currentConfig.sortable !== false && (
         <SortColumnButton
           columnId={currentType}
+          columnLabel={t(currentConfig.labelKey)}
           sortState={sortState}
           onSort={onSort}
         />
