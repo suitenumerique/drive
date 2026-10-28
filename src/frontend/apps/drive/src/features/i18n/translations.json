@@ -84,6 +84,19 @@
             "inherited_edit": "Inherited. To lower role or remove access, edit",
             "parent_folder": "the parent folder."
           }
+        },
+        "verify_identity": "Verify identity",
+        "pending_encryption": {
+          "accept": "Accept",
+          "accepting": "Accepting…",
+          "no_public_key": "This user still hasn't completed their encryption onboarding.",
+          "own_key_unavailable": "Your encryption key can no longer open this item, most likely because you reset your encryption. Another member who has access must accept this person.",
+          "section_title": "Action needed",
+          "section_title_waiting": "Waiting for access",
+          "waiting_hint": "Members who have not enabled encryption yet get access once they do.",
+          "encryption_enabled": "Encryption enabled",
+          "waiting_chip": "Waiting for encryption",
+          "waiting_chip_hint": "Waiting for them to enable encryption"
         }
       },
       "file_download_modal": {
@@ -104,7 +117,8 @@
         "cancel": "Cancel"
       },
       "common": {
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "retry": "Retry"
       },
       "clipboard": {
         "success": "Copied to clipboard",
@@ -183,7 +197,8 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Spaces",
-          "all_folders": "All folders"
+          "all_folders": "All folders",
+          "encrypted": "Encrypted folder"
         },
         "modal": {
           "move": {
@@ -230,7 +245,9 @@
           "created_at": "Created at",
           "size": "Size",
           "created_by": "Created by",
-          "description": "Description"
+          "description": "Description",
+          "encrypted": "Encrypted",
+          "security": "Security"
         },
         "grid": {
           "name": "Name",
@@ -612,10 +629,38 @@
             "unfavorite": "Unstar",
             "duplicate": "Duplicate",
             "duplicate_error": "An error occurred while duplicating the item.",
-            "delete": "Delete"
+            "delete": "Delete",
+            "encrypt": "Encrypt",
+            "remove_encryption": "Remove encryption"
           },
           "duplicating": "duplication in progress",
           "converting": "conversion in progress"
+        },
+        "encrypted": {
+          "decrypting": "Decrypting...",
+          "pending_self": {
+            "title": "Waiting for access",
+            "body_with_keys": "This file was shared with you before you enabled encryption, so its key could not be given to you then. You will get access the next time the file owner opens it.",
+            "body_without_keys": "This file is encrypted and you have not enabled encryption yet, so its key could not be given to you. Enable encryption: you will get access the next time the file owner opens it."
+          },
+          "decryption_failure": {
+            "key_unavailable": {
+              "title": "This file was shared with a previous key",
+              "body": "That key is no longer on your account, most likely because you reset your encryption. Ask the file owner to remove you from its members and add you again."
+            },
+            "key_mismatch": {
+              "title": "This file was encrypted with a different key",
+              "body": "Your current encryption key cannot open it. Ask the file owner to remove you from its members and add you again."
+            },
+            "content_integrity": {
+              "title": "This file cannot be decrypted",
+              "body": "Your key is correct, but the stored content is damaged or was altered, so it cannot be trusted. Contact the owner of this file or your support."
+            },
+            "unknown": {
+              "title": "This file could not be decrypted",
+              "body": "Something went wrong while decrypting this file. Try again."
+            }
+          }
         }
       },
       "anonymous_cta": {
@@ -705,6 +750,94 @@
         "title": "User reconciliation",
         "success": "Your email address has been confirmed. To complete the merge of your accounts, please click the confirmation links sent to all the addresses you provided.",
         "error": "An error occurred during email validation."
+      },
+      "encryption": {
+        "encrypt_modal": {
+          "title_folder": "Encrypt this folder",
+          "title_file": "Encrypt this file",
+          "confirm": "Encrypt",
+          "description_folder": "The folder and everything inside will be encrypted end-to-end. Only people you share it with will be able to access its contents.",
+          "description_file": "The file will be encrypted end-to-end. Only people you share it with will be able to access its contents.",
+          "pending_users_one": "{{count}} collaborator has not enabled encryption yet. They will be added as pending and get access once they enable it.",
+          "pending_users_many": "{{count}} collaborators have not enabled encryption yet. They will be added as pending and get access once they enable it.",
+          "pending_users_other": "{{count}} collaborators have not enabled encryption yet. They will be added as pending and get access once they enable it.",
+          "title_folder_into_chain": "Encrypt and move this folder",
+          "title_file_into_chain": "Encrypt and move this file",
+          "confirm_into_chain": "Encrypt & move",
+          "encrypting": "Encrypting…",
+          "done": "Encrypted"
+        },
+        "errors": {
+          "self_missing_key": "You need to complete your encryption onboarding before encrypting this item.",
+          "no_keys_at_all": "Nobody with access to this item has completed encryption onboarding.",
+          "not_restricted": "The item must have restricted access (no public or authenticated link).",
+          "no_accesses": "No users with access found on the root item.",
+          "nothing_to_encrypt_file": "This file is already encrypted.",
+          "nothing_to_decrypt_file": "This file is already plaintext.",
+          "subtree_mutated": "The folder contents changed during the operation ({{added}} added, {{removed}} removed).",
+          "file_failed": "\"{{title}}\" could not be processed ({{error}}). Nothing was changed.",
+          "intochain_missing_parent": "Destination parent missing for encrypt-on-move.",
+          "intochain_keychain_failed": "Could not retrieve the destination key chain ({{err}})."
+        },
+        "missing_keys": {
+          "title": "Enable encryption on this device",
+          "body": "Encryption keys are stored on each device. To continue here, restore your existing keys from another device or your recovery phrase, or enable encryption if you never did.",
+          "viewer_body": "This file is encrypted. You must enable encryption on this device to open it.",
+          "set_up": "Enable encryption",
+          "home": "Home",
+          "cancel": "Not now",
+          "viewer_title": "Encrypted file"
+        },
+        "service_unavailable": {
+          "title": "Encryption service unavailable",
+          "body": "The encryption service could not be loaded. Check your connection and try again.",
+          "viewer_body": "This file is encrypted and the encryption service could not be loaded. Check your connection and try again.",
+          "retry": "Retry",
+          "close": "Close"
+        },
+        "not_root_modal": {
+          "title": "Encrypted with its folder",
+          "body_file": "This file is encrypted with the folder below. Encryption can only be removed from that folder, which also decrypts everything inside it.",
+          "body_folder": "This folder is encrypted with the folder below. Encryption can only be removed from that folder, which also decrypts everything inside it.",
+          "open_folder": "Open the folder"
+        },
+        "remove_modal": {
+          "title_folder": "Remove encryption from this folder",
+          "title_file": "Remove encryption from this file",
+          "confirm": "Remove encryption",
+          "description": "The content will be decrypted and stored in plain text on the server.",
+          "removing": "Removing encryption…",
+          "done": "Encryption removed"
+        },
+        "row": {
+          "already_encrypted": "Already encrypted",
+          "not_encrypted": "Not encrypted",
+          "encrypting": "{{title}}: encrypting",
+          "decrypting": "{{title}}: decrypting",
+          "failed": "Could not be processed ({{error}})"
+        },
+        "progress": {
+          "to_encrypt_one": "{{count}} item to encrypt",
+          "to_encrypt_many": "{{count}} items to encrypt",
+          "to_encrypt_other": "{{count}} items to encrypt",
+          "to_decrypt_one": "{{count}} item to decrypt",
+          "to_decrypt_many": "{{count}} items to decrypt",
+          "to_decrypt_other": "{{count}} items to decrypt",
+          "encrypted_one": "{{done}} of {{count}} item encrypted",
+          "encrypted_many": "{{done}} of {{count}} items encrypted",
+          "encrypted_other": "{{done}} of {{count}} items encrypted",
+          "decrypted_one": "{{done}} of {{count}} item decrypted",
+          "decrypted_many": "{{done}} of {{count}} items decrypted",
+          "decrypted_other": "{{done}} of {{count}} items decrypted",
+          "committing": "Finalizing…"
+        },
+        "host_modal": {
+          "label": "Encryption"
+        }
+      },
+      "file_preview": {
+        "unsupported": {
+        }
       }
     }
   },
@@ -793,6 +926,19 @@
             "inherited_edit": "Hérité. Pour réduire le rôle ou supprimer l'accès, modifiez",
             "parent_folder": "le dossier parent."
           }
+        },
+        "verify_identity": "Vérifier l'identité",
+        "pending_encryption": {
+          "accept": "Accepter",
+          "accepting": "Acceptation…",
+          "no_public_key": "Cet utilisateur n'a pas encore terminé sa configuration du chiffrement.",
+          "own_key_unavailable": "Votre clé de chiffrement ne permet plus d'ouvrir cet élément, très probablement parce que vous avez réinitialisé votre chiffrement. Un autre membre qui y a accès doit accepter cette personne.",
+          "section_title": "Action requise",
+          "section_title_waiting": "En attente d'accès",
+          "waiting_hint": "Les membres qui n'ont pas encore activé le chiffrement auront accès dès qu'ils l'auront fait.",
+          "encryption_enabled": "Chiffrement activé",
+          "waiting_chip": "En attente de chiffrement",
+          "waiting_chip_hint": "En attente de l'activation du chiffrement par cette personne"
         }
       },
       "file_download_modal": {
@@ -813,7 +959,8 @@
         "cancel": "Annuler"
       },
       "common": {
-        "cancel": "Annuler"
+        "cancel": "Annuler",
+        "retry": "Réessayer"
       },
       "clipboard": {
         "success": "Copié dans le presse-papiers",
@@ -892,7 +1039,8 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Espaces",
-          "all_folders": "Tous les dossiers"
+          "all_folders": "Tous les dossiers",
+          "encrypted": "Dossier chiffré"
         },
         "modal": {
           "move": {
@@ -939,7 +1087,9 @@
           "created_at": "Création",
           "size": "Poids",
           "created_by": "Créé par",
-          "description": "Description"
+          "description": "Description",
+          "encrypted": "Chiffré",
+          "security": "Sécurité"
         },
         "grid": {
           "name": "Nom",
@@ -1321,10 +1471,38 @@
             "unfavorite": "Retirer des favoris",
             "duplicate": "Dupliquer",
             "duplicate_error": "Une erreur est survenue lors de la duplication.",
-            "delete": "Supprimer"
+            "delete": "Supprimer",
+            "encrypt": "Chiffrer",
+            "remove_encryption": "Retirer le chiffrement"
           },
           "duplicating": "duplication en cours",
           "converting": "conversion en cours"
+        },
+        "encrypted": {
+          "decrypting": "Déchiffrement…",
+          "pending_self": {
+            "title": "En attente d'accès",
+            "body_with_keys": "Ce fichier vous a été partagé avant que vous activiez le chiffrement, sa clé n'a donc pas pu vous être transmise à ce moment-là. Vous aurez accès la prochaine fois que le propriétaire du fichier l'ouvrira.",
+            "body_without_keys": "Ce fichier est chiffré et vous n'avez pas encore activé le chiffrement, sa clé n'a donc pas pu vous être transmise. Activez le chiffrement : vous aurez accès la prochaine fois que le propriétaire du fichier l'ouvrira."
+          },
+          "decryption_failure": {
+            "key_unavailable": {
+              "title": "Ce fichier a été partagé avec une ancienne clé",
+              "body": "Cette clé n'est plus sur votre compte, sans doute parce que vous avez réinitialisé votre chiffrement. Demandez au propriétaire du fichier de vous retirer de ses membres puis de vous ajouter à nouveau."
+            },
+            "key_mismatch": {
+              "title": "Ce fichier a été chiffré avec une autre clé",
+              "body": "Votre clé de chiffrement actuelle ne permet pas de l'ouvrir. Demandez au propriétaire du fichier de vous retirer de ses membres puis de vous ajouter à nouveau."
+            },
+            "content_integrity": {
+              "title": "Ce fichier ne peut pas être déchiffré",
+              "body": "Votre clé est la bonne, mais le contenu enregistré est endommagé ou a été modifié : il n'est pas fiable. Contactez le propriétaire de ce fichier ou votre support."
+            },
+            "unknown": {
+              "title": "Ce fichier n'a pas pu être déchiffré",
+              "body": "Une erreur est survenue lors du déchiffrement de ce fichier. Réessayez."
+            }
+          }
         }
       },
       "anonymous_cta": {
@@ -1414,6 +1592,94 @@
         "title": "Réconciliation de comptes",
         "success": "Votre adresse e-mail a été confirmée. Pour finaliser la fusion de vos comptes, cliquez sur les liens de confirmation envoyés à toutes les adresses que vous avez fournies.",
         "error": "Une erreur s'est produite lors de la validation de l'e-mail."
+      },
+      "encryption": {
+        "encrypt_modal": {
+          "title_folder": "Chiffrer ce dossier",
+          "title_file": "Chiffrer ce fichier",
+          "confirm": "Chiffrer",
+          "description_folder": "Le dossier et tout son contenu seront chiffrés de bout en bout. Seules les personnes avec qui vous le partagez pourront y accéder.",
+          "description_file": "Le fichier sera chiffré de bout en bout. Seules les personnes avec qui vous le partagez pourront y accéder.",
+          "pending_users_one": "{{count}} personne n'a pas encore activé le chiffrement. Elle sera ajoutée en attente et aura accès dès qu'elle l'aura activé.",
+          "pending_users_many": "{{count}} personnes n'ont pas encore activé le chiffrement. Elles seront ajoutées en attente et auront accès dès qu'elles l'auront activé.",
+          "pending_users_other": "{{count}} personnes n'ont pas encore activé le chiffrement. Elles seront ajoutées en attente et auront accès dès qu'elles l'auront activé.",
+          "title_folder_into_chain": "Chiffrer et déplacer ce dossier",
+          "title_file_into_chain": "Chiffrer et déplacer ce fichier",
+          "confirm_into_chain": "Chiffrer et déplacer",
+          "encrypting": "Chiffrement…",
+          "done": "Chiffré"
+        },
+        "errors": {
+          "self_missing_key": "Vous devez terminer votre configuration du chiffrement avant de chiffrer cet élément.",
+          "no_keys_at_all": "Aucun utilisateur ayant accès à cet élément n'a terminé sa configuration du chiffrement.",
+          "not_restricted": "L'élément doit avoir un accès restreint (pas de lien public ou authentifié).",
+          "no_accesses": "Aucun utilisateur n'a accès à l'élément racine.",
+          "nothing_to_encrypt_file": "Ce fichier est déjà chiffré.",
+          "nothing_to_decrypt_file": "Ce fichier est déjà en clair.",
+          "subtree_mutated": "Le contenu du dossier a changé pendant l'opération ({{added}} ajoutés, {{removed}} supprimés).",
+          "file_failed": "« {{title}} » n'a pas pu être traité ({{error}}). Rien n'a été modifié.",
+          "intochain_missing_parent": "Le dossier de destination est introuvable pour le chiffrement lors du déplacement.",
+          "intochain_keychain_failed": "Impossible de récupérer la chaîne de clés de la destination ({{err}})."
+        },
+        "missing_keys": {
+          "title": "Activer le chiffrement sur cet appareil",
+          "body": "Les clés de chiffrement sont stockées sur chaque appareil. Pour continuer ici, restaurez vos clés depuis un autre appareil ou votre phrase de récupération, ou activez le chiffrement si vous ne l'avez jamais fait.",
+          "viewer_body": "Ce fichier est chiffré. Vous devez activer le chiffrement sur cet appareil pour l'ouvrir.",
+          "set_up": "Activer le chiffrement",
+          "home": "Accueil",
+          "cancel": "Plus tard",
+          "viewer_title": "Fichier chiffré"
+        },
+        "service_unavailable": {
+          "title": "Service de chiffrement indisponible",
+          "body": "Le service de chiffrement n'a pas pu être chargé. Vérifiez votre connexion et réessayez.",
+          "viewer_body": "Ce fichier est chiffré et le service de chiffrement n'a pas pu être chargé. Vérifiez votre connexion et réessayez.",
+          "retry": "Réessayer",
+          "close": "Fermer"
+        },
+        "not_root_modal": {
+          "title": "Chiffré avec son dossier",
+          "body_file": "Ce fichier est chiffré avec le dossier ci-dessous. Le chiffrement ne peut être retiré que depuis ce dossier, ce qui déchiffre aussi tout ce qu'il contient.",
+          "body_folder": "Ce dossier est chiffré avec le dossier ci-dessous. Le chiffrement ne peut être retiré que depuis ce dossier, ce qui déchiffre aussi tout ce qu'il contient.",
+          "open_folder": "Ouvrir le dossier"
+        },
+        "remove_modal": {
+          "title_folder": "Retirer le chiffrement de ce dossier",
+          "title_file": "Retirer le chiffrement de ce fichier",
+          "confirm": "Retirer le chiffrement",
+          "description": "Le contenu sera déchiffré et stocké en clair sur le serveur.",
+          "removing": "Suppression du chiffrement…",
+          "done": "Chiffrement supprimé"
+        },
+        "row": {
+          "already_encrypted": "Déjà chiffré",
+          "not_encrypted": "Non chiffré",
+          "encrypting": "{{title}} : chiffrement",
+          "decrypting": "{{title}} : déchiffrement",
+          "failed": "Traitement impossible ({{error}})"
+        },
+        "progress": {
+          "to_encrypt_one": "{{count}} élément à chiffrer",
+          "to_encrypt_many": "{{count}} éléments à chiffrer",
+          "to_encrypt_other": "{{count}} éléments à chiffrer",
+          "to_decrypt_one": "{{count}} élément à déchiffrer",
+          "to_decrypt_many": "{{count}} éléments à déchiffrer",
+          "to_decrypt_other": "{{count}} éléments à déchiffrer",
+          "encrypted_one": "{{done}} sur {{count}} élément chiffré",
+          "encrypted_many": "{{done}} sur {{count}} éléments chiffrés",
+          "encrypted_other": "{{done}} sur {{count}} éléments chiffrés",
+          "decrypted_one": "{{done}} sur {{count}} élément déchiffré",
+          "decrypted_many": "{{done}} sur {{count}} éléments déchiffrés",
+          "decrypted_other": "{{done}} sur {{count}} éléments déchiffrés",
+          "committing": "Finalisation…"
+        },
+        "host_modal": {
+          "label": "Chiffrement"
+        }
+      },
+      "file_preview": {
+        "unsupported": {
+        }
       }
     }
   },
@@ -1502,6 +1768,19 @@
             "inherited_edit": "Herediteerd. Om de rol te verlagen of het toegang te verwijderen, bewerkt u",
             "parent_folder": "de bovenliggende map."
           }
+        },
+        "verify_identity": "Identiteit verifiëren",
+        "pending_encryption": {
+          "accept": "Accepteren",
+          "accepting": "Bezig met accepteren…",
+          "no_public_key": "Deze gebruiker heeft de versleuteling nog niet ingesteld.",
+          "own_key_unavailable": "Uw versleutelingssleutel kan dit item niet meer openen, waarschijnlijk omdat u uw versleuteling opnieuw hebt ingesteld. Een ander lid met toegang moet deze persoon accepteren.",
+          "section_title": "Actie vereist",
+          "section_title_waiting": "Wacht op toegang",
+          "waiting_hint": "Leden die versleuteling nog niet hebben ingeschakeld, krijgen toegang zodra ze dat doen.",
+          "encryption_enabled": "Versleuteling ingeschakeld",
+          "waiting_chip": "Wacht op versleuteling",
+          "waiting_chip_hint": "Wacht tot deze persoon versleuteling inschakelt"
         }
       },
       "file_download_modal": {
@@ -1522,7 +1801,8 @@
         "cancel": "Annuleren"
       },
       "common": {
-        "cancel": "Annuleren"
+        "cancel": "Annuleren",
+        "retry": "Opnieuw proberen"
       },
       "clipboard": {
         "success": "Gekopieërd naar klembord",
@@ -1601,7 +1881,8 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Werkruimten",
-          "all_folders": "Alle mappen"
+          "all_folders": "Alle mappen",
+          "encrypted": "Versleutelde map"
         },
         "modal": {
           "move": {
@@ -1648,7 +1929,9 @@
           "created_at": "Gecreëerd op",
           "size": "Grootte",
           "created_by": "Gecreëerd door",
-          "description": "Beschrijving"
+          "description": "Beschrijving",
+          "encrypted": "Versleuteld",
+          "security": "Beveiliging"
         },
         "grid": {
           "name": "Naam",
@@ -2030,10 +2313,38 @@
             "unfavorite": "Verwijder uit favorieten",
             "duplicate": "Dupliceer",
             "duplicate_error": "Er is een fout opgetreden bij het dupliceren.",
-            "delete": "Verwijder"
+            "delete": "Verwijder",
+            "encrypt": "Versleutelen",
+            "remove_encryption": "Versleuteling verwijderen"
           },
           "duplicating": "duplicatie bezig",
           "converting": "conversie bezig"
+        },
+        "encrypted": {
+          "decrypting": "Bezig met ontsleutelen...",
+          "pending_self": {
+            "title": "Wacht op toegang",
+            "body_with_keys": "Dit bestand is met u gedeeld voordat u versleuteling inschakelde, daarom kon de sleutel u toen niet worden gegeven. U krijgt toegang zodra de eigenaar van het bestand het opnieuw opent.",
+            "body_without_keys": "Dit bestand is versleuteld en u hebt versleuteling nog niet ingeschakeld, daarom kon de sleutel u niet worden gegeven. Schakel versleuteling in: u krijgt toegang zodra de eigenaar van het bestand het opnieuw opent."
+          },
+          "decryption_failure": {
+            "key_unavailable": {
+              "title": "Dit bestand is gedeeld met een eerdere sleutel",
+              "body": "Die sleutel staat niet meer op uw account, waarschijnlijk omdat u uw versleuteling opnieuw hebt ingesteld. Vraag de eigenaar van het bestand u als lid te verwijderen en opnieuw toe te voegen."
+            },
+            "key_mismatch": {
+              "title": "Dit bestand is versleuteld met een andere sleutel",
+              "body": "Uw huidige versleutelingssleutel kan het niet openen. Vraag de eigenaar van het bestand u als lid te verwijderen en opnieuw toe te voegen."
+            },
+            "content_integrity": {
+              "title": "Dit bestand kan niet worden ontsleuteld",
+              "body": "Uw sleutel is juist, maar de opgeslagen inhoud is beschadigd of gewijzigd en kan dus niet worden vertrouwd. Neem contact op met de eigenaar van dit bestand of met uw ondersteuning."
+            },
+            "unknown": {
+              "title": "Dit bestand kon niet worden ontsleuteld",
+              "body": "Er ging iets mis bij het ontsleutelen van dit bestand. Probeer het opnieuw."
+            }
+          }
         }
       },
       "anonymous_cta": {
@@ -2123,6 +2434,94 @@
         "title": "Accountreconciliatie",
         "success": "Uw e-mailadres is bevestigd. Klik op de bevestigingslinks die naar alle door u opgegeven adressen zijn verzonden om het samenvoegen van uw accounts te voltooien.",
         "error": "Er is een fout opgetreden tijdens de e-mailvalidatie."
+      },
+      "encryption": {
+        "encrypt_modal": {
+          "title_folder": "Deze map versleutelen",
+          "title_file": "Dit bestand versleutelen",
+          "confirm": "Versleutelen",
+          "description_folder": "De map en alles wat erin staat worden end-to-end versleuteld. Alleen de mensen met wie u de map deelt, hebben toegang tot de inhoud.",
+          "description_file": "Het bestand wordt end-to-end versleuteld. Alleen de mensen met wie u het deelt, hebben toegang tot de inhoud.",
+          "pending_users_one": "{{count}} medewerker heeft versleuteling nog niet ingeschakeld. Deze wordt als in afwachting toegevoegd en krijgt toegang zodra de versleuteling is ingeschakeld.",
+          "pending_users_many": "{{count}} medewerkers hebben versleuteling nog niet ingeschakeld. Zij worden als in afwachting toegevoegd en krijgen toegang zodra ze versleuteling inschakelen.",
+          "pending_users_other": "{{count}} medewerkers hebben versleuteling nog niet ingeschakeld. Zij worden als in afwachting toegevoegd en krijgen toegang zodra ze versleuteling inschakelen.",
+          "title_folder_into_chain": "Deze map versleutelen en verplaatsen",
+          "title_file_into_chain": "Dit bestand versleutelen en verplaatsen",
+          "confirm_into_chain": "Versleutelen en verplaatsen",
+          "encrypting": "Versleutelen…",
+          "done": "Versleuteld"
+        },
+        "errors": {
+          "self_missing_key": "U moet versleuteling inschakelen voordat u dit item kunt versleutelen.",
+          "no_keys_at_all": "Niemand met toegang tot dit item heeft versleuteling ingesteld.",
+          "not_restricted": "Het item moet beperkte toegang hebben (geen openbare of geverifieerde link).",
+          "no_accesses": "Geen gebruikers met toegang gevonden op het hoofditem.",
+          "nothing_to_encrypt_file": "Dit bestand is al versleuteld.",
+          "nothing_to_decrypt_file": "Dit bestand is al onversleuteld.",
+          "subtree_mutated": "De inhoud van de map is tijdens de bewerking gewijzigd ({{added}} toegevoegd, {{removed}} verwijderd).",
+          "file_failed": "\"{{title}}\" kon niet worden verwerkt ({{error}}). Er is niets gewijzigd.",
+          "intochain_missing_parent": "Doelmap ontbreekt voor versleutelen bij verplaatsen.",
+          "intochain_keychain_failed": "Kan de sleutelketen van de bestemming niet ophalen ({{err}})."
+        },
+        "missing_keys": {
+          "title": "Versleuteling inschakelen op dit apparaat",
+          "body": "Versleutelingssleutels worden per apparaat bewaard. Om hier verder te gaan, herstelt u uw bestaande sleutels vanaf een ander apparaat of met uw herstelzin, of schakelt u versleuteling in als u dat nog nooit hebt gedaan.",
+          "viewer_body": "Dit bestand is versleuteld. U moet versleuteling op dit apparaat inschakelen om het te openen.",
+          "set_up": "Versleuteling inschakelen",
+          "home": "Home",
+          "cancel": "Niet nu",
+          "viewer_title": "Versleuteld bestand"
+        },
+        "service_unavailable": {
+          "title": "Versleutelingsdienst niet beschikbaar",
+          "body": "De versleutelingsdienst kon niet worden geladen. Controleer uw verbinding en probeer het opnieuw.",
+          "viewer_body": "Dit bestand is versleuteld en de versleutelingsdienst kon niet worden geladen. Controleer uw verbinding en probeer het opnieuw.",
+          "retry": "Opnieuw proberen",
+          "close": "Sluiten"
+        },
+        "not_root_modal": {
+          "title": "Versleuteld met de map",
+          "body_file": "Dit bestand is versleuteld met de map hieronder. Versleuteling kan alleen vanaf die map worden verwijderd, wat ook alles daarin ontsleutelt.",
+          "body_folder": "Deze map is versleuteld met de map hieronder. Versleuteling kan alleen vanaf die map worden verwijderd, wat ook alles daarin ontsleutelt.",
+          "open_folder": "Map openen"
+        },
+        "remove_modal": {
+          "title_folder": "Versleuteling verwijderen van deze map",
+          "title_file": "Versleuteling verwijderen van dit bestand",
+          "confirm": "Versleuteling verwijderen",
+          "description": "De inhoud wordt ontsleuteld en onversleuteld op de server opgeslagen.",
+          "removing": "Versleuteling verwijderen…",
+          "done": "Versleuteling verwijderd"
+        },
+        "row": {
+          "already_encrypted": "Al versleuteld",
+          "not_encrypted": "Niet versleuteld",
+          "encrypting": "{{title}}: versleutelen",
+          "decrypting": "{{title}}: ontsleutelen",
+          "failed": "Kon niet worden verwerkt ({{error}})"
+        },
+        "progress": {
+          "to_encrypt_one": "{{count}} item te versleutelen",
+          "to_encrypt_many": "{{count}} items te versleutelen",
+          "to_encrypt_other": "{{count}} items te versleutelen",
+          "to_decrypt_one": "{{count}} item te ontsleutelen",
+          "to_decrypt_many": "{{count}} items te ontsleutelen",
+          "to_decrypt_other": "{{count}} items te ontsleutelen",
+          "encrypted_one": "{{done}} van {{count}} item versleuteld",
+          "encrypted_many": "{{done}} van {{count}} items versleuteld",
+          "encrypted_other": "{{done}} van {{count}} items versleuteld",
+          "decrypted_one": "{{done}} van {{count}} item ontsleuteld",
+          "decrypted_many": "{{done}} van {{count}} items ontsleuteld",
+          "decrypted_other": "{{done}} van {{count}} items ontsleuteld",
+          "committing": "Bezig met afronden…"
+        },
+        "host_modal": {
+          "label": "Versleuteling"
+        }
+      },
+      "file_preview": {
+        "unsupported": {
+        }
       }
     }
   }

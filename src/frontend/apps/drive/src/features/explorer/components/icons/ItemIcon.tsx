@@ -3,11 +3,13 @@ import folderIcon from "@/assets/folder/folder.svg";
 import {
   FileIcon,
   FileIconContent,
+  getIconSize,
   ICONS,
   IconSize,
   MimeCategory,
 } from "@gouvfr-lasuite/ui-components";
 import { itemToPreviewFile } from "../../utils/utils";
+import { getEffectiveMimetype } from "../../utils/mimeTypes";
 
 type ItemIconProps = {
   item: Item;
@@ -23,10 +25,38 @@ export const ItemIcon = ({
   type = "normal",
 }: ItemIconProps) => {
   const extendedIcon = getItemExtendedIcon(item, type);
-  if (extendedIcon) {
-    return <FileIconContent icon={extendedIcon} size={size} />;
+  const icon = extendedIcon ? (
+    <FileIconContent icon={extendedIcon} size={size} />
+  ) : (
+    <FileIcon
+      file={{
+        ...itemToPreviewFile(item),
+        // Encrypted uploads are stored as application/octet-stream since the
+        // server cannot inspect ciphertext: pick the icon from the extension.
+        mimetype: getEffectiveMimetype(item) ?? "",
+      }}
+      size={size}
+    />
+  );
+
+  if (!item.is_encrypted) {
+    return icon;
   }
-  return <FileIcon file={itemToPreviewFile(item)} size={size} />;
+
+  return (
+    <span style={{ position: "relative", display: "inline-flex" }}>
+      {icon}
+      <span
+        className="material-icons drive__encryption-badge"
+        style={{
+          fontSize: Math.max(12, Math.round(getIconSize(size) * 0.4)),
+        }}
+        aria-hidden="true"
+      >
+        verified_user
+      </span>
+    </span>
+  );
 };
 
 /**

@@ -1,0 +1,1380 @@
+import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
+import { Item, ItemType, LinkReach } from "@/features/drivers/types";
+import { getDriver } from "@/features/config/Config";
+import { APIError, errorToString } from "@/features/api/APIError";
+import { FileStagingError, abortError, runStagingPool } from "./stagingPool";
+import { useAuth } from "@/features/auth/Auth";
+import { useConfig } from "@/features/config/ConfigProvider";
+import { fetchRegisteredKeys } from "@/features/encryption/fetchRegisteredKeys";
+import { useVaultClient } from "../VaultClientProvider";
+import {
+  chainForNode,
+  fetchSubtree,
+  foldersOnly,
+  innerEncryptionRoots,
+  isInsideInnerRoot,
+} from "./flattenSubtree";
+import { fromBase64, stagedFilename, toBase64 } from "./binary";
+import { getEncryptionUploadUrl, putToS3 } from "./presignedUpload";
+import {
+  FileJobRow,
+  FileJobState,
+  FlatNode,
+  JobPhase,
+  SkipReason,
+  StagedEncryptFile,
+} from "./types";
+
+/**
+ * Job modes:
+ *  - 'encrypt'           : turn an item into a self-rooted encryption tree.
+ *                          Mints K_root, wraps per-user, materialises
+ *                          ItemAccess rows. Calls PATCH /encrypt/.
+ *  - 'decrypt'           : remove encryption from a self-rooted tree.
+ *                          Calls PATCH /remove-encryption/.
+ *  - 'encrypt-into-chain': encrypt AND move into an existing encrypted
+ *                          subtree atomically. K_root and descendant keys
+ *                          are wrapped under the destination's chain only
+ *                          — no per-user wraps anywhere. Calls POST /move/
+ *                          with the encrypt-on-move payload (same one-shot
+ *                          atomicity contract as /encrypt/).
+ */
+type Mode = "encrypt" | "decrypt" | "encrypt-into-chain";
+
+type State = {
+  phase: JobPhase;
+  rows: FileJobRow[];
+  rowIndexById: Record<string, number>;
+  topError: string | null;
+  validationErrors: string[];
+  totalProcessable: number;
+  pendingUserCount: number;
+};
+
+type Action =
+  | { type: "SET_PHASE"; phase: JobPhase }
+  | { type: "SET_ROWS"; rows: FileJobRow[] }
+  | {
+      type: "UPDATE_ROW";
+      id: string;
+      state: FileJobState;
+      error?: string;
+      skipReason?: SkipReason;
+    }
+  | { type: "SET_TOP_ERROR"; error: string | null }
+  | { type: "SET_VALIDATION"; errors: string[] }
+  | { type: "SET_PENDING_USER_COUNT"; count: number }
+  | { type: "PROMOTE_STAGED_TO_DONE" }
+  | { type: "RESET_FAILED_TO_PENDING" }
+  | { type: "FAIL_RUNNING"; error: string }
+  | { type: "RESET" };
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "SET_PHASE":
+      return { ...state, phase: action.phase };
+    case "SET_ROWS": {
+      const rowIndexById: Record<string, number> = {};
+      action.rows.forEach((r, i) => {
+        rowIndexById[r.id] = i;
+      });
+      const totalProcessable = action.rows.filter(
+        (r) => r.state !== "skipped",
+      ).length;
+      return { ...state, rows: action.rows, rowIndexById, totalProcessable };
+    }
+    case "UPDATE_ROW": {
+      const idx = state.rowIndexById[action.id];
+      if (idx === undefined) return state;
+      const next = state.rows.slice();
+      next[idx] = {
+        ...next[idx],
+        state: action.state,
+        error: action.error,
+        skipReason: action.skipReason ?? next[idx].skipReason,
+      };
+      return { ...state, rows: next };
+    }
+    case "SET_TOP_ERROR":
+      return { ...state, topError: action.error };
+    case "SET_VALIDATION":
+      return { ...state, validationErrors: action.errors };
+    case "SET_PENDING_USER_COUNT":
+      return { ...state, pendingUserCount: action.count };
+    case "PROMOTE_STAGED_TO_DONE": {
+      const next = state.rows.map((r) =>
+        r.state === "staged" ? { ...r, state: "done" as FileJobState } : r,
+      );
+      return { ...state, rows: next };
+    }
+    case "RESET_FAILED_TO_PENDING": {
+      const next = state.rows.map((r) =>
+        r.state === "failed"
+          ? { ...r, state: "pending" as FileJobState, error: undefined }
+          : r,
+      );
+      return { ...state, rows: next };
+    }
+    // The operation failed outside a file's own step (the commit, a missing
+    // item): rows still marked running would otherwise spin forever. Failing
+    // them also lets a retry pick them up again.
+    case "FAIL_RUNNING": {
+      const next = state.rows.map((r) =>
+        r.state === "running"
+          ? { ...r, state: "failed" as FileJobState, error: action.error }
+          : r,
+      );
+      return { ...state, rows: next };
+    }
+    case "RESET":
+      return INITIAL;
+    default:
+      return state;
+  }
+}
+
+const INITIAL: State = {
+  phase: "discovering",
+  rows: [],
+  rowIndexById: {},
+  topError: null,
+  validationErrors: [],
+  totalProcessable: 0,
+  pendingUserCount: 0,
+};
+
+export type UseRecursiveEncryptionJobArgs = {
+  mode: Mode;
+  item: Item;
+  isOpen: boolean;
+  onSuccess?: () => void;
+  /**
+   * Required for `mode: 'encrypt-into-chain'`. The destination parent
+   * the item is moving into — the job fetches its key-chain during
+   * validation so K_root and descendant keys can be wrapped under the
+   * destination's chain instead of minted as a fresh root.
+   */
+  intoChainParentId?: string;
+};
+
+export type UseRecursiveEncryptionJob = {
+  phase: JobPhase;
+  rows: FileJobRow[];
+  totalProcessable: number;
+  doneCount: number;
+  validationErrors: string[];
+  topError: string | null;
+  canConfirm: boolean;
+  pendingUserCount: number;
+  confirm: () => void;
+  retry: () => void;
+  cancel: () => void;
+};
+
+/**
+ * Discover → validate → stage (worker pool) → single-shot commit.
+ *
+ * Atomicity: staging uploads N blobs to S3 under fresh keys, then ONE backend
+ * PATCH commits the whole fileKeyMapping + encryptedKeysForDescendants in a
+ * DB transaction. Failure pre-commit ⇒ DB untouched; rollback is `return;`.
+ */
+
+type RecipientLabel = { email: string; name?: string };
+
+/**
+ * Build the SDK's labeled recipient map (sub → {email, name}) for a set of
+ * subs, reading each label from the sourced access-row labels. The vault only
+ * uses the subs (it resolves + trust-checks keys itself); the labels are shown
+ * if the verify-recipients trust modal opens. The fallback placeholder guards
+ * only a sub that has a key but no resolvable access row (should not happen for
+ * individual accesses) and is never shown for a trusted recipient — the modal
+ * surfaces only the blocked ones.
+ */
+function toRecipients(
+  subs: string[],
+  labels: Record<string, RecipientLabel>,
+): Record<string, RecipientLabel> {
+  const recipients: Record<string, RecipientLabel> = {};
+  for (const sub of subs) {
+    recipients[sub] = labels[sub] ?? { email: "unknown@unknown.invalid" };
+  }
+  return recipients;
+}
+
+export function useRecursiveEncryptionJob({
+  mode,
+  item,
+  isOpen,
+  onSuccess,
+  intoChainParentId,
+}: UseRecursiveEncryptionJobArgs): UseRecursiveEncryptionJob {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const { client: vaultClient } = useVaultClient();
+  const { user } = useAuth();
+  const { config } = useConfig();
+  const uploadAcl =
+    config.AWS_S3_UPLOAD_ACL === "default"
+      ? undefined
+      : config.AWS_S3_UPLOAD_ACL;
+
+  const [state, dispatch] = useReducer(reducer, INITIAL);
+
+  const abortRef = useRef<AbortController | null>(null);
+  const flatRef = useRef<FlatNode[]>([]);
+  const processableIdsRef = useRef<string[]>([]);
+  const publicKeysRef = useRef<Record<string, ArrayBuffer>>({});
+  const versionsRef = useRef<Record<string, number>>({});
+  const pendingUserIdsRef = useRef<string[]>([]);
+  const recipientLabelsRef = useRef<Record<string, RecipientLabel>>({});
+  // For encrypt mode, the root's per-user wrapped key map (committed).
+  const rootEncryptedKeysRef = useRef<Record<string, ArrayBuffer>>({});
+  // Current user's wrapped copy of the root key — entry key passed to the
+  // vault when minting descendant keys via encryptWithoutKey.
+  const currentUserRootWrappedRef = useRef<ArrayBuffer | null>(null);
+  // Wrapped keys of non-root folders in the subtree, keyed by folder id.
+  // Populated during the encrypt folder phase; consumed when building each
+  // file's chain and merged into encryptedKeysForDescendants at commit.
+  const folderWrappedKeysRef = useRef<Map<string, ArrayBuffer>>(new Map());
+  // For encrypt-into-chain mode: the destination's key-chain. The
+  // `parentEntryKey` is K_dest_root wrapped to user (entry into the
+  // destination's encryption tree); `parentChainToParent` walks from
+  // K_dest_root down to K_dest_parent, the immediate parent the item
+  // attaches under. Both are fed to the vault so it can mint K_root
+  // wrapped under K_dest_parent in one call.
+  const parentEntryKeyRef = useRef<ArrayBuffer | null>(null);
+  const parentChainToParentRef = useRef<ArrayBuffer[]>([]);
+  // Wrap of the moved-subtree's root under the destination chain — the
+  // top-level chain wrap shipped on `encrypted_symmetric_key` in the
+  // /move/ payload.
+  const intoChainRootWrapRef = useRef<ArrayBuffer | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      abortRef.current?.abort();
+      abortRef.current = null;
+      flatRef.current = [];
+      processableIdsRef.current = [];
+      publicKeysRef.current = {};
+      versionsRef.current = {};
+      pendingUserIdsRef.current = [];
+      recipientLabelsRef.current = {};
+      rootEncryptedKeysRef.current = {};
+      currentUserRootWrappedRef.current = null;
+      folderWrappedKeysRef.current = new Map();
+      parentEntryKeyRef.current = null;
+      parentChainToParentRef.current = [];
+      intoChainRootWrapRef.current = null;
+      dispatch({ type: "RESET" });
+    }
+  }, [isOpen]);
+
+  // Discovery + validation when the modal opens.
+  useEffect(() => {
+    if (!isOpen || !vaultClient || !user?.sub) return;
+
+    let cancelled = false;
+    const run = async () => {
+      try {
+        dispatch({ type: "SET_PHASE", phase: "discovering" });
+
+        const driver = getDriver();
+        const flat =
+          item.type === ItemType.FOLDER
+            ? await fetchSubtree(driver, item)
+            : [{ item, parentId: null, depth: 0, pathCrumb: "" }];
+        if (cancelled) return;
+        flatRef.current = flat;
+
+        // For a folder root, show every item in the subtree (the root
+        // itself + every descendant folder and file) so the user sees
+        // the full scope — including folders, which are also operated
+        // on in both modes (key-minted on encrypt, state-cleared on
+        // decrypt). For a file root, we only have one node anyway.
+        const sourceNodes = flat;
+
+        // For stacked encryption: items inside an inner encryption root
+        // stay untouched whether we're encrypting or decrypting the outer
+        // root. Skip them in the row list.
+        const innerRoots = innerEncryptionRoots(flat, item.id);
+
+        const rows: FileJobRow[] = sourceNodes.map((n) => {
+          const insideInner = isInsideInnerRoot(n, innerRoots);
+          // Uniform: skip if this is_encrypted-state already matches the
+          // target state (can't encrypt what's already encrypted, can't
+          // decrypt what's already plaintext). Applies to both files and
+          // folders — a plaintext folder has nothing to clear on decrypt,
+          // an already-encrypted folder has nothing to mint on encrypt.
+          // 'encrypt-into-chain' shares the encrypt skip semantics — the
+          // source is plaintext on entry and the target state is
+          // encrypted.
+          const alreadyInTargetState =
+            mode === "decrypt" ? !n.item.is_encrypted : !!n.item.is_encrypted;
+          const shouldSkip = insideInner || alreadyInTargetState;
+          return {
+            id: n.item.id,
+            title: n.item.title,
+            path: n.pathCrumb,
+            item: n.item,
+            state: shouldSkip ? "skipped" : "pending",
+            skipReason: shouldSkip
+              ? mode === "decrypt"
+                ? "not_encrypted"
+                : "already_encrypted"
+              : undefined,
+          };
+        });
+
+        dispatch({ type: "SET_ROWS", rows });
+        // processableIds feeds the file worker pool, which fetches &
+        // uploads content per id. Folders don't have content — their
+        // key-minting runs in a separate sequential loop in
+        // encryptPipeline — so filter them out here.
+        const flatById = new Map(flat.map((n) => [n.item.id, n]));
+        processableIdsRef.current = rows
+          .filter(
+            (r) =>
+              r.state === "pending" &&
+              flatById.get(r.id)?.item.type === ItemType.FILE,
+          )
+          .map((r) => r.id);
+
+        dispatch({ type: "SET_PHASE", phase: "validating" });
+
+        const errors: string[] = [];
+
+        if (mode === "encrypt") {
+          const effectiveReach =
+            item.computed_link_reach ?? item.link_reach ?? null;
+          if (effectiveReach && effectiveReach !== LinkReach.RESTRICTED) {
+            errors.push(
+              t(
+                "encryption.errors.not_restricted",
+                "The item must have restricted access (no public or authenticated link).",
+              ),
+            );
+          }
+
+          const userIds = item.accesses_user_ids ?? [];
+          if (userIds.length === 0) {
+            errors.push(
+              t(
+                "encryption.errors.no_accesses",
+                "No users with access found on the root item.",
+              ),
+            );
+          }
+
+          // Only error out when the whole operation is a no-op. For a
+          // folder root, encrypting it produces K_root + ItemAccess keys
+          // even with no processable descendants (e.g. every descendant
+          // file is already inside a stacked inner encryption root, which
+          // we leave untouched). For a file root, no processable ids means
+          // the file itself is already encrypted — genuine no-op.
+          if (
+            item.type === ItemType.FILE &&
+            processableIdsRef.current.length === 0
+          ) {
+            errors.push(
+              t(
+                "encryption.errors.nothing_to_encrypt_file",
+                "This file is already encrypted.",
+              ),
+            );
+          }
+
+          if (errors.length === 0 && userIds.length > 0) {
+            const { publicKeys, versions } = await fetchRegisteredKeys(userIds);
+            if (cancelled) return;
+
+            // Source display labels (email/name) for the recipients so the
+            // SDK's verify-recipients trust modal can identify them — the job
+            // otherwise carries only subs (accesses_user_ids) + pubkeys, and
+            // emails live on the item's access rows.
+            const accessRows = await driver.getItemAccesses(item.id);
+            if (cancelled) return;
+            const labels: Record<string, RecipientLabel> = {};
+            for (const a of accessRows) {
+              if (a.user.sub) {
+                labels[a.user.sub] = {
+                  email: a.user.email,
+                  name: a.user.full_name,
+                };
+              }
+            }
+            recipientLabelsRef.current = labels;
+
+            const missing = userIds.filter((uid) => !publicKeys[uid]);
+            const callerMissing = user?.sub && missing.includes(user.sub);
+
+            // The caller must have their own key — they're the one about
+            // to encrypt, they need to be able to decrypt afterwards.
+            if (callerMissing) {
+              errors.push(
+                t(
+                  "encryption.errors.self_missing_key",
+                  "You need to complete your encryption onboarding before encrypting this item.",
+                ),
+              );
+            } else if (missing.length === userIds.length) {
+              // No one on the access list has a key — nobody could
+              // decrypt the result. Genuine blocker.
+              errors.push(
+                t(
+                  "encryption.errors.no_keys_at_all",
+                  "Nobody with access to this item has completed encryption onboarding.",
+                ),
+              );
+            } else {
+              // Partial: some users are pending. They'll be written as
+              // pending on the backend and get the key once they have
+              // enabled encryption. Informational, not blocking. Invitees
+              // on the item join them: an invitation becomes a pending
+              // access when its invitee signs up.
+              publicKeysRef.current = publicKeys;
+              versionsRef.current = versions;
+              pendingUserIdsRef.current = missing;
+              const invitations = await driver.getItemInvitations(item.id);
+              if (cancelled) return;
+              dispatch({
+                type: "SET_PENDING_USER_COUNT",
+                count: missing.length + invitations.count,
+              });
+            }
+          }
+        } else if (mode === "encrypt-into-chain") {
+          // Encrypt-on-move: the only chain entry we need is the
+          // destination's. No per-user pubkey collection — the moved
+          // subtree decrypts entirely through the destination's chain,
+          // so collaborators on the SOURCE side that happened to have
+          // inherited access don't need wraps materialised. The
+          // RESTRICTED check is also unnecessary: the destination
+          // subtree is by definition restricted (encrypted), and the
+          // moved item inherits that on the way in.
+          if (!intoChainParentId) {
+            errors.push(
+              t(
+                "encryption.errors.intochain_missing_parent",
+                "Destination parent missing for encrypt-on-move.",
+              ),
+            );
+          } else {
+            try {
+              const driver = getDriver();
+              const keyChain = await driver.getKeyChain(intoChainParentId);
+              if (cancelled) return;
+              parentEntryKeyRef.current = fromBase64(
+                keyChain.encrypted_key_for_user,
+              );
+              parentChainToParentRef.current = keyChain.chain.map((e) =>
+                fromBase64(e.encrypted_symmetric_key),
+              );
+            } catch (err) {
+              errors.push(
+                t(
+                  "encryption.errors.intochain_keychain_failed",
+                  "Could not retrieve the destination key chain ({{err}}).",
+                  { err: (err as Error).message },
+                ),
+              );
+            }
+          }
+
+          // Same no-op guard as encrypt mode: a plaintext file root
+          // must have content to encrypt; a folder root is meaningful
+          // even with zero processable descendants (root key minted
+          // alone is fine).
+          if (
+            item.type === ItemType.FILE &&
+            processableIdsRef.current.length === 0
+          ) {
+            errors.push(
+              t(
+                "encryption.errors.nothing_to_encrypt_file",
+                "This file is already encrypted.",
+              ),
+            );
+          }
+        } else {
+          // For a folder root, decrypting is meaningful even with zero
+          // processable files — the root itself needs its ItemAccess
+          // keys cleared and its `is_encrypted` flag reset (e.g. when a
+          // nested inner root was previously decrypted so there are no
+          // encrypted descendants left under this root). For a file
+          // root, zero processable means the single file is already
+          // plaintext, which is a genuine no-op.
+          if (
+            item.type === ItemType.FILE &&
+            processableIdsRef.current.length === 0
+          ) {
+            errors.push(
+              t(
+                "encryption.errors.nothing_to_decrypt_file",
+                "This file is already plaintext.",
+              ),
+            );
+          }
+        }
+
+        dispatch({ type: "SET_VALIDATION", errors });
+
+        if (errors.length > 0) {
+          dispatch({ type: "SET_PHASE", phase: "blocked" });
+          return;
+        }
+
+        dispatch({ type: "SET_PHASE", phase: "ready" });
+      } catch (err) {
+        if (cancelled) return;
+        dispatch({ type: "SET_TOP_ERROR", error: (err as Error).message });
+        dispatch({ type: "SET_PHASE", phase: "failed" });
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, vaultClient, user?.sub, item, mode, intoChainParentId, t]);
+
+  const confirm = useCallback(async () => {
+    if (!vaultClient || !user?.sub) return;
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+    dispatch({ type: "SET_PHASE", phase: "staging" });
+
+    const stagedResults = new Map<
+      string,
+      StagedEncryptFile | { newFilename: string }
+    >();
+
+    try {
+      if (mode === "encrypt") {
+        // Reset folder key map on each attempt (retry recomputes them).
+        folderWrappedKeysRef.current = new Map();
+        await encryptPipeline({
+          vaultClient,
+          currentUserId: user.sub!,
+          rootItem: item,
+          flat: flatRef.current,
+          processableIds: processableIdsRef.current,
+          publicKeys: publicKeysRef.current,
+          recipientLabels: recipientLabelsRef.current,
+          rootEncryptedKeysRef,
+          currentUserRootWrappedRef,
+          folderWrappedKeysRef,
+          signal: controller.signal,
+          uploadAcl,
+          dispatch,
+          onFileStaged: (id, staged) => stagedResults.set(id, staged),
+        });
+      } else if (mode === "encrypt-into-chain") {
+        folderWrappedKeysRef.current = new Map();
+        intoChainRootWrapRef.current = null;
+        const parentEntryKey = parentEntryKeyRef.current;
+        if (!parentEntryKey) {
+          throw new Error(
+            "Destination key chain not loaded — encrypt-on-move cannot proceed.",
+          );
+        }
+        await encryptIntoChainPipeline({
+          vaultClient,
+          rootItem: item,
+          flat: flatRef.current,
+          processableIds: processableIdsRef.current,
+          parentEntryKey,
+          parentChainToParent: parentChainToParentRef.current,
+          intoChainRootWrapRef,
+          folderWrappedKeysRef,
+          signal: controller.signal,
+          uploadAcl,
+          dispatch,
+          onFileStaged: (id, staged) => stagedResults.set(id, staged),
+        });
+      } else {
+        await decryptPipeline({
+          vaultClient,
+          rootItem: item,
+          flat: flatRef.current,
+          processableIds: processableIdsRef.current,
+          signal: controller.signal,
+          uploadAcl,
+          dispatch,
+          onFileStaged: (id, staged) => stagedResults.set(id, staged),
+        });
+      }
+
+      dispatch({ type: "SET_PHASE", phase: "committing" });
+
+      const driver = getDriver();
+      if (mode === "encrypt") {
+        const fileKeyMapping: Record<string, string> = {};
+        const encryptedKeysForDescendants: Record<string, string> = {};
+        // Folder wrappedKeys first (minted top-down in the pipeline),
+        // then file wrappedKeys. Backend stores both on Item.encrypted_symmetric_key
+        // so /key-chain/ can return the full chain at decrypt time.
+        folderWrappedKeysRef.current.forEach((wk, id) => {
+          encryptedKeysForDescendants[id] = toBase64(wk);
+        });
+        stagedResults.forEach((v, id) => {
+          fileKeyMapping[id] = v.newFilename;
+          if (
+            "wrappedKey" in v &&
+            v.wrappedKey &&
+            v.wrappedKey.byteLength > 0
+          ) {
+            encryptedKeysForDescendants[id] = toBase64(v.wrappedKey);
+          }
+        });
+
+        // Contract with /encrypt/: every user on the access list must
+        // appear in the payload exactly once. Validated users get their
+        // base64 wrapped key; pending users get explicit null.
+        const encryptedSymmetricKeyPerUser: Record<string, string | null> = {};
+        for (const [uid, buf] of Object.entries(rootEncryptedKeysRef.current)) {
+          encryptedSymmetricKeyPerUser[uid] = toBase64(buf);
+        }
+        for (const uid of pendingUserIdsRef.current) {
+          encryptedSymmetricKeyPerUser[uid] = null;
+        }
+
+        // Record the encryption public key version for each user whose
+        // public key we have and null for pending users (no public key →
+        // no version). Backend stores the map verbatim on the ItemAccess
+        // rows so clients can later tell which key version each user's
+        // wrapped key was produced for — the key-staleness check in the
+        // key-mismatch panel reads directly from here. Mirrors the
+        // symmetric-key payload: every user on the access list appears
+        // in the map exactly once.
+        const encryptionPublicKeyVersionPerUser: Record<string, number | null> =
+          {};
+        for (const uid of Object.keys(publicKeysRef.current)) {
+          encryptionPublicKeyVersionPerUser[uid] =
+            versionsRef.current[uid] ?? null;
+        }
+        for (const uid of pendingUserIdsRef.current) {
+          encryptionPublicKeyVersionPerUser[uid] = null;
+        }
+
+        await driver.encryptItem(item.id, {
+          encryptedSymmetricKeyPerUser,
+          encryptionPublicKeyVersionPerUser,
+          encryptedKeysForDescendants,
+          fileKeyMapping,
+        });
+      } else if (mode === "encrypt-into-chain") {
+        const fileKeyMapping: Record<string, string> = {};
+        const encryptedKeysForDescendants: Record<string, string> = {};
+        // Same merge as encrypt mode — folder wraps first, then file
+        // wraps. The root's chain wrap goes on the top-level field
+        // `encrypted_symmetric_key`, NOT in the descendants map.
+        folderWrappedKeysRef.current.forEach((wk, id) => {
+          if (id === item.id) return; // skip — that's the root wrap
+          encryptedKeysForDescendants[id] = toBase64(wk);
+        });
+        stagedResults.forEach((v, id) => {
+          fileKeyMapping[id] = v.newFilename;
+          if (
+            "wrappedKey" in v &&
+            v.wrappedKey &&
+            v.wrappedKey.byteLength > 0
+          ) {
+            encryptedKeysForDescendants[id] = toBase64(v.wrappedKey);
+          }
+        });
+        const rootChainWrap = intoChainRootWrapRef.current;
+        if (!rootChainWrap) {
+          throw new Error(
+            "Root chain wrap missing after pipeline — encrypt-on-move bug.",
+          );
+        }
+        if (!intoChainParentId) {
+          throw new Error("Destination parent missing for encrypt-on-move.");
+        }
+        await driver.moveItemEncryptOnMove(item.id, {
+          targetItemId: intoChainParentId,
+          encryptedSymmetricKey: toBase64(rootChainWrap),
+          encryptedKeysForDescendants,
+          fileKeyMapping,
+        });
+      } else {
+        const fileKeyMapping: Record<string, string> = {};
+        stagedResults.forEach((v, id) => {
+          fileKeyMapping[id] = v.newFilename;
+        });
+        await driver.removeEncryption(item.id, { fileKeyMapping });
+      }
+
+      dispatch({ type: "PROMOTE_STAGED_TO_DONE" });
+      await queryClient.invalidateQueries({ queryKey: ["items"] });
+
+      dispatch({ type: "SET_PHASE", phase: "success" });
+      onSuccess?.();
+    } catch (err) {
+      if (controller.signal.aborted && (err as Error).name === "AbortError") {
+        return;
+      }
+      let message: string;
+      if (err instanceof FileStagingError) {
+        // The job stopped at this file: name it, the row shows where it is.
+        const title =
+          flatRef.current.find((n) => n.item.id === err.itemId)?.item.title ??
+          "";
+        message = t(
+          "encryption.errors.file_failed",
+          '"{{title}}" could not be processed ({{error}}). Nothing was changed.',
+          { title, error: errorToString(err.cause) },
+        );
+      } else if (
+        err instanceof APIError &&
+        err.data?.code === "subtree_mutated"
+      ) {
+        const missing = (err.data.missing as string[] | undefined) ?? [];
+        const extra = (err.data.extra as string[] | undefined) ?? [];
+        message = t(
+          "encryption.errors.subtree_mutated",
+          "The folder contents changed during the operation ({{added}} added, {{removed}} removed).",
+          { added: missing.length, removed: extra.length },
+        );
+      } else {
+        // APIError has no `.message` (it passes nothing to super), so
+        // reading err.message would yield an empty string and the banner
+        // would stay blank. errorToString extracts a readable detail from
+        // the response body or falls back to the i18n generic string.
+        message = errorToString(err);
+      }
+      dispatch({ type: "FAIL_RUNNING", error: message });
+      dispatch({ type: "SET_TOP_ERROR", error: message });
+      dispatch({ type: "SET_PHASE", phase: "failed" });
+    }
+  }, [
+    mode,
+    vaultClient,
+    user?.sub,
+    item,
+    queryClient,
+    onSuccess,
+    t,
+    uploadAcl,
+  ]);
+
+  const retry = useCallback(() => {
+    // Only a run that failed can be retried; a refused one needs its cause fixed.
+    if (state.phase !== "failed") return;
+    dispatch({ type: "RESET_FAILED_TO_PENDING" });
+    dispatch({ type: "SET_TOP_ERROR", error: null });
+    void confirm();
+  }, [confirm, state.phase]);
+
+  const cancel = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
+  const doneCount = state.rows.filter(
+    (r) => r.state === "done" || r.state === "staged",
+  ).length;
+
+  // For both folder encrypt and folder decrypt, the operation is
+  // meaningful even with zero processable descendants:
+  // - encrypt: establish the folder as a new encryption root (stacking
+  //   over inner sub-roots that keep their own keys).
+  // - decrypt: clear the root's ItemAccess keys and its is_encrypted
+  //   flag even when every descendant is already plaintext (e.g. after
+  //   an inner root was previously decrypted).
+  // Only a file root strictly needs processable content.
+  const needsProcessableDescendants = item.type === ItemType.FILE;
+  const canConfirm =
+    state.phase === "ready" &&
+    state.validationErrors.length === 0 &&
+    (!needsProcessableDescendants || processableIdsRef.current.length > 0);
+
+  return {
+    phase: state.phase,
+    rows: state.rows,
+    totalProcessable: state.totalProcessable,
+    doneCount,
+    validationErrors: state.validationErrors,
+    topError: state.topError,
+    canConfirm,
+    pendingUserCount: state.pendingUserCount,
+    confirm,
+    retry,
+    cancel,
+  };
+}
+
+// ---------- Pipelines ----------
+
+type DispatchFn = (action: Action) => void;
+
+type EncryptPipelineArgs = {
+  vaultClient: VaultClient;
+  currentUserId: string;
+  rootItem: Item;
+  flat: FlatNode[];
+  processableIds: string[];
+  publicKeys: Record<string, ArrayBuffer>;
+  recipientLabels: Record<string, RecipientLabel>;
+  rootEncryptedKeysRef: React.MutableRefObject<Record<string, ArrayBuffer>>;
+  currentUserRootWrappedRef: React.MutableRefObject<ArrayBuffer | null>;
+  folderWrappedKeysRef: React.MutableRefObject<Map<string, ArrayBuffer>>;
+  signal: AbortSignal;
+  uploadAcl: string | undefined;
+  dispatch: DispatchFn;
+  onFileStaged: (id: string, staged: StagedEncryptFile) => void;
+};
+
+async function encryptPipeline({
+  vaultClient,
+  currentUserId,
+  rootItem,
+  flat,
+  processableIds,
+  publicKeys,
+  recipientLabels,
+  rootEncryptedKeysRef,
+  currentUserRootWrappedRef,
+  folderWrappedKeysRef,
+  signal,
+  uploadAcl,
+  dispatch,
+  onFileStaged,
+}: EncryptPipelineArgs): Promise<void> {
+  // Root-key minting happens before per-file staging only when the root
+  // is a FOLDER. When the root is a FILE, the root IS the per-file case
+  // and encryptWithoutKey is called with the actual file content below.
+  if (rootItem.type === ItemType.FOLDER) {
+    dispatch({ type: "UPDATE_ROW", id: rootItem.id, state: "running" });
+    // Pass a labeled recipient map; the vault resolves + trust-checks each key
+    // itself (binding + TOFU) and uses only the subs. `publicKeys` is keyed by
+    // userId; labels come from the sourced access rows.
+    const { encryptedKeys } = await vaultClient.encryptWithoutKey(
+      new ArrayBuffer(0),
+      toRecipients(Object.keys(publicKeys), recipientLabels),
+    );
+    if (signal.aborted) throw abortError();
+    rootEncryptedKeysRef.current = encryptedKeys;
+    const currentUserWrapped = encryptedKeys[currentUserId];
+    if (!currentUserWrapped) {
+      throw new Error(
+        "Current user has no wrapped root key — encryption keys not set up.",
+      );
+    }
+    currentUserRootWrappedRef.current = currentUserWrapped;
+    dispatch({ type: "UPDATE_ROW", id: rootItem.id, state: "staged" });
+
+    // Mint a symmetric key for every nested folder in the effective
+    // scope, wrapped by its parent folder's key. Inner encryption roots
+    // (and everything under them) are excluded — stacked encryption
+    // leaves those subtrees with their existing keys. Processed top-down
+    // so each folder's chain only references already-minted ancestors.
+    // Serial because later entries depend on earlier ones.
+    const innerRoots = innerEncryptionRoots(flat, rootItem.id);
+    const nestedFolders = foldersOnly(flat)
+      .filter(
+        (n) => n.item.id !== rootItem.id && !isInsideInnerRoot(n, innerRoots),
+      )
+      .sort((a, b) => a.depth - b.depth);
+    for (const folder of nestedFolders) {
+      if (signal.aborted) throw abortError();
+      dispatch({ type: "UPDATE_ROW", id: folder.item.id, state: "running" });
+      const chain = chainForNode(
+        folder,
+        rootItem.id,
+        folderWrappedKeysRef.current,
+      );
+      const { wrappedKey } = await vaultClient.encryptNestedWithoutKey(
+        new ArrayBuffer(0),
+        currentUserWrapped,
+        chain,
+      );
+      folderWrappedKeysRef.current.set(folder.item.id, wrappedKey);
+      dispatch({ type: "UPDATE_ROW", id: folder.item.id, state: "staged" });
+    }
+  }
+
+  await runStagingPool(processableIds, signal, (id, poolSignal) =>
+    stageOneEncryption({
+      vaultClient,
+      rootItem,
+      flat,
+      targetId: id,
+      publicKeys,
+      recipientLabels,
+      rootEncryptedKeysRef,
+      currentUserRootWrappedRef,
+      folderWrappedKeysRef,
+      signal: poolSignal,
+      uploadAcl,
+      dispatch,
+      onFileStaged,
+    }),
+  );
+  void currentUserId;
+}
+
+type StageOneEncryptArgs = {
+  vaultClient: VaultClient;
+  rootItem: Item;
+  flat: FlatNode[];
+  targetId: string;
+  publicKeys: Record<string, ArrayBuffer>;
+  recipientLabels: Record<string, RecipientLabel>;
+  rootEncryptedKeysRef: React.MutableRefObject<Record<string, ArrayBuffer>>;
+  currentUserRootWrappedRef: React.MutableRefObject<ArrayBuffer | null>;
+  folderWrappedKeysRef: React.MutableRefObject<Map<string, ArrayBuffer>>;
+  signal: AbortSignal;
+  uploadAcl: string | undefined;
+  dispatch: DispatchFn;
+  onFileStaged: (id: string, staged: StagedEncryptFile) => void;
+};
+
+async function stageOneEncryption({
+  vaultClient,
+  rootItem,
+  flat,
+  targetId,
+  publicKeys,
+  recipientLabels,
+  rootEncryptedKeysRef,
+  currentUserRootWrappedRef,
+  folderWrappedKeysRef,
+  signal,
+  uploadAcl,
+  dispatch,
+  onFileStaged,
+}: StageOneEncryptArgs): Promise<void> {
+  const node = flat.find((n) => n.item.id === targetId);
+  if (!node) throw new Error(`Row ${targetId} not found in tree`);
+
+  dispatch({ type: "UPDATE_ROW", id: targetId, state: "running" });
+
+  try {
+    if (signal.aborted) throw abortError();
+
+    const resp = await fetch(node.item.url!, {
+      credentials: "include",
+      signal,
+    });
+    if (!resp.ok) {
+      throw new Error(`Download failed: ${resp.status}`);
+    }
+    const plaintext = await resp.arrayBuffer();
+
+    let encryptedContent: ArrayBuffer;
+    let wrappedKey: ArrayBuffer;
+
+    if (rootItem.type === ItemType.FILE && targetId === rootItem.id) {
+      // optimizeMemory: hot path — `plaintext` is the full file body
+      // (often several MB) and is discarded after this call. Pass a labeled
+      // recipient map; the vault resolves + trust-checks each key (binding +
+      // TOFU) and uses only the subs.
+      const { encryptedContent: ct, encryptedKeys } =
+        await vaultClient.encryptWithoutKey(
+          plaintext,
+          toRecipients(Object.keys(publicKeys), recipientLabels),
+          {
+            optimizeMemory: true,
+          },
+        );
+      encryptedContent = ct;
+      rootEncryptedKeysRef.current = encryptedKeys;
+      wrappedKey = new ArrayBuffer(0);
+    } else {
+      const entryKey = currentUserRootWrappedRef.current;
+      if (!entryKey) throw new Error("Missing root entry key");
+      // Chain is the wrapped keys of every intermediate folder between the
+      // root (exclusive) and this file's direct parent (inclusive). The
+      // vault resolves entry + chain to the direct parent's key, mints
+      // K_file, encrypts content with K_file, and wraps K_file under the
+      // parent's key. `encryptWithKey` is reserved for symmetric use of an
+      // existing key; minting a new nested resource goes through
+      // `encryptNestedWithoutKey`.
+      const chain = chainForNode(
+        node,
+        rootItem.id,
+        folderWrappedKeysRef.current,
+      );
+      // optimizeMemory: hot path — file body, discarded after this call.
+      const { encryptedContent: ct, wrappedKey: wk } =
+        await vaultClient.encryptNestedWithoutKey(plaintext, entryKey, chain, {
+          optimizeMemory: true,
+        });
+      encryptedContent = ct;
+      wrappedKey = wk;
+    }
+
+    const newFilename = stagedFilename(node.item.title);
+    const uploadUrl = await getEncryptionUploadUrl(
+      targetId,
+      newFilename,
+      encryptedContent.byteLength,
+      signal,
+    );
+    await putToS3(uploadUrl, encryptedContent, signal, uploadAcl);
+
+    onFileStaged(targetId, { itemId: targetId, newFilename, wrappedKey });
+    dispatch({ type: "UPDATE_ROW", id: targetId, state: "staged" });
+  } catch (err) {
+    if ((err as Error).name === "AbortError") {
+      // Interrupted (cancelled, or another file failed): not this file's fault.
+      dispatch({ type: "UPDATE_ROW", id: targetId, state: "pending" });
+      throw err;
+    }
+    dispatch({
+      type: "UPDATE_ROW",
+      id: targetId,
+      state: "failed",
+      error: (err as Error).message,
+    });
+    throw new FileStagingError(targetId, err);
+  }
+}
+
+type EncryptIntoChainPipelineArgs = {
+  vaultClient: VaultClient;
+  rootItem: Item;
+  flat: FlatNode[];
+  processableIds: string[];
+  parentEntryKey: ArrayBuffer;
+  parentChainToParent: ArrayBuffer[];
+  intoChainRootWrapRef: React.MutableRefObject<ArrayBuffer | null>;
+  folderWrappedKeysRef: React.MutableRefObject<Map<string, ArrayBuffer>>;
+  signal: AbortSignal;
+  uploadAcl: string | undefined;
+  dispatch: DispatchFn;
+  onFileStaged: (id: string, staged: StagedEncryptFile) => void;
+};
+
+/**
+ * Encrypt-on-move pipeline. Mirrors `encryptPipeline` (mint-then-stage)
+ * but every wrap targets the destination's chain instead of a per-user
+ * key map. The conceptual difference vs. encrypt mode:
+ *
+ *   - encrypt: K_root is wrapped per-user; descendant wraps stack on
+ *     K_root via `currentUserWrapped` as the SDK entry key.
+ *   - encrypt-into-chain: K_root is wrapped under K_dest_parent (chain
+ *     wrap); descendant wraps stack on K_root, but the SDK entry into
+ *     each call is `parentEntryKey` (K_dest_root wrapped to user) and
+ *     the chain prefix walks K_dest_root → K_dest_parent → K_root → ...
+ *
+ * The shared trick is that `folderWrappedKeysRef.current.get(rootItem.id)`
+ * holds K_root's chain wrap, so `chainForNode` naturally picks it up
+ * for descendants (it returns the chain from the root's direct child to
+ * the node's direct parent — and we always prepend the destination
+ * prefix on every call so K_root sits between).
+ */
+async function encryptIntoChainPipeline({
+  vaultClient,
+  rootItem,
+  flat,
+  processableIds,
+  parentEntryKey,
+  parentChainToParent,
+  intoChainRootWrapRef,
+  folderWrappedKeysRef,
+  signal,
+  uploadAcl,
+  dispatch,
+  onFileStaged,
+}: EncryptIntoChainPipelineArgs): Promise<void> {
+  // Mint K_root wrapped under K_dest_parent. For a folder root we mint
+  // ahead of any per-file work; for a file root we defer to the
+  // per-file stage where the file's plaintext goes through the same
+  // encryptNestedWithoutKey call.
+  if (rootItem.type === ItemType.FOLDER) {
+    dispatch({ type: "UPDATE_ROW", id: rootItem.id, state: "running" });
+    const { wrappedKey } = await vaultClient.encryptNestedWithoutKey(
+      new ArrayBuffer(0),
+      parentEntryKey,
+      parentChainToParent.length > 0 ? parentChainToParent : undefined,
+    );
+    if (signal.aborted) throw abortError();
+    intoChainRootWrapRef.current = wrappedKey;
+    // Stash under the root's id so chainForNode picks it up for
+    // descendants below — chainForNode otherwise excludes the root,
+    // but here OUR root is just an intermediate folder relative to
+    // K_dest_root.
+    folderWrappedKeysRef.current.set(rootItem.id, wrappedKey);
+    dispatch({ type: "UPDATE_ROW", id: rootItem.id, state: "staged" });
+
+    // Mint nested folders top-down so each chain only references
+    // already-minted ancestors.
+    const innerRoots = innerEncryptionRoots(flat, rootItem.id);
+    const nestedFolders = foldersOnly(flat)
+      .filter(
+        (n) => n.item.id !== rootItem.id && !isInsideInnerRoot(n, innerRoots),
+      )
+      .sort((a, b) => a.depth - b.depth);
+    for (const folder of nestedFolders) {
+      if (signal.aborted) throw abortError();
+      dispatch({ type: "UPDATE_ROW", id: folder.item.id, state: "running" });
+      const subtreeChain = chainForNode(
+        folder,
+        rootItem.id,
+        folderWrappedKeysRef.current,
+      );
+      // Full chain seen by the SDK: [destPrefix..., K_root_wrap,
+      // intermediates...]. K_root_wrap is the wrapped key we just
+      // stashed — chainForNode's exclusion of the root means we have
+      // to prepend it explicitly.
+      const fullChain = [
+        ...parentChainToParent,
+        folderWrappedKeysRef.current.get(rootItem.id)!,
+        ...subtreeChain,
+      ];
+      const { wrappedKey: folderWrap } =
+        await vaultClient.encryptNestedWithoutKey(
+          new ArrayBuffer(0),
+          parentEntryKey,
+          fullChain,
+        );
+      folderWrappedKeysRef.current.set(folder.item.id, folderWrap);
+      dispatch({ type: "UPDATE_ROW", id: folder.item.id, state: "staged" });
+    }
+  }
+
+  await runStagingPool(processableIds, signal, (id, poolSignal) =>
+    stageOneEncryptionIntoChain({
+      vaultClient,
+      rootItem,
+      flat,
+      targetId: id,
+      parentEntryKey,
+      parentChainToParent,
+      intoChainRootWrapRef,
+      folderWrappedKeysRef,
+      signal: poolSignal,
+      uploadAcl,
+      dispatch,
+      onFileStaged,
+    }),
+  );
+}
+
+type StageOneEncryptIntoChainArgs = {
+  vaultClient: VaultClient;
+  rootItem: Item;
+  flat: FlatNode[];
+  targetId: string;
+  parentEntryKey: ArrayBuffer;
+  parentChainToParent: ArrayBuffer[];
+  intoChainRootWrapRef: React.MutableRefObject<ArrayBuffer | null>;
+  folderWrappedKeysRef: React.MutableRefObject<Map<string, ArrayBuffer>>;
+  signal: AbortSignal;
+  uploadAcl: string | undefined;
+  dispatch: DispatchFn;
+  onFileStaged: (id: string, staged: StagedEncryptFile) => void;
+};
+
+async function stageOneEncryptionIntoChain({
+  vaultClient,
+  rootItem,
+  flat,
+  targetId,
+  parentEntryKey,
+  parentChainToParent,
+  intoChainRootWrapRef,
+  folderWrappedKeysRef,
+  signal,
+  uploadAcl,
+  dispatch,
+  onFileStaged,
+}: StageOneEncryptIntoChainArgs): Promise<void> {
+  const node = flat.find((n) => n.item.id === targetId);
+  if (!node) throw new Error(`Row ${targetId} not found in tree`);
+
+  dispatch({ type: "UPDATE_ROW", id: targetId, state: "running" });
+
+  try {
+    if (signal.aborted) throw abortError();
+
+    const resp = await fetch(node.item.url!, {
+      credentials: "include",
+      signal,
+    });
+    if (!resp.ok) {
+      throw new Error(`Download failed: ${resp.status}`);
+    }
+    const plaintext = await resp.arrayBuffer();
+
+    let encryptedContent: ArrayBuffer;
+    let wrappedKey: ArrayBuffer;
+
+    if (rootItem.type === ItemType.FILE && targetId === rootItem.id) {
+      // File root: K_file gets minted directly under K_dest_parent.
+      // No subtree-root prefix in the chain — there are no
+      // intermediate folders for a single-file move.
+      const { encryptedContent: ct, wrappedKey: wk } =
+        await vaultClient.encryptNestedWithoutKey(
+          plaintext,
+          parentEntryKey,
+          parentChainToParent.length > 0 ? parentChainToParent : undefined,
+          { optimizeMemory: true },
+        );
+      encryptedContent = ct;
+      // Top-level chain wrap stored separately; descendants map stays
+      // empty (none for a file root). Mirrors how encrypt mode treats
+      // a file root's wrappedKey as 0-byte and pulls per-user wraps
+      // out of `rootEncryptedKeysRef` instead.
+      intoChainRootWrapRef.current = wk;
+      wrappedKey = new ArrayBuffer(0);
+    } else {
+      // Descendant file: chain through dest prefix, K_root, and any
+      // intermediate folder wraps already in folderWrappedKeysRef.
+      const subtreeChain = chainForNode(
+        node,
+        rootItem.id,
+        folderWrappedKeysRef.current,
+      );
+      const rootWrap = folderWrappedKeysRef.current.get(rootItem.id);
+      if (!rootWrap) {
+        throw new Error("Subtree root wrap missing — folder ordering bug.");
+      }
+      const fullChain = [...parentChainToParent, rootWrap, ...subtreeChain];
+      const { encryptedContent: ct, wrappedKey: wk } =
+        await vaultClient.encryptNestedWithoutKey(
+          plaintext,
+          parentEntryKey,
+          fullChain,
+          {
+            optimizeMemory: true,
+          },
+        );
+      encryptedContent = ct;
+      wrappedKey = wk;
+    }
+
+    const newFilename = stagedFilename(node.item.title);
+    const uploadUrl = await getEncryptionUploadUrl(
+      targetId,
+      newFilename,
+      encryptedContent.byteLength,
+      signal,
+    );
+    await putToS3(uploadUrl, encryptedContent, signal, uploadAcl);
+
+    onFileStaged(targetId, { itemId: targetId, newFilename, wrappedKey });
+    dispatch({ type: "UPDATE_ROW", id: targetId, state: "staged" });
+  } catch (err) {
+    if ((err as Error).name === "AbortError") {
+      // Interrupted (cancelled, or another file failed): not this file's fault.
+      dispatch({ type: "UPDATE_ROW", id: targetId, state: "pending" });
+      throw err;
+    }
+    dispatch({
+      type: "UPDATE_ROW",
+      id: targetId,
+      state: "failed",
+      error: (err as Error).message,
+    });
+    throw new FileStagingError(targetId, err);
+  }
+}
+
+type DecryptPipelineArgs = {
+  vaultClient: VaultClient;
+  rootItem: Item;
+  flat: FlatNode[];
+  processableIds: string[];
+  signal: AbortSignal;
+  uploadAcl: string | undefined;
+  dispatch: DispatchFn;
+  onFileStaged: (id: string, staged: { newFilename: string }) => void;
+};
+
+async function decryptPipeline({
+  vaultClient,
+  rootItem,
+  flat,
+  processableIds,
+  signal,
+  uploadAcl,
+  dispatch,
+  onFileStaged,
+}: DecryptPipelineArgs): Promise<void> {
+  // Folders (and the root itself, if it's a folder) have no per-item
+  // decrypt work — their encryption state is cleared by the backend in
+  // a single commit — but they still need to visually progress from
+  // 'pending' to 'staged' → 'done' alongside the files. Mark them now.
+  // Skipped rows (inner roots and plaintext descendants) are NOT
+  // promoted because UPDATE_ROW would overwrite their 'skipped' state;
+  // we filter to the in-scope items.
+  const innerRoots = innerEncryptionRoots(flat, rootItem.id);
+  const processableIdsSet = new Set(processableIds);
+  for (const node of flat) {
+    if (processableIdsSet.has(node.item.id)) continue;
+    if (node.item.type !== ItemType.FOLDER) continue;
+    if (isInsideInnerRoot(node, innerRoots)) continue;
+    // Only promote in-scope folders that would have been 'pending'
+    // (encrypted, not inside an inner root).
+    if (!node.item.is_encrypted) continue;
+    dispatch({ type: "UPDATE_ROW", id: node.item.id, state: "staged" });
+  }
+
+  await runStagingPool(processableIds, signal, async (id, poolSignal) => {
+    const node = flat.find((n) => n.item.id === id);
+    if (!node) return;
+
+    dispatch({ type: "UPDATE_ROW", id, state: "running" });
+
+    try {
+      const driver = getDriver();
+      const keyChain = await driver.getKeyChain(id);
+      const entryKey = fromBase64(keyChain.encrypted_key_for_user);
+      const chain = keyChain.chain.map((e) =>
+        fromBase64(e.encrypted_symmetric_key),
+      );
+
+      const resp = await fetch(node.item.url!, {
+        credentials: "include",
+        signal: poolSignal,
+      });
+      if (!resp.ok) {
+        throw new Error(`Download failed: ${resp.status}`);
+      }
+      const ciphertext = await resp.arrayBuffer();
+
+      const keyVersion = keyChain.encryption_public_key_version ?? 1;
+
+      // optimizeMemory: hot path — file body, ciphertext discarded
+      // after this call and plaintext goes straight to S3.
+      const { data: plaintext } = await vaultClient.decryptWithKey(
+        ciphertext,
+        entryKey,
+        keyVersion,
+        chain.length > 0 ? chain : undefined,
+        { optimizeMemory: true },
+      );
+
+      const newFilename = stagedFilename(node.item.title);
+      const uploadUrl = await getEncryptionUploadUrl(
+        id,
+        newFilename,
+        plaintext.byteLength,
+        poolSignal,
+      );
+      await putToS3(uploadUrl, plaintext, poolSignal, uploadAcl);
+
+      onFileStaged(id, { newFilename });
+      dispatch({ type: "UPDATE_ROW", id, state: "staged" });
+    } catch (err) {
+      if ((err as Error).name === "AbortError") {
+        // Interrupted (cancelled, or another file failed): not this file's fault.
+        dispatch({ type: "UPDATE_ROW", id, state: "pending" });
+        throw err;
+      }
+      dispatch({
+        type: "UPDATE_ROW",
+        id,
+        state: "failed",
+        error: (err as Error).message,
+      });
+      throw new FileStagingError(id, err);
+    }
+  });
+}

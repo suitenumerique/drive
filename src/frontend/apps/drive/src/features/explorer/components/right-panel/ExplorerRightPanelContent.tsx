@@ -98,6 +98,17 @@ export const ExplorerRightPanelContent = ({
           <div className="explorer__right-panel__item-type">
             <ItemIcon item={firstSelectedItem} size={IconSize.X_LARGE} />
           </div>
+          {firstSelectedItem.is_encrypted && (
+            <div
+              className="drive__encryption-inline"
+              style={{ marginTop: "8px" }}
+            >
+              <span className="material-icons" aria-hidden="true">
+                verified_user
+              </span>
+              {t("explorer.rightPanel.encrypted", "Encrypted")}
+            </div>
+          )}
           {showWarning && (
             <div className="explorer__right-panel__suspicious-warning">
               <div className="explorer__right-panel__suspicious-warning__text">

@@ -37,6 +37,10 @@ import {
   useMutationDuplicateItem,
 } from "./useMutations";
 import { DefaultRoute } from "@/utils/defaultRoutes";
+import { ModalRecursiveEncrypt } from "@/features/encryption/ModalRecursiveEncrypt";
+import { ModalRecursiveRemoveEncryption } from "@/features/encryption/ModalRecursiveRemoveEncryption";
+import { ModalEncryptionNotRoot } from "@/features/encryption/ModalEncryptionNotRoot";
+import { useVaultClient } from "@/features/encryption/VaultClientProvider";
 import { getCanUploadErrorDescription } from "@/utils/entitlements";
 import {
   addToast,
@@ -64,6 +68,7 @@ export const useItemActionMenuItems = ({
     useGlobalExplorer();
   const { handleDownloadItem } = useDownloadItem();
   const { deleteItems: deleteItem } = useDeleteItem();
+  const { isEnabled: isEncryptionEnabled } = useVaultClient();
   const treeContext = useTreeContext();
 
   const { mutateAsync: deleteFavoriteItem } = useMutationDeleteFavoriteItem();
@@ -74,6 +79,8 @@ export const useItemActionMenuItems = ({
   const renameModal = useModal();
   const moveModal = useModal();
   const createFolderModal = useModal();
+  const encryptModal = useModal();
+  const removeEncryptionModal = useModal();
 
   const [currentItem, setCurrentItem] = useState<Item | null>(null);
 
@@ -81,7 +88,9 @@ export const useItemActionMenuItems = ({
     renameModal.isOpen ||
     shareItemModal.isOpen ||
     moveModal.isOpen ||
-    createFolderModal.isOpen;
+    createFolderModal.isOpen ||
+    encryptModal.isOpen ||
+    removeEncryptionModal.isOpen;
 
   useEffect(() => {
     onModalOpenChange?.(isModalOpen);
@@ -128,6 +137,36 @@ export const useItemActionMenuItems = ({
     const effectiveItemId = options?.itemId ?? item.originalId ?? item.id;
     const effectiveItem = { ...item, id: effectiveItemId };
     const showAddChildren = allowCreate;
+
+    const encryptionEntries: MenuItem[] = [
+      ...(isEncryptionEnabled && !item.is_encrypted && item.abilities?.encrypt
+        ? [
+            {
+              icon: <span className="material-icons">add_moderator</span>,
+              label: t("explorer.item.actions.encrypt", "Encrypt"),
+              callback: () => {
+                setCurrentItem(effectiveItem);
+                encryptModal.open();
+              },
+            },
+          ]
+        : []),
+      ...(item.is_encrypted && item.abilities?.remove_encryption
+        ? [
+            {
+              icon: <span className="material-icons">remove_moderator</span>,
+              label: t(
+                "explorer.item.actions.remove_encryption",
+                "Remove encryption",
+              ),
+              callback: () => {
+                setCurrentItem(effectiveItem);
+                removeEncryptionModal.open();
+              },
+            },
+          ]
+        : []),
+    ];
 
     return [
       ...(showAddChildren
@@ -227,7 +266,9 @@ export const useItemActionMenuItems = ({
         },
       },
       { type: "separator" },
-
+      ...(encryptionEntries.length
+        ? [...encryptionEntries, { type: "separator" as const }]
+        : []),
       {
         icon: <Info />,
         label: t("explorer.item.actions.view_info"),
@@ -277,9 +318,33 @@ export const useItemActionMenuItems = ({
       {currentItem && createFolderModal.isOpen && (
         <ExplorerCreateFolderModal
           {...createFolderModal}
-          parentId={currentItem.id}
+          parent={currentItem}
         />
       )}
+      {currentItem && encryptModal.isOpen && (
+        <ModalRecursiveEncrypt
+          isOpen
+          onClose={encryptModal.close}
+          item={currentItem}
+        />
+      )}
+      {currentItem &&
+        removeEncryptionModal.isOpen &&
+        (currentItem.is_encrypted &&
+        (!currentItem.is_encryption_root ||
+          currentItem.is_inside_encrypted_subtree) ? (
+          <ModalEncryptionNotRoot
+            isOpen
+            onClose={removeEncryptionModal.close}
+            item={currentItem}
+          />
+        ) : (
+          <ModalRecursiveRemoveEncryption
+            isOpen
+            onClose={removeEncryptionModal.close}
+            item={currentItem}
+          />
+        ))}
     </>
   );
 

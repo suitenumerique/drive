@@ -1,4 +1,5 @@
 import { useContext, useEffect, useMemo, useState } from "react";
+import { useAutoAcceptPendingMembers } from "@/features/encryption/sharing/useAutoAcceptPendingMembers";
 import { useQuery } from "@tanstack/react-query";
 import {
   Item,
@@ -187,6 +188,9 @@ export const GlobalExplorerProvider = ({
   const [previewItem, setPreviewItem] = useState<Item | undefined>(undefined);
   const [previewItems, setPreviewItems] = useState<Item[]>([]);
 
+  useAutoAcceptPendingMembers(item);
+  useAutoAcceptPendingMembers(previewItem);
+
   return (
     <SelectionStoreContext.Provider value={selectionStore}>
       <GlobalExplorerContext.Provider
@@ -272,17 +276,21 @@ export const GlobalExplorerProvider = ({
             </ExplorerDndProvider>
           </TreeProviderInitializer>
         </TreeProvider>
-        <input
-          {...dropZone.getInputProps({
-            webkitdirectory: "true",
-            id: "import-folders",
-          })}
-        />
-        <input
-          {...dropZone.getInputProps({
-            id: "import-files",
-          })}
-        />
+        {/* Dropzone's hidden inputs sit below the app and would make the page
+            scroll by 1px: kept in a box of no height. */}
+        <div style={{ position: "relative", height: 0, overflow: "hidden" }}>
+          <input
+            {...dropZone.getInputProps({
+              webkitdirectory: "true",
+              id: "import-folders",
+            })}
+          />
+          <input
+            {...dropZone.getInputProps({
+              id: "import-files",
+            })}
+          />
+        </div>
 
         <Toaster />
         <CustomFilesPreview

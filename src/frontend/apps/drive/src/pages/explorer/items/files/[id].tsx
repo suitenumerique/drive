@@ -9,13 +9,18 @@ import { useRouter } from "next/router";
 import { useTranslation } from "react-i18next";
 import { useItem } from "@/features/explorer/hooks/useQueries";
 import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout";
+import { useAutoAcceptPendingMembers } from "@/features/encryption/sharing/useAutoAcceptPendingMembers";
+import type { NextPageWithLayout } from "@/pages/_app";
 
-export default function FilePage() {
+const FilePage: NextPageWithLayout = () => {
   const { t } = useTranslation();
   const router = useRouter();
   const itemId = router.query.id as string;
 
   const { data: item, isLoading, error } = useItem(itemId);
+  // This page has no explorer context, which is what hands the key to pending
+  // members when a manager opens an encrypted item: do it here too.
+  useAutoAcceptPendingMembers(item);
 
   // On 403, 401, the user is automatically redirected to the 401/403 page.
 
@@ -47,8 +52,11 @@ export default function FilePage() {
       />
     </div>
   );
-}
+};
 
+// GlobalLayout carries the auth and vault providers the encrypted viewers need.
 FilePage.getLayout = function getLayout(page: React.ReactElement) {
   return <GlobalLayout>{page}</GlobalLayout>;
 };
+
+export default FilePage;

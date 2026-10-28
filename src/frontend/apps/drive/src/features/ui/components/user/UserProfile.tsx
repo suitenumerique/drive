@@ -13,18 +13,58 @@ import { LANGUAGES } from "@/features/i18n/conf";
 import { AnonymousCTA } from "../anonymous-cta/AnonymousCTA";
 import { useTranslation } from "react-i18next";
 import { useClipboard } from "@/hooks/useCopyToClipboard";
+import { useVaultClient } from "@/features/encryption/VaultClientProvider";
+import { ModalEncryptionOnboarding } from "@/features/encryption/ModalEncryptionOnboarding";
+import { ModalEncryptionSettings } from "@/features/encryption/ModalEncryptionSettings";
+import { useCallback, useState } from "react";
 
 export const UserProfile = () => {
   const { user } = useAuth();
+  const { hasKeys, isEnabled: isEncryptionEnabled } = useVaultClient();
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const handleEncryptionClick = useCallback(() => {
+    // The user menu is a react-aria popover with no close handle exposed:
+    // Escape is the way to dismiss it before our modal opens.
+    document.activeElement?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+
+    if (hasKeys) {
+      setIsSettingsOpen(true);
+    } else {
+      setIsOnboardingOpen(true);
+    }
+  }, [hasKeys]);
+
   return (
     <div className="user-profile">
       {user ? (
-        <UserMenu
-          user={user}
-          logout={logout}
-          termOfServiceUrl="https://docs.numerique.gouv.fr/docs/8e298e03-c95f-44c7-be4a-ffb618af1854/"
-          actions={<LanguagePickerUserMenu />}
-        />
+        <>
+          <UserMenu
+            user={user}
+            logout={logout}
+            termOfServiceUrl="https://docs.numerique.gouv.fr/docs/8e298e03-c95f-44c7-be4a-ffb618af1854/"
+            appSettingsCTA={
+              isEncryptionEnabled ? handleEncryptionClick : undefined
+            }
+            actions={<LanguagePickerUserMenu />}
+          />
+
+          {isOnboardingOpen && (
+            <ModalEncryptionOnboarding
+              isOpen
+              onClose={() => setIsOnboardingOpen(false)}
+            />
+          )}
+          {isSettingsOpen && (
+            <ModalEncryptionSettings
+              isOpen
+              onClose={() => setIsSettingsOpen(false)}
+            />
+          )}
+        </>
       ) : (
         <>
           <AnonymousDropdownMenu />

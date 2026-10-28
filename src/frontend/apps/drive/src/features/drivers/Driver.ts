@@ -25,6 +25,33 @@ import {
   WorkspaceType,
 } from "./types";
 
+/**
+ * Thrown by `moveItem` when the move can't be completed in-place
+ * because it crosses an encryption boundary that needs the
+ * recursive-encryption flow:
+ *   - moving a plaintext item INTO an encrypted folder (must encrypt
+ *     each item under the new parent's chain), or
+ *   - moving an encrypted item OUT of its encryption root (or into a
+ *     different encryption root) — currently unsupported, would need
+ *     decrypt-then-re-encrypt for the destination.
+ *
+ * The React-side `useMoveItems` hook catches this and routes through
+ * `ModalRecursiveEncrypt` to handle the encryption work, then retries
+ * the move once the items are in the right state.
+ */
+export class MoveRequiresEncryption extends Error {
+  constructor(
+    public readonly itemId: string,
+    public readonly reason:
+      | "plaintext-into-encrypted"
+      | "encrypted-out-of-root"
+      | "encrypted-cross-root",
+  ) {
+    super(`Move ${itemId} requires encryption flow: ${reason}`);
+    this.name = "MoveRequiresEncryption";
+  }
+}
+
 export enum ItemFiltersScope {
   ALL = "all",
   DELETED = "deleted",
@@ -115,6 +142,24 @@ export type Entitlements = {
   };
 };
 
+export type KeyChain = {
+  user_access_item_id: string;
+  encrypted_key_for_user: string;
+  /** Version of the user's key `encrypted_key_for_user` was wrapped for: the one to decrypt with. */
+  encryption_public_key_version: number | null;
+  /**
+   * Identity of the encryption tree the item belongs to — the deepest
+   * encryption root that's an ancestor (or self) of the item. Stable
+   * across hybrid wraps (demoted self-rooted items still expose the
+   * outer tree root here, even though they carry per-user wraps of
+   * their own). Use THIS field for cross-root comparisons on
+   * moves; `user_access_item_id` is the user's entry point and can
+   * land on the item itself for hybrids.
+   */
+  encryption_tree_root_item_id: string | null;
+  chain: Array<{ item_id: string; encrypted_symmetric_key: string }>;
+};
+
 export abstract class Driver {
   abstract getConfig(): Promise<ApiConfig>;
   abstract getItems(filters?: ItemFilters): Promise<PaginatedChildrenResult>;
@@ -123,6 +168,25 @@ export abstract class Driver {
   abstract getItemBreadcrumb(id: string): Promise<ItemBreadcrumb[]>;
   abstract updateItem(item: Partial<Item>): Promise<Item>;
   abstract restoreItems(ids: string[]): Promise<void>;
+  /**
+   * Move a single item under a new parent (or to root when `parentId` is
+   * omitted).
+   *
+   * Encryption-aware: when the moved item is encrypted, its `K_item` is
+   * wrapped under its OLD parent's key. The driver decides what to do
+   * about that based on the source/destination encryption state:
+   *   - source encrypted + destination encrypted (same encryption root):
+   *     re-wrap K_item under the new parent's key (via the vault
+   *     `rewrapNestedKey` op) before persisting the move; the file's
+   *     content is left untouched.
+   *   - source plaintext + destination encrypted: throws
+   *     `MoveRequiresEncryption` so the caller can route through the
+   *     recursive-encryption flow.
+   *   - source encrypted, destination plaintext OR different encryption
+   *     root: throws `MoveRequiresEncryption` (we'd need a re-encrypt
+   *     pipeline that's out of scope here).
+   *   - everything else: plain move.
+   */
   abstract moveItem(id: string, parentId?: string): Promise<void>;
   abstract moveItems(ids: string[], parentId?: string): Promise<void>;
   abstract getChildren(
@@ -161,7 +225,14 @@ export abstract class Driver {
   abstract updateUser(payload: Partial<User> & { id: string }): Promise<User>;
   // Tree
   abstract getTree(id: string): Promise<Item>;
-  abstract createFolder(data: { title: string }): Promise<Item>;
+  abstract getDescendants(id: string): Promise<Item[]>;
+  abstract createFolder(data: {
+    title: string;
+    // Full parent Item. Omit for root / workspace-level creation.
+    // When `parent.is_encrypted`, the driver mints a folder key
+    // wrapped by the parent's chain.
+    parent?: Item;
+  }): Promise<Item>;
   abstract createWorkspace(data: {
     title: string;
     description: string;
@@ -169,14 +240,17 @@ export abstract class Driver {
   abstract updateWorkspace(item: Partial<Item>): Promise<Item>;
   abstract deleteWorkspace(id: string): Promise<void>;
   abstract createFile(data: {
-    parentId?: string;
+    // Full parent Item. Omit for root / workspace-level creation.
+    // When `parent.is_encrypted`, the driver encrypts the content
+    // client-side and sends the wrapped key.
+    parent?: Item;
     filename: string;
     file: File;
     uploadAcl?: string;
     progressHandler?: (progress: number) => void;
   }): { promise: Promise<Item>; abort: () => Promise<void> };
   abstract createFileFromTemplate(data: {
-    parentId: string;
+    parentId?: string;
     extension: string;
     title: string;
   }): Promise<Item>;
@@ -187,6 +261,51 @@ export abstract class Driver {
   abstract convertItem(itemId: string): Promise<Item>;
 
   abstract getEntitlements(): Promise<Entitlements>;
+
+  // Encryption
+  abstract encryptItem(
+    itemId: string,
+    data: {
+      encryptedSymmetricKeyPerUser: Record<string, string | null>;
+      encryptionPublicKeyVersionPerUser: Record<string, number | null>;
+      encryptedKeysForDescendants: Record<string, string>;
+      fileKeyMapping?: Record<string, string>;
+    },
+  ): Promise<Item>;
+  abstract removeEncryption(
+    itemId: string,
+    data?: { fileKeyMapping?: Record<string, string> },
+  ): Promise<Item>;
+  /**
+   * Encrypt-on-move: ship a plaintext subtree into an encrypted destination
+   * in one atomic backend call. The frontend has already encrypted file
+   * contents under the destination's chain and uploaded to fresh S3 keys;
+   * this commit writes the chain wraps + filename swap + path change in a
+   * single transaction.
+   *
+   * Mirrors the /encrypt/ payload shape (encryptedKeysForDescendants +
+   * fileKeyMapping) but produces a chain-rooted item — no per-user wraps,
+   * no ItemAccess rows materialised, no inherited-collaborator bloat.
+   */
+  abstract moveItemEncryptOnMove(
+    itemId: string,
+    data: {
+      targetItemId: string;
+      encryptedSymmetricKey: string;
+      encryptedKeysForDescendants: Record<string, string>;
+      fileKeyMapping?: Record<string, string>;
+    },
+  ): Promise<void>;
+  abstract getKeyChain(itemId: string): Promise<KeyChain>;
+  /** Give a pending member the key of `itemId`, which the caller holds, wrapped for them. */
+  abstract acceptEncryptionAccess(
+    itemId: string,
+    data: {
+      user_id: string;
+      encrypted_item_symmetric_key_for_user: string;
+      encryption_public_key_version: number;
+    },
+  ): Promise<void>;
 
   // User reconciliation
   abstract confirmUserReconciliation(

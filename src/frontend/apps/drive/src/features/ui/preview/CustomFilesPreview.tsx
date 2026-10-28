@@ -6,7 +6,7 @@ import {
   useModal,
 } from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
-import { PropsWithChildren, useMemo } from "react";
+import { PropsWithChildren, ReactNode, useMemo } from "react";
 import posthog from "posthog-js";
 import { itemToPreviewFile } from "@/features/explorer/utils/utils";
 import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
@@ -16,6 +16,7 @@ import { openWopiInNewTab } from "@/features/wopi/openWopi";
 import { useAuth } from "@/features/auth/Auth";
 import { AnonymousCTA } from "../components/anonymous-cta/AnonymousCTA";
 import { MyFilesCTA } from "../components/my-files-cta/MyFilesCTA";
+import { EncryptedFilesPreview } from "./encrypted/EncryptedFilesPreview";
 
 export enum CustomFilesPreviewMode {
   // The actions header will be the default actions header.
@@ -45,6 +46,8 @@ export const CustomFilesPreview = ({
       .map(itemToPreviewFile);
   }, [items]);
 
+  // `EncryptedFilesPreview` awaits the office editor's save guard before
+  // calling these, so the previous editor has already drained here.
   const handleClosePreview = () => {
     setPreviewItem?.(undefined);
   };
@@ -54,30 +57,34 @@ export const CustomFilesPreview = ({
     setPreviewItem?.(item);
   };
 
-  return (
-    <FilePreview
-      isOpen={!!currentItem}
-      onClose={handleClosePreview}
-      files={files}
-      onChangeFile={handleChangePreviewItem}
-      handleDownloadFile={() => handleDownloadItem(currentItem)}
-      openedFileId={currentItem?.id}
-      onFileOpen={(file) =>
-        posthog.capture("file_preview_opened", {
-          id: file.id,
-          size: file.size,
-          mimetype: file.mimetype,
-        })
-      }
-      onOpenInEditor={openWopiInNewTab}
-      customHeaderActions={(actions) => (
-        <CustomFilesPreviewRightHeader currentItem={currentItem} mode={mode}>
-          {actions}
-        </CustomFilesPreviewRightHeader>
-      )}
-      sidebarContent={currentItem && <ItemInfo item={currentItem} />}
-    />
-  );
+  const previewProps = {
+    isOpen: !!currentItem,
+    onClose: handleClosePreview,
+    files,
+    onChangeFile: handleChangePreviewItem,
+    handleDownloadFile: () => handleDownloadItem(currentItem),
+    openedFileId: currentItem?.id,
+    onFileOpen: (file: FilePreviewType) =>
+      posthog.capture("file_preview_opened", {
+        id: file.id,
+        size: file.size,
+        mimetype: file.mimetype,
+      }),
+    customHeaderActions: (actions: ReactNode) => (
+      <CustomFilesPreviewRightHeader currentItem={currentItem} mode={mode}>
+        {actions}
+      </CustomFilesPreviewRightHeader>
+    ),
+    sidebarContent: currentItem && <ItemInfo item={currentItem} />,
+  };
+
+  // The design system's preview cannot host another viewer: an encrypted
+  // file is shown by our own shell, which decrypts it in the browser.
+  if (currentItem?.is_encrypted) {
+    return <EncryptedFilesPreview {...previewProps} />;
+  }
+
+  return <FilePreview {...previewProps} onOpenInEditor={openWopiInNewTab} />;
 };
 
 type CustomFilesPreviewRightHeaderProps = {

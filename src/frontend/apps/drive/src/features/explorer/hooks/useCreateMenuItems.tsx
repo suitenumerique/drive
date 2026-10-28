@@ -40,11 +40,13 @@ export const useCreateMenuItems = ({
   includeCreate = true,
 }: UseCreateMenuItemsProps = {}): UseCreateMenuItemsReturn => {
   const { t } = useTranslation();
-  const { item, itemId } = useGlobalExplorer();
+  const { item } = useGlobalExplorer();
   const router = useRouter();
   const isOnMyFiles = isMyFilesRoute(router.pathname);
   const canCreateHere = item?.abilities?.children_create ?? false;
-  const effectiveParentId = canCreateHere ? itemId : undefined;
+  // The full Item (not only its id) lets the modals encrypt the new child
+  // when the parent is encrypted.
+  const effectiveParent = canCreateHere ? item : undefined;
   // On "My files", the item is created without a parent, which already puts
   // it in the current view — no redirect needed.
   const shouldRedirectToCreated = !canCreateHere && !isOnMyFiles;
@@ -145,12 +147,12 @@ export const useCreateMenuItems = ({
     <>
       <ExplorerCreateFolderModal
         {...createFolderModal}
-        parentId={effectiveParentId}
+        parent={effectiveParent}
         redirectAfterCreate={shouldRedirectToCreated}
       />
       <ExplorerCreateFileModal
         {...createFileModal}
-        parentId={effectiveParentId}
+        parent={effectiveParent}
         redirectAfterCreate={shouldRedirectToCreated}
         type={createFileModalType}
       />

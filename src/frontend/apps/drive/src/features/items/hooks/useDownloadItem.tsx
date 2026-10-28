@@ -1,6 +1,7 @@
 import { Item, ItemUploadState } from "@/features/drivers/types";
 import { ModalSize, useModals } from "@gouvfr-lasuite/ui-components";
 import { downloadFile } from "../utils";
+import { downloadDecryptedFile } from "./useDecryptedContent";
 import { useAuth } from "@/features/auth/Auth";
 import { useTranslation } from "react-i18next";
 import {
@@ -47,13 +48,20 @@ export const useDownloadItem = () => {
       description = t("file_download_modal.description");
     }
 
-    const triggerDownload = () => {
+    const triggerDownload = async () => {
       posthog.capture("file_download", {
         id: item.id,
         size: item.size,
         mimetype: item.mimetype,
+        is_encrypted: item.is_encrypted,
       });
-      downloadFile(item.url!, item.title);
+
+      if (item.is_encrypted) {
+        // Encrypted file: fetch, decrypt via vault, then download
+        await downloadDecryptedFile(item);
+      } else {
+        downloadFile(item.url!, item.title);
+      }
     };
 
     if (title && description) {

@@ -1,8 +1,12 @@
 import { fetchAPI } from "@/features/api/fetchApi";
+import { fromBase64, toBase64 } from "@/features/encryption/recursive/binary";
+import { fetchRegisteredKeys } from "@/features/encryption/fetchRegisteredKeys";
 import {
   Driver,
   Entitlements,
   ItemFilters,
+  KeyChain,
+  MoveRequiresEncryption,
   UserFilters,
   PaginatedChildrenResult,
 } from "../Driver";
@@ -60,7 +64,9 @@ export class StandardDriver extends Driver {
   }
 
   async getItemBreadcrumb(id: string): Promise<ItemBreadcrumb[]> {
-    const response = await fetchAPI(`items/${id}/breadcrumb/`);
+    const response = await fetchAPI(`items/${id}/breadcrumb/`, undefined, {
+      redirectOn40x: false,
+    });
     const data = await response.json();
     return data;
   }
@@ -139,9 +145,11 @@ export class StandardDriver extends Driver {
       ...(filters ? convertFiltersToQueryParams(filters) : {}),
     };
 
-    const response = await fetchAPI(`items/${id}/children/`, {
-      params,
-    });
+    const response = await fetchAPI(
+      `items/${id}/children/`,
+      { params },
+      { redirectOn40x: false },
+    );
     const data = await response.json();
 
     return {
@@ -155,14 +163,266 @@ export class StandardDriver extends Driver {
   }
 
   async getTree(id: string): Promise<Item> {
-    const response = await fetchAPI(`items/${id}/tree/`);
+    const response = await fetchAPI(`items/${id}/tree/`, undefined, {
+      redirectOn40x: false,
+    });
     const data = await response.json();
     return jsonToItem(data);
   }
 
+  async getDescendants(id: string): Promise<Item[]> {
+    const response = await fetchAPI(`items/${id}/descendants/`, undefined, {
+      redirectOn40x: false,
+    });
+    const data = await response.json();
+    return jsonToItems(data);
+  }
+
   async moveItem(id: string, parentId?: string): Promise<void> {
-    const payload = {
+    // Encryption-aware move. Four resolved cases:
+    //
+    //   1. Plain → plain: vanilla POST.
+    //   2. Encrypted → encrypted, SAME root: rewrap K_item under the
+    //      destination parent's chain (`vaultClient.rewrapNestedKey`)
+    //      and ship the new wrap with the move. Item stays in the
+    //      tree, content untouched.
+    //   3. Encrypted → plaintext OR workspace root: re-anchor the
+    //      item as its OWN encryption root. K_item recovered from
+    //      the user's chain, then re-wrapped per-user via
+    //      `shareKeys`; the backend stores the new wraps on the
+    //      item, for the users who can reach it there. Backend flips
+    //      `is_encryption_root: true` on the item and clears its
+    //      chain wrap.
+    //   4. Self-rooted encrypted → encrypted subtree (item is its
+    //      own encryption root, destination is in a different tree):
+    //      attach the item under the destination's chain by wrapping
+    //      K_item under the destination parent's terminal key
+    //      (`vaultClient.wrapNestedKey`). Backend flips
+    //      `is_encryption_root: false`, writes `encrypted_symmetric_key`,
+    //      and keeps the item's per-user wraps for its own members.
+    //
+    //   Throws `MoveRequiresEncryption('plaintext-into-encrypted')`
+    //   when the source is plaintext and the destination is in an
+    //   encrypted subtree — the React layer routes that through the
+    //   recursive-encryption modal first, then retries the move.
+    //
+    //   Throws `MoveRequiresEncryption('encrypted-cross-root')` for
+    //   tree-A → tree-B chain-rooted moves (would need decrypt +
+    //   re-wrap-as-self-root + re-attach). Not handled yet.
+    const item = await this.getItem(id);
+    const targetParent = parentId ? await this.getItem(parentId) : null;
+
+    const sourceEncrypted = !!item.is_encrypted;
+    const sourceIsRoot = !!item.is_encryption_root;
+    const targetEncrypted = !!targetParent?.is_encrypted;
+
+    let encryptedSymmetricKey: string | undefined;
+    // Map of user sub → base64 K_item wrapped under their pubkey, or
+    // `null` when the user has access but hasn't published an
+    // encryption pubkey yet. Backend stores no wrap for them, so the
+    // user is pending; the wrap can be filled in later
+    // via the share UI once the user has onboarded.
+    let perUserEncryptedKeys: Record<string, string | null> | undefined;
+    // Matched pair with `perUserEncryptedKeys`: same key set, value is
+    // the version of the user's encryption pubkey at wrap time (or null
+    // when the user is pending). Backend stores it with the wrap so
+    // clients can later detect a key-rotation mismatch.
+    let perUserVersions: Record<string, number | null> | undefined;
+    let isEncryptionRoot: boolean | undefined; // present iff the move toggles the flag
+
+    if (sourceEncrypted && targetEncrypted && sourceIsRoot) {
+      // Case 4: self-rooted source attaches under destination chain.
+      const vaultClient = window.__driveVaultClient;
+      if (!vaultClient) {
+        throw new Error(
+          "Vault client not initialized — cannot wrap key for move.",
+        );
+      }
+      // The caller's per-user wrap of the item's key.
+      const userEncryptedKey = item.encrypted_item_symmetric_key_for_user;
+      if (!userEncryptedKey) {
+        throw new Error(
+          "Self-rooted encrypted item has no per-user wrap on the caller — cannot derive K_item.",
+        );
+      }
+      const newParentKeyChain = await this.getKeyChain(parentId!);
+      const newEntryKey = fromBase64(newParentKeyChain.encrypted_key_for_user);
+      const newChainToParent = newParentKeyChain.chain.map((e) =>
+        fromBase64(e.encrypted_symmetric_key),
+      );
+
+      const { newEncryptedKey } = await vaultClient.wrapNestedKey(
+        fromBase64(userEncryptedKey),
+        newEntryKey,
+        newChainToParent.length > 0 ? newChainToParent : undefined,
+      );
+      encryptedSymmetricKey = toBase64(newEncryptedKey);
+      isEncryptionRoot = false; // demoting from self-root into the chain
+    } else if (sourceEncrypted && targetEncrypted) {
+      // Case 2: same-root rewrap.
+      const oldKeyChain = await this.getKeyChain(id);
+      const newParentKeyChain = await this.getKeyChain(parentId!);
+
+      // Cross-root detection: compare the encryption tree root each
+      // item belongs to. If they're the same, source and target are
+      // in the same encrypted subtree — a chain rewrap is enough.
+      // If they differ, this is the "tree A → tree B" case — would
+      // need decrypt + re-wrap-as-self-root then re-attach (Case 4
+      // composed with Case 3); not yet handled in one shot.
+      //
+      // `user_access_item_id` would be wrong here: hybrid items (a
+      // self-rooted file demoted into a chain) keep their per-user
+      // wrap, so the deepest-first walker resolves entry to the
+      // item itself, not its tree root — making same-tree moves
+      // look cross-root.
+      if (
+        oldKeyChain.encryption_tree_root_item_id !==
+        newParentKeyChain.encryption_tree_root_item_id
+      ) {
+        throw new MoveRequiresEncryption(id, "encrypted-cross-root");
+      }
+
+      const vaultClient = window.__driveVaultClient;
+      if (!vaultClient) {
+        throw new Error(
+          "Vault client not initialized — cannot rewrap key for move.",
+        );
+      }
+
+      const entryKey = fromBase64(oldKeyChain.encrypted_key_for_user);
+      // `getKeyChain(itemId).chain` resolves to ITEM's own key — its
+      // last element is K_item wrapped under the OLD parent. Strip
+      // that to get the chain to the OLD parent itself.
+      const oldChainToParent = oldKeyChain.chain
+        .slice(0, -1)
+        .map((e) => fromBase64(e.encrypted_symmetric_key));
+      const oldEncryptedKey = fromBase64(
+        oldKeyChain.chain[oldKeyChain.chain.length - 1].encrypted_symmetric_key,
+      );
+      const newChainToParent = newParentKeyChain.chain.map((e) =>
+        fromBase64(e.encrypted_symmetric_key),
+      );
+
+      const { newEncryptedKey } = await vaultClient.rewrapNestedKey(
+        entryKey,
+        oldEncryptedKey,
+        oldChainToParent.length > 0 ? oldChainToParent : undefined,
+        newChainToParent.length > 0 ? newChainToParent : undefined,
+      );
+      encryptedSymmetricKey = toBase64(newEncryptedKey);
+    } else if (!sourceEncrypted && targetEncrypted) {
+      throw new MoveRequiresEncryption(id, "plaintext-into-encrypted");
+    } else if (sourceEncrypted && !targetEncrypted) {
+      // Case 3: re-anchor as its own encryption root.
+      const vaultClient = window.__driveVaultClient;
+      if (!vaultClient) {
+        throw new Error(
+          "Vault client not initialized — cannot re-anchor for move.",
+        );
+      }
+
+      const oldKeyChain = await this.getKeyChain(id);
+      const entryKey = fromBase64(oldKeyChain.encrypted_key_for_user);
+      // `oldKeyChain.chain` resolves to the item's own K_item — pass
+      // it as-is so `shareKeys` lands on K_item, then re-wraps it
+      // for each user's pubkey.
+      const chainToItem = oldKeyChain.chain.map((e) =>
+        fromBase64(e.encrypted_symmetric_key),
+      );
+
+      // Collect every user with current access. The encryption server
+      // keys on the OIDC `sub` (cross-product identifier —
+      // `suiteUserId` inside the vault), NOT Drive's local user UUID.
+      // `Access.user.sub` is the right field; `Access.user.id` would
+      // silently miss everyone.
+      const accesses = await this.getItemAccesses(id);
+      const userSubs = Array.from(
+        new Set(accesses.map((a) => a.user.sub).filter(Boolean)),
+      );
+      if (userSubs.length === 0) {
+        throw new Error(
+          "No users with access — cannot re-anchor item as its own encryption root.",
+        );
+      }
+      const { publicKeys, versions } = await fetchRegisteredKeys(userSubs);
+      const usersWithKeys = new Set(Object.keys(publicKeys));
+
+      // The only catastrophic case is the OPERATOR (the user doing
+      // the move) lacking a published pubkey — re-anchoring without
+      // their wrap would lock them out of their own file. Refuse the
+      // move in that single case; surface a clear error.
+      //
+      // Other collaborators without keys aren't refused — they stay
+      // pending (`null` wrap, nothing stored) and the share UI
+      // can later top them up once they finish onboarding. This
+      // mirrors how new shares work for not-yet-onboarded users.
+      const actorSub = vaultClient.getAuthContext?.()?.suiteUserId;
+      if (!actorSub) {
+        throw new Error(
+          "Vault auth context is not set — cannot determine the operator for the re-anchor guard.",
+        );
+      }
+      if (!usersWithKeys.has(actorSub)) {
+        throw new Error(
+          "Your encryption keys aren't published yet — moving this item out of its encryption root would lock you out. Complete encryption setup first.",
+        );
+      }
+
+      // Wrap K_item only for users who have a pubkey; the rest get a
+      // `null` placeholder that the backend will treat as pending. Pass a
+      // labeled recipient map (sub → {email, name}) built from the same
+      // access rows — the vault resolves + trust-checks each key (binding +
+      // TOFU); the labels are display-only, shown if the trust modal opens.
+      const recipients: Record<string, { email: string; name?: string }> = {};
+      for (const a of accesses) {
+        if (a.user.sub && publicKeys[a.user.sub]) {
+          recipients[a.user.sub] = {
+            email: a.user.email,
+            name: a.user.full_name,
+          };
+        }
+      }
+      const { encryptedKeys } = await vaultClient.shareKeys(
+        entryKey,
+        recipients,
+        chainToItem.length > 0 ? chainToItem : undefined,
+      );
+      perUserEncryptedKeys = {};
+      // Versions travel as matched pairs with the per-user wraps —
+      // the backend stores each wrap with its key version,
+      // identical to /encrypt/.
+      perUserVersions = {};
+      for (const userSub of userSubs) {
+        const wrap = encryptedKeys[userSub];
+        perUserEncryptedKeys[userSub] = wrap ? toBase64(wrap) : null;
+        const pubKey = publicKeys[userSub];
+        perUserVersions[userSub] = pubKey ? versions[userSub] : null;
+      }
+      const pendingCount = userSubs.length - usersWithKeys.size;
+      if (pendingCount > 0) {
+        console.info(
+          "[StandardDriver.moveItem] re-anchor: marking",
+          pendingCount,
+          "collaborator access row(s) as pending — they will be re-shared once their pubkey is available.",
+        );
+      }
+      isEncryptionRoot = true; // promoting to self-root on the way out
+    }
+
+    const payload: Record<string, unknown> = {
       ...(parentId ? { target_item_id: parentId } : {}),
+      ...(encryptedSymmetricKey
+        ? { encrypted_symmetric_key: encryptedSymmetricKey }
+        : {}),
+      ...(typeof isEncryptionRoot === "boolean"
+        ? { is_encryption_root: isEncryptionRoot }
+        : {}),
+      ...(perUserEncryptedKeys
+        ? { per_user_encrypted_keys: perUserEncryptedKeys }
+        : {}),
+      ...(perUserVersions
+        ? { encryption_public_key_versions: perUserVersions }
+        : {}),
     };
     await fetchAPI(
       `items/${id}/move/`,
@@ -185,12 +445,20 @@ export class StandardDriver extends Driver {
   }
 
   async createAccess(data: DTOCreateAccess): Promise<void> {
+    const body: Record<string, unknown> = {
+      user_id: data.userId,
+      role: data.role,
+    };
+    if (data.encrypted_item_symmetric_key_for_user) {
+      body.encrypted_item_symmetric_key_for_user =
+        data.encrypted_item_symmetric_key_for_user;
+    }
+    if (data.encryption_public_key_version) {
+      body.encryption_public_key_version = data.encryption_public_key_version;
+    }
     await fetchAPI(`items/${data.itemId}/accesses/`, {
       method: "POST",
-      body: JSON.stringify({
-        user_id: data.userId,
-        role: data.role,
-      }),
+      body: JSON.stringify(body),
     });
   }
 
@@ -282,21 +550,63 @@ export class StandardDriver extends Driver {
     }
   }
 
-  async createFolder(data: {
-    title: string;
-    parentId?: string;
-  }): Promise<Item> {
-    const { parentId, ...rest } = data;
-    const url = parentId ? `items/${parentId}/children/` : `items/`;
+  async createFolder(data: { title: string; parent?: Item }): Promise<Item> {
+    const { parent, ...rest } = data;
+    const url = parent ? `items/${parent.id}/children/` : `items/`;
+    const body: Record<string, unknown> = {
+      ...rest,
+      type: ItemType.FOLDER,
+    };
+
+    // If the parent is encrypted, the backend requires a wrapped
+    // symmetric key for the new folder. Mint K_folder via the vault,
+    // wrapped by the parent's key chain, and include it in the payload.
+    if (parent?.is_encrypted) {
+      body.encrypted_symmetric_key = await this.mintWrappedChildKey(parent);
+    }
+
     const response = await fetchAPI(url, {
       method: "POST",
-      body: JSON.stringify({
-        ...rest,
-        type: ItemType.FOLDER,
-      }),
+      body: JSON.stringify(body),
     });
     const item = await response.json();
     return jsonToItem(item);
+  }
+
+  // Mint a symmetric key for a new child of `parent` (folder or file),
+  // wrapped by the parent's effective key. Returns the base64-encoded
+  // wrapped key suitable for `encrypted_symmetric_key` on POST /children/.
+  // The second return (for files) is the encrypted content; folders
+  // encrypt an empty buffer they don't use.
+  private async encryptForParent(
+    parent: Item,
+    content: ArrayBuffer,
+  ): Promise<{ wrappedKey: string; encryptedContent: ArrayBuffer }> {
+    const vaultClient = window.__driveVaultClient;
+    if (!vaultClient) {
+      throw new Error(
+        "Vault client not initialized — cannot create an encrypted child.",
+      );
+    }
+    const keyChain = await this.getKeyChain(parent.id);
+    const entryKey = fromBase64(keyChain.encrypted_key_for_user);
+    const chain = keyChain.chain.map((e) =>
+      fromBase64(e.encrypted_symmetric_key),
+    );
+    const { encryptedContent, wrappedKey } =
+      await vaultClient.encryptNestedWithoutKey(content, entryKey, chain);
+    return {
+      wrappedKey: toBase64(wrappedKey),
+      encryptedContent,
+    };
+  }
+
+  private async mintWrappedChildKey(parent: Item): Promise<string> {
+    const { wrappedKey } = await this.encryptForParent(
+      parent,
+      new ArrayBuffer(0),
+    );
+    return wrappedKey;
   }
 
   async createWorkspace(data: {
@@ -370,7 +680,7 @@ export class StandardDriver extends Driver {
   }
 
   createFile(data: {
-    parentId?: string;
+    parent?: Item;
     file: File;
     filename: string;
     uploadAcl?: string;
@@ -387,17 +697,42 @@ export class StandardDriver extends Driver {
     };
 
     const promise = (async () => {
-      const { parentId, file, uploadAcl, progressHandler, ...rest } = data;
-      const url = parentId ? `items/${parentId}/children/` : `items/`;
+      const { parent, file, uploadAcl, progressHandler, ...rest } = data;
+      const url = parent ? `items/${parent.id}/children/` : `items/`;
+
+      const body: Record<string, unknown> = {
+        type: ItemType.FILE,
+        ...rest,
+      };
+
+      // If the parent is encrypted, mint K_file wrapped by the parent's
+      // key and encrypt the file content client-side. The upload to the
+      // policy URL then carries ciphertext; the backend /upload-ended/
+      // short-circuits mimetype / malware analysis for encrypted items.
+      let uploadedFile = file;
+      if (parent?.is_encrypted) {
+        const plaintext = await file.arrayBuffer();
+        const { wrappedKey, encryptedContent } = await this.encryptForParent(
+          parent,
+          plaintext,
+        );
+        body.encrypted_symmetric_key = wrappedKey;
+        uploadedFile = new File([encryptedContent], file.name, {
+          type: "application/octet-stream",
+        });
+      }
+
+      if (aborted) {
+        throw new DOMException("Upload cancelled", "AbortError");
+      }
+
       const response = await fetchAPI(
         url,
         {
           method: "POST",
-          body: JSON.stringify({
-            type: ItemType.FILE,
-            ...rest,
-            size: file.size,
-          }),
+          // The reservation is for the bytes uploaded: the ciphertext, a little
+          // longer than the file, when the parent is encrypted.
+          body: JSON.stringify({ ...body, size: uploadedFile.size }),
         },
         {
           redirectOn40x: false,
@@ -423,7 +758,7 @@ export class StandardDriver extends Driver {
 
       const upload = uploadFile(
         item.policy,
-        file,
+        uploadedFile,
         uploadAcl,
         progressHandlerProxy,
       );
@@ -534,6 +869,86 @@ export class StandardDriver extends Driver {
     const response = await fetchAPI(`entitlements/`);
     const data = await response.json();
     return data;
+  }
+
+  // Encryption
+
+  async encryptItem(
+    itemId: string,
+    data: {
+      encryptedSymmetricKeyPerUser: Record<string, string | null>;
+      encryptionPublicKeyVersionPerUser: Record<string, number | null>;
+      encryptedKeysForDescendants: Record<string, string>;
+      fileKeyMapping?: Record<string, string>;
+    },
+  ): Promise<Item> {
+    // Wire format is snake_case (consistent with the rest of the
+    // backend). Caller-side keeps camelCase to stay idiomatic in TS.
+    const response = await fetchAPI(`items/${itemId}/encrypt/`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        encrypted_symmetric_key_per_user: data.encryptedSymmetricKeyPerUser,
+        encryption_public_key_version_per_user:
+          data.encryptionPublicKeyVersionPerUser,
+        encrypted_keys_for_descendants: data.encryptedKeysForDescendants,
+        file_key_mapping: data.fileKeyMapping ?? {},
+      }),
+    });
+    const json = await response.json();
+    return jsonToItem(json);
+  }
+
+  async moveItemEncryptOnMove(
+    itemId: string,
+    data: {
+      targetItemId: string;
+      encryptedSymmetricKey: string;
+      encryptedKeysForDescendants: Record<string, string>;
+      fileKeyMapping?: Record<string, string>;
+    },
+  ): Promise<void> {
+    await fetchAPI(`items/${itemId}/move/`, {
+      method: "POST",
+      body: JSON.stringify({
+        target_item_id: data.targetItemId,
+        encrypted_symmetric_key: data.encryptedSymmetricKey,
+        encrypted_keys_for_descendants: data.encryptedKeysForDescendants,
+        file_key_mapping: data.fileKeyMapping ?? {},
+      }),
+    });
+  }
+
+  async removeEncryption(
+    itemId: string,
+    data?: { fileKeyMapping?: Record<string, string> },
+  ): Promise<Item> {
+    const response = await fetchAPI(`items/${itemId}/remove-encryption/`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        file_key_mapping: data?.fileKeyMapping ?? {},
+      }),
+    });
+    const json = await response.json();
+    return jsonToItem(json);
+  }
+
+  async getKeyChain(itemId: string): Promise<KeyChain> {
+    const response = await fetchAPI(`items/${itemId}/key-chain/`);
+    return response.json();
+  }
+
+  async acceptEncryptionAccess(
+    itemId: string,
+    data: {
+      user_id: string;
+      encrypted_item_symmetric_key_for_user: string;
+      encryption_public_key_version: number;
+    },
+  ): Promise<void> {
+    await fetchAPI(`items/${itemId}/encryption-key-wraps/`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
   }
 
   async confirmUserReconciliation(

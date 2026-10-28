@@ -71,6 +71,13 @@ export type Item = {
   description: string;
   is_wopi_supported?: boolean;
   created_at: Date;
+  is_encrypted?: boolean;
+  is_encryption_root?: boolean;
+  is_inside_encrypted_subtree?: boolean;
+  is_pending_encryption_for_user?: boolean;
+  encryption_public_key_version_for_user?: number | null;
+  encrypted_item_symmetric_key_for_user?: string;
+  accesses_user_ids?: string[];
   is_favorite?: boolean;
   children?: Item[];
   parents?: Item[];
@@ -94,14 +101,17 @@ export type Item = {
     children_create: boolean;
     children_list: boolean;
     destroy: boolean;
+    encrypt: boolean;
     export: boolean;
     favorite: boolean;
     invite_owner: boolean;
+    key_chain: boolean;
     link_configuration: boolean;
     media_auth: boolean;
     move: boolean;
     link_select_options: Record<LinkReach, LinkRole[] | null>;
     partial_update: boolean;
+    remove_encryption: boolean;
     duplicate: boolean;
     restore: boolean;
     retrieve: boolean;
@@ -136,6 +146,7 @@ export type Access = {
   team: string;
   user: User;
   is_explicit: boolean;
+  is_pending_encryption?: boolean;
   max_role: Role;
   max_ancestors_role: Role;
   max_ancestors_role_item_id: string;
@@ -181,6 +192,7 @@ export enum Role {
 
 export type User = {
   id: string;
+  sub: string;
   email: string;
   full_name: string;
   short_name: string;
@@ -204,6 +216,9 @@ export type ApiConfig = {
   ALLOW_SHARE_IMPORT_FILE?: boolean;
   AWS_S3_UPLOAD_ACL?: string;
   DATA_UPLOAD_MAX_MEMORY_SIZE?: number;
+  ENCRYPTION_FEATURE_ENABLED?: boolean;
+  ENCRYPTION_INTERFACE_URL?: string | null;
+  ENCRYPTION_VAULT_URL?: string | null;
   POSTHOG_KEY?: string;
   POSTHOG_HOST?: string;
   FRONTEND_MORE_LINK?: string;

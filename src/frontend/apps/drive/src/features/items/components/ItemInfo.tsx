@@ -46,6 +46,19 @@ export const ItemInfo = ({ item }: ItemInfoProps) => {
         label={t("explorer.rightPanel.created_by")}
         rightContent={<UserRow fullName={item.creator.full_name} />}
       />
+      {item.is_encrypted && (
+        <InfoRow
+          label={t("explorer.rightPanel.security", "Security")}
+          rightContent={
+            <span className="drive__encryption-inline">
+              <span className="material-icons" aria-hidden="true">
+                verified_user
+              </span>
+              {t("explorer.rightPanel.encrypted", "Encrypted")}
+            </span>
+          }
+        />
+      )}
     </div>
   );
 };

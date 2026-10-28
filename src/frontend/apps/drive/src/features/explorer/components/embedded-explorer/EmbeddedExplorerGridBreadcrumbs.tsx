@@ -15,6 +15,7 @@ import {
   Icon,
   IconSize,
   Button,
+  Tooltip,
   useModal,
 } from "@gouvfr-lasuite/ui-components";
 import { NavigationItem } from "../GlobalExplorerContext";
@@ -289,6 +290,7 @@ export const BreadcrumbItemButton = ({
 };
 
 export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const shareModal = useModal();
   const icon = useMemo(() => {
@@ -329,6 +331,19 @@ export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
           />
         }
       />
+      {item.is_encrypted && (
+        <Tooltip
+          content={t("explorer.breadcrumbs.encrypted", "Encrypted folder")}
+        >
+          <span
+            className="material-icons drive__encryption-inline"
+            style={{ fontSize: 18 }}
+            aria-hidden="true"
+          >
+            verified_user
+          </span>
+        </Tooltip>
+      )}
       {icon && (
         <>
           <Button

@@ -30,7 +30,7 @@ export const useMutationCreateFile = () => {
       return promise;
     },
     onSuccess: (data, variables) => {
-      refresh(variables.parentId);
+      refresh(variables.parent?.id);
     },
     meta: {
       showErrorOn403: true,
@@ -128,7 +128,7 @@ export const useMutationCreateFolder = () => {
       return driver.createFolder(...payload);
     },
     onSuccess: (_, variables) => {
-      refresh(variables.parentId);
+      refresh(variables.parent?.id);
     },
   });
 };

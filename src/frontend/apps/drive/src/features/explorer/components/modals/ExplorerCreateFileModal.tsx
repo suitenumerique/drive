@@ -7,8 +7,17 @@ import {
 import { useTranslation } from "react-i18next";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { RhfInput } from "@/features/forms/components/RhfInput";
-import { useMutationCreateFileFromTemplate } from "../../hooks/useMutations";
+import { Item } from "@/features/drivers/types";
+import {
+  useMutationCreateFile,
+  useMutationCreateFileFromTemplate,
+} from "../../hooks/useMutations";
+import {
+  createBlankOdf,
+  BlankOdfExtension,
+} from "@/features/encryption/blank-odf/createBlankOdf";
 import { useRouter } from "next/router";
+import { useConfig } from "@/features/config/ConfigProvider";
 import { useSetSelectedItems } from "../../stores/selectionStore";
 
 type Inputs = {
@@ -21,20 +30,26 @@ export enum ExplorerCreateFileType {
   CALC = "calc",
 }
 
-const getExtension = (type: ExplorerCreateFileType) => {
-  switch (type) {
-    case ExplorerCreateFileType.DOC:
-      return "odt";
-    case ExplorerCreateFileType.POWERPOINT:
-      return "odp";
-    case ExplorerCreateFileType.CALC:
-      return "ods";
-  }
+const EXT_BY_TYPE: Record<ExplorerCreateFileType, BlankOdfExtension> = {
+  [ExplorerCreateFileType.DOC]: "odt",
+  [ExplorerCreateFileType.POWERPOINT]: "odp",
+  [ExplorerCreateFileType.CALC]: "ods",
+};
+
+const MIME_BY_EXT: Record<BlankOdfExtension, string> = {
+  odt: "application/vnd.oasis.opendocument.text",
+  ods: "application/vnd.oasis.opendocument.spreadsheet",
+  odp: "application/vnd.oasis.opendocument.presentation",
 };
 
 export const ExplorerCreateFileModal = (
   props: Pick<ModalProps, "isOpen" | "onClose"> & {
-    parentId?: string;
+    // Full parent Item. Omit for root / workspace-level creation.
+    // When `parent.is_encrypted`, the server can't provide a plaintext
+    // template (it has no access to the parent's keys), so we generate a
+    // blank ODF client-side and route through `createFile`, which encrypts
+    // and uploads via the same path as drag-drop.
+    parent?: Item;
     redirectAfterCreate?: boolean;
     type: ExplorerCreateFileType;
   },
@@ -42,28 +57,53 @@ export const ExplorerCreateFileModal = (
   const { t } = useTranslation();
   const form = useForm<Inputs>();
   const createFileFromTemplate = useMutationCreateFileFromTemplate();
+  const createFile = useMutationCreateFile();
   const router = useRouter();
+  const { config } = useConfig();
   const setSelectedItems = useSetSelectedItems();
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
-    const extension = getExtension(props.type);
+    const extension = EXT_BY_TYPE[props.type];
+    const filename = data.filename.endsWith(`.${extension}`)
+      ? data.filename
+      : `${data.filename}.${extension}`;
+
+    const onSuccess = (createdItem?: Item) => {
+      form.reset();
+      props.onClose();
+      if (props.redirectAfterCreate && createdItem?.id) {
+        router.push(`/explorer/items/my-files`);
+        setSelectedItems([createdItem]);
+      }
+    };
+
+    if (props.parent?.is_encrypted) {
+      const bytes = await createBlankOdf(extension);
+      const blankFile = new File([bytes], filename, {
+        type: MIME_BY_EXT[extension],
+      });
+      createFile.mutate(
+        {
+          parent: props.parent,
+          filename,
+          file: blankFile,
+          uploadAcl:
+            config.AWS_S3_UPLOAD_ACL === "default"
+              ? undefined
+              : config.AWS_S3_UPLOAD_ACL,
+        },
+        { onSuccess },
+      );
+      return;
+    }
 
     createFileFromTemplate.mutate(
       {
-        parentId: props.parentId,
-        extension: extension,
+        parentId: props.parent?.id,
+        extension,
         title: data.filename,
       },
-      {
-        onSuccess: (createdItem) => {
-          form.reset();
-          props.onClose();
-          if (props.redirectAfterCreate && createdItem?.id) {
-            router.push(`/explorer/items/my-files`);
-            setSelectedItems([createdItem]);
-          }
-        },
-      },
+      { onSuccess },
     );
   };
 
