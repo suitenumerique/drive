@@ -92,6 +92,16 @@ def test_logging_request(client, console_logs):
     assert isinstance(console_logs[1]["duration_ms"], int)
 
 
+def test_logging_request_access_token(client, console_logs):
+    """A request should be logged without the access token of its query string."""
+    client.get("/api/v1.0/unknown/?access_token=secret-token&page=2")
+
+    assert [line["request"] for line in console_logs] == [
+        "GET /api/v1.0/unknown/?access_token=[redacted]&page=2",
+        "GET /api/v1.0/unknown/?access_token=[redacted]&page=2",
+    ]
+
+
 def test_logging_request_user(client, console_logs):
     """A request should be logged with the id of its user."""
     user = factories.UserFactory()
