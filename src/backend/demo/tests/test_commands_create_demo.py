@@ -1,6 +1,6 @@
 """Test the `create_demo` management command"""
 
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.test import override_settings
 
 import pytest
@@ -64,6 +64,56 @@ def test_commands_create_demo_with_file_types():
     dev_user = models.User.objects.get(email="drive@drive.world")
     for item in file_type_items:
         assert models.ItemAccess.objects.filter(item=item).exclude(user=dev_user).exists()
+
+
+@override_settings(DEBUG=True)
+def test_commands_create_demo_with_profiles():
+    """The create_demo command should optionally add users shaped like production profiles."""
+    call_command("create_demo", "--profiles", "median", "deepest", "history")
+
+    deepest = models.User.objects.get(email="deepest@profiles.demo")
+    deepest_items = models.Item.objects.filter(creator=deepest)
+    assert deepest_items.count() == 20000
+    assert deepest_items.filter(type=models.ItemTypeChoices.FOLDER).count() == 12000
+    assert max(len(item.path) for item in deepest_items.only("path")) == 24
+
+    median = models.User.objects.get(email="median@profiles.demo")
+    assert models.Item.objects.filter(creator=median).count() == 8
+    assert models.ItemAccess.objects.filter(user=median, role="reader").count() == 1
+    assert models.LinkTrace.objects.filter(user=median).count() == 2
+
+    history = models.User.objects.get(email="history@profiles.demo")
+    assert models.Item.objects.filter(creator=history, deleted_at__isnull=False).count() == 800
+    assert models.LinkTrace.objects.filter(user=history).count() == 3400
+
+
+@override_settings(DEBUG=True)
+def test_commands_create_demo_with_profile_user():
+    """The create_demo command should attach a profile to an existing user."""
+    call_command("create_demo", "--profiles", "median", "--profile-user", "drive@drive.world")
+
+    dev_user = models.User.objects.get(email="drive@drive.world")
+    assert models.Item.objects.filter(creator=dev_user, title__startswith="Folder ").count() == 2
+    assert models.LinkTrace.objects.filter(user=dev_user).count() == 2
+    assert not models.User.objects.filter(email="median@profiles.demo").exists()
+
+
+@override_settings(DEBUG=True)
+def test_commands_create_demo_with_profile_user_requires_one_profile():
+    """The create_demo command should refuse a profile user without exactly one profile."""
+    with pytest.raises(CommandError, match="requires exactly one profile"):
+        call_command("create_demo", "--profiles", "--profile-user", "drive@drive.world")
+
+    assert models.Item.objects.count() == 0
+
+
+@override_settings(DEBUG=True)
+def test_commands_create_demo_with_unknown_profile_user():
+    """The create_demo command should fail when the profile user does not exist."""
+    with pytest.raises(CommandError, match="No user found with email unknown@example.com"):
+        call_command("create_demo", "--profiles", "median", "--profile-user", "unknown@example.com")
+
+    assert not models.User.objects.filter(email="median@profiles.demo").exists()
 
 
 @override_settings(DEBUG=True)
