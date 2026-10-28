@@ -1400,11 +1400,11 @@ class Item(TreeModel, BaseModel):
 
     def ancestors(self):
         """Return the ancestors of the item excluding the item itself."""
-        return super().ancestors().exclude(id=self.id)
+        return Item.objects.filter(path__ancestors=self.path).exclude(id=self.id)
 
     def descendants(self):
         """Return the descendants of the item excluding the item itself."""
-        return super().descendants().exclude(id=self.id)
+        return Item.objects.filter(path__descendants=self.path).exclude(id=self.id)
 
     def children(self):
         """
@@ -1412,6 +1412,12 @@ class Item(TreeModel, BaseModel):
         rather than among all its descendants, see ParentPath.
         """
         return Item.objects.alias(parent_path=ParentPath("path")).filter(parent_path=self.path)
+
+    def siblings(self):
+        """Return the items at the same level under the same parent, excluding the item."""
+        return Item.objects.filter(
+            path__descendants=str(self.path[:-1]), path__depth=len(self.path)
+        ).exclude(path=self.path)
 
     def set_quota_excluded(self, value):
         """Set quota_excluded on the item and its descendants, return the updated count."""
