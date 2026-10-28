@@ -254,3 +254,47 @@ def test_admin_items_transfer_items_inherited_access():
     message_user.assert_called_once_with(
         request, f"1 items and 1 accesses transferred from {alice} to {carol}."
     )
+
+
+def test_admin_items_tree():
+    """The tree should list the ancestors from the root, then the item itself opened."""
+    folder, (_folder, subfolder, file), _users = _create_tree()
+
+    html = ItemAdmin(models.Item, admin.site).tree(file)
+
+    positions = [
+        html.index(f"/admin/core/item/{item.pk}/tree/") for item in (folder, subfolder, file)
+    ]
+    assert positions == sorted(positions)
+    assert f'href="/admin/core/item/{folder.pk}/change/"' in html
+    assert f'href="/admin/core/item/{file.pk}/change/"' not in html
+    assert html.count(" open>") == 1
+
+
+def test_admin_items_tree_node(client):
+    """Opening a node should list the direct accesses and the children of the item."""
+    folder, (_folder, subfolder, _file), (alice, _bob) = _create_tree()
+    factories.UserItemAccessFactory(item=folder, user=alice, role="owner")
+    factories.TeamItemAccessFactory(item=folder, team="lasuite", role="editor")
+    file = factories.ItemFactory(parent=folder, type=models.ItemTypeChoices.FILE, title="a.txt")
+    client.force_login(factories.UserFactory(is_staff=True, is_superuser=True))
+
+    response = client.get(f"/admin/core/item/{folder.pk}/tree/")
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    for text in (alice.email, "lasuite", "Owner", "Editor"):
+        assert text in html
+    assert html.index(f"/admin/core/item/{subfolder.pk}/tree/") < html.index(
+        f"/admin/core/item/{file.pk}/tree/"
+    )
+
+
+def test_admin_items_tree_node_permission(client):
+    """Staff users without the view permission on items should be denied the tree."""
+    folder, _tree, _users = _create_tree()
+    client.force_login(factories.UserFactory(is_staff=True))
+
+    response = client.get(f"/admin/core/item/{folder.pk}/tree/")
+
+    assert response.status_code == 403

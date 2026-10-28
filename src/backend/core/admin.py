@@ -10,14 +10,17 @@ from django.contrib.admin import helpers
 from django.contrib.admin.widgets import AutocompleteSelect
 from django.contrib.auth import admin as auth_admin
 from django.contrib.auth import forms as auth_forms
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Subquery, UUIDField
 from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Cast, Coalesce, Lower
+from django.http import Http404
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
 from django.template.response import TemplateResponse
 from django.templatetags.static import static
+from django.urls import path
 from django.utils.html import format_html
 from django.utils.text import format_lazy
 from django.utils.translation import gettext_lazy as _
@@ -473,6 +476,7 @@ class ItemAdmin(admin.ModelAdmin):
                     "path",
                     "depth",
                     "numchild",
+                    "tree",
                 )
             },
         ),
@@ -501,6 +505,7 @@ class ItemAdmin(admin.ModelAdmin):
         "deleted_at",
         "ancestors_deleted_at",
         "malware_detection_info",
+        "tree",
     )
     search_fields = ("id", "title", "creator__email")
     list_filter = ("upload_state", "link_reach", "link_role", "quota_excluded")
@@ -652,6 +657,43 @@ class ItemAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
         if "quota_excluded" in form.changed_data:
             obj.set_quota_excluded(obj.quota_excluded)
+
+    @admin.display(description=_("tree"))
+    def tree(self, obj):
+        """Return the ancestors and the item as tree nodes loaded when opened."""
+        if not obj.path:
+            return ""
+        return render_to_string(
+            "core/admin/item_tree.html",
+            {"items": [*obj.ancestors().order_by("path"), obj], "current": obj},
+        )
+
+    def tree_node_view(self, request, object_id):
+        """Return the accesses and the children of an item, for its opened tree node."""
+        item = self.get_object(request, object_id)
+        if item is None:
+            raise Http404
+        if not self.has_view_permission(request, item):
+            raise PermissionDenied
+        return TemplateResponse(
+            request,
+            "core/admin/item_tree_node.html",
+            {
+                "accesses": item.accesses.select_related("user").order_by("user__email", "team"),
+                "children": item.children().order_by("-type", "title"),
+            },
+        )
+
+    def get_urls(self):
+        """Add the view loading a node of the item tree."""
+        return [
+            path(
+                "<uuid:object_id>/tree/",
+                self.admin_site.admin_view(self.tree_node_view),
+                name="core_item_tree_node",
+            ),
+            *super().get_urls(),
+        ]
 
 
 @admin.register(models.Invitation)

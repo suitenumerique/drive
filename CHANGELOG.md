@@ -12,6 +12,7 @@ and this project adheres to
 
 - ✨(frontend) restrict and reopen folder access from the share modal
 - 🔊(backend) log rejected WOPI requests
+- ✨(backend) browse the item tree and its accesses from the admin
 
 ### Changed
 

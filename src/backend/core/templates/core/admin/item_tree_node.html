@@ -1,0 +1,20 @@
+{% load i18n %}
+<table>
+  <tr>
+    <th>{% translate "user" %}</th>
+    <th>{% translate "team" %}</th>
+    <th>{% translate "role" %}</th>
+  </tr>
+  {% for access in accesses %}
+  <tr>
+    <td>{% if access.user %}<a href="{% url 'admin:core_user_change' access.user.pk %}">{{ access.user.email }}</a>{% endif %}</td>
+    <td>{{ access.team }}</td>
+    <td>{{ access.get_role_display }}</td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="3">{% translate "No direct access" %}</td></tr>
+  {% endfor %}
+</table>
+<ul>
+  {% for item in children %}{% include "core/admin/item_tree_entry.html" %}{% endfor %}
+</ul>
