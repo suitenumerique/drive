@@ -265,6 +265,33 @@ def test_admin_users_top_files_flags():
     assert "in trash, excluded from quota" in admin_instance.top_files(loaded)
 
 
+def test_admin_users_root_items():
+    """The root items the user has a direct access to should be listed with the role."""
+    user = factories.UserFactory()
+    workspace = factories.ItemFactory(
+        title="workspace", main_workspace=True, users=[(user, "owner")]
+    )
+    shared = factories.ItemFactory(
+        title="shared", type=models.ItemTypeChoices.FOLDER, users=[(user, "reader")]
+    )
+    factories.ItemFactory(title="child", parent=shared, users=[(user, "editor")])
+    factories.ItemFactory(title="other-user")
+    hard_deleted = factories.ItemFactory(title="hard-deleted", users=[(user, "owner")])
+    hard_deleted.soft_delete()
+    hard_deleted.hard_delete()
+
+    admin_instance, loaded = _get_user(user)
+    html = admin_instance.root_items(loaded)
+
+    for item in (shared, workspace):
+        assert f'href="/admin/core/item/{item.pk}/change/"' in html
+    assert html.index("shared") < html.index("workspace")
+    for text in ("Owner", "Reader", "main workspace"):
+        assert text in html
+    for title in ("child", "other-user", "hard-deleted", "Editor"):
+        assert title not in html
+
+
 STATIC_STORAGES = {
     **settings.STORAGES,
     "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},

@@ -141,6 +141,7 @@ class UserAdmin(auth_admin.UserAdmin):
                 )
             },
         ),
+        (_("Items"), {"fields": ("root_items",)}),
         (_("Important dates"), {"fields": ("created_at", "updated_at", "last_login")}),
         (
             _("Permissions"),
@@ -202,6 +203,7 @@ class UserAdmin(auth_admin.UserAdmin):
         "last_login",
         "quota_display",
         "top_files",
+        "root_items",
     )
     search_fields = ("id", "sub", "admin_email", "email", "full_name")
     top_files_choices = (5, 20, 50, 100)
@@ -355,6 +357,18 @@ class UserAdmin(auth_admin.UserAdmin):
                 ],
             },
         )
+
+    @admin.display(description=_("root items"))
+    def root_items(self, obj):
+        """Return the root items the user has a direct access to, with their role."""
+        accesses = (
+            models.ItemAccess.objects.filter(
+                user=obj, item__path__depth=1, item__hard_deleted_at__isnull=True
+            )
+            .select_related("item")
+            .order_by("item__title")
+        )
+        return render_to_string("core/admin/user_root_items.html", {"accesses": accesses})
 
 
 @admin.register(models.UserReconciliationCsvImport)
