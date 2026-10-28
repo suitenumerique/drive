@@ -1189,6 +1189,10 @@ class ItemManager(TreeManager.from_queryset(ItemQuerySet)):
         """
         return self.get_queryset().readable_per_se(user)
 
+    def create(self, **kwargs):
+        """Create an item with the given path, TreeManager.create would replace it."""
+        return self.get_queryset().create(**kwargs)
+
     def create_child(self, parent=None, **kwargs):
         """
         Check if the item can have children before adding one and if the title is
