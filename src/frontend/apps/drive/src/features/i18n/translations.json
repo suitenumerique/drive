@@ -234,6 +234,7 @@
         },
         "grid": {
           "name": "Name",
+          "actions_column": "Actions",
           "last_update": "Last Update",
           "columns": {
             "last_modified": "Last modified",
@@ -253,9 +254,9 @@
             "PB": "PB"
           },
           "sort": {
-            "ascending": "Sort ascending",
-            "descending": "Sort descending",
-            "reset": "Reset sorting"
+            "ascending": "Sort {{column}} ascending",
+            "descending": "Sort {{column}} descending",
+            "reset": "Reset {{column}} sorting"
           },
           "empty": {
             "default": "No folder found in the selected folder",
@@ -951,6 +952,7 @@
         },
         "grid": {
           "name": "Nom",
+          "actions_column": "Actions",
           "last_update": "Dernière modification",
           "columns": {
             "last_modified": "Dernière modification",
@@ -970,9 +972,9 @@
             "PB": "Po"
           },
           "sort": {
-            "ascending": "Tri croissant",
-            "descending": "Tri décroissant",
-            "reset": "Réinitialiser le tri"
+            "ascending": "Trier {{column}} par ordre croissant",
+            "descending": "Trier {{column}} par ordre décroissant",
+            "reset": "Réinitialiser le tri de {{column}}"
           },
           "empty": {
             "default": "Aucun dossier trouvé dans le dossier sélectionné",
@@ -1668,6 +1670,7 @@
         },
         "grid": {
           "name": "Naam",
+          "actions_column": "Acties",
           "last_update": "Laatste update",
           "columns": {
             "last_modified": "Laatst gewijzigd",
@@ -1687,9 +1690,9 @@
             "PB": "PB"
           },
           "sort": {
-            "ascending": "Oplopend sorteren",
-            "descending": "Aflopend sorteren",
-            "reset": "Sortering resetten"
+            "ascending": "{{column}} oplopend sorteren",
+            "descending": "{{column}} aflopend sorteren",
+            "reset": "Sortering van {{column}} resetten"
           },
           "empty": {
             "default": "Geen map gevonden in de geselecteerde map",
