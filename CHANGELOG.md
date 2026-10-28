@@ -12,6 +12,8 @@ and this project adheres to
 
 - ✨(frontend) restrict and reopen folder access from the share modal
 - 🔊(backend) log rejected WOPI requests
+- ✨(backend) add file-scanner malware webhook endpoint
+- 🔧(backend) make malware reschedule delay configurable
 
 ### Fixed
 
