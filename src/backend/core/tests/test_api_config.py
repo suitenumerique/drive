@@ -18,6 +18,7 @@ pytestmark = pytest.mark.django_db
 
 
 @override_settings(
+    ACCOUNT_SETTINGS_URL="http://accounts.test/",
     ALLOW_SHARE_IMPORT_FILE=True,
     AWS_S3_UPLOAD_ACL="private",
     CRISP_WEBSITE_ID="123",
@@ -66,6 +67,7 @@ def test_api_config(is_authenticated):
     response = client.get("/api/v1.0/config/")
     assert response.status_code == HTTP_200_OK
     assert response.json() == {
+        "ACCOUNT_SETTINGS_URL": "http://accounts.test/",
         "ALLOW_SHARE_IMPORT_FILE": True,
         "AWS_S3_UPLOAD_ACL": "private",
         "CRISP_WEBSITE_ID": "123",
@@ -110,6 +112,23 @@ def test_api_config(is_authenticated):
         "SENTRY_DSN": "https://sentry.test/123",
         "theme_customization": {},
     }
+
+
+@pytest.mark.parametrize("is_authenticated", [False, True])
+def test_api_config_account_settings_url_default(is_authenticated):
+    """
+    Without ACCOUNT_SETTINGS_URL, the configuration exposes it as null so the
+    frontend keeps opening the encryption settings itself.
+    """
+    client = APIClient()
+
+    if is_authenticated:
+        user = factories.UserFactory()
+        client.force_login(user)
+
+    response = client.get("/api/v1.0/config/")
+    assert response.status_code == HTTP_200_OK
+    assert response.json()["ACCOUNT_SETTINGS_URL"] is None
 
 
 @override_settings(

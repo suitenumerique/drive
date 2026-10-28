@@ -84,6 +84,9 @@ FRONTEND_HELP_MENU_CONFIG={"documentationUrl": "https://docs.numerique.gouv.fr/d
 # ENCRYPTION_FEATURE_ENABLED=True
 # ENCRYPTION_VAULT_URL=http://data.encryption.localhost:7200
 # ENCRYPTION_INTERFACE_URL=http://encryption.localhost:7200
+# Optional: the user's account settings (e.g. LaSuite Accounts), linked as
+# "Manage account" in the user menu, where encryption is managed too.
+# ACCOUNT_SETTINGS_URL=
 
 # WOPI
 WOPI_CLIENTS="collabora,onlyoffice"

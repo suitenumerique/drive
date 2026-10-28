@@ -3,6 +3,7 @@ import type { UserMenuProps } from "@gouvfr-lasuite/ui-components";
 import { UserProfile } from "../UserProfile";
 
 let userMenuProps: UserMenuProps | undefined;
+let config: Record<string, unknown> = {};
 let vault = { isEnabled: true, hasKeys: true as boolean | null };
 
 jest.mock("@gouvfr-lasuite/ui-components", () => ({
@@ -15,6 +16,9 @@ jest.mock("@gouvfr-lasuite/ui-components", () => ({
 jest.mock("@/features/auth/Auth", () => ({
   useAuth: () => ({ user: { id: "u1", email: "user@test.fr" } }),
   logout: jest.fn(),
+}));
+jest.mock("@/features/config/ConfigProvider", () => ({
+  useConfig: () => ({ config }),
 }));
 jest.mock("@/features/encryption/VaultClientProvider", () => ({
   useVaultClient: () => vault,
@@ -46,16 +50,24 @@ const render = () => {
 
 describe("UserProfile settings entries", () => {
   beforeEach(() => {
+    config = {};
     vault = { isEnabled: true, hasKeys: true };
   });
 
-  it("opens the encryption settings in Drive when encryption is enabled", () => {
+  it("links to the account settings and names no encryption entry when ACCOUNT_SETTINGS_URL is set", () => {
+    config = { ACCOUNT_SETTINGS_URL: "https://accounts.test/" };
+    const props = render();
+    expect(props.settingsCTA).toBe("https://accounts.test/");
+    expect(props.appSettingsCTA).toBeUndefined();
+  });
+
+  it("opens the encryption settings in Drive without ACCOUNT_SETTINGS_URL", () => {
     const props = render();
     expect(typeof props.appSettingsCTA).toBe("function");
     expect(props.settingsCTA).toBeUndefined();
   });
 
-  it("shows no settings entry when encryption is disabled", () => {
+  it("shows no settings entry when encryption is disabled and no account settings are set", () => {
     vault = { isEnabled: false, hasKeys: null };
     const props = render();
     expect(props.appSettingsCTA).toBeUndefined();

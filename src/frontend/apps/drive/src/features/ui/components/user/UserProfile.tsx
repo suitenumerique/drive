@@ -16,10 +16,13 @@ import { useClipboard } from "@/hooks/useCopyToClipboard";
 import { useVaultClient } from "@/features/encryption/VaultClientProvider";
 import { ModalEncryptionOnboarding } from "@/features/encryption/ModalEncryptionOnboarding";
 import { ModalEncryptionSettings } from "@/features/encryption/ModalEncryptionSettings";
+import { userMenuSettingsCTAs } from "@/features/encryption/encryptionSettingsMenu";
+import { useConfig } from "@/features/config/ConfigProvider";
 import { useCallback, useState } from "react";
 
 export const UserProfile = () => {
   const { user } = useAuth();
+  const { config } = useConfig();
   const { hasKeys, isEnabled: isEncryptionEnabled } = useVaultClient();
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -46,9 +49,11 @@ export const UserProfile = () => {
             user={user}
             logout={logout}
             termOfServiceUrl="https://docs.numerique.gouv.fr/docs/8e298e03-c95f-44c7-be4a-ffb618af1854/"
-            appSettingsCTA={
-              isEncryptionEnabled ? handleEncryptionClick : undefined
-            }
+            {...userMenuSettingsCTAs({
+              isEncryptionEnabled,
+              accountSettingsUrl: config.ACCOUNT_SETTINGS_URL,
+              openEncryptionSettings: handleEncryptionClick,
+            })}
             actions={<LanguagePickerUserMenu />}
           />
 

@@ -3856,6 +3856,7 @@ class ConfigView(drf.views.APIView):
             Return a dictionary of public settings.
         """
         array_settings = [
+            "ACCOUNT_SETTINGS_URL",
             "ALLOW_SHARE_IMPORT_FILE",
             "AWS_S3_UPLOAD_ACL",
             "CRISP_WEBSITE_ID",

@@ -1115,6 +1115,12 @@ class Base(Configuration):
     ENCRYPTION_INTERFACE_URL = values.Value(
         None, environ_name="ENCRYPTION_INTERFACE_URL", environ_prefix=None
     )
+    # The user's account settings (e.g. LaSuite Accounts), shown as "Manage
+    # account" in the user menu. When set, encryption is managed there and the
+    # menu shows no encryption entry of its own.
+    ACCOUNT_SETTINGS_URL = values.Value(
+        None, environ_name="ACCOUNT_SETTINGS_URL", environ_prefix=None
+    )
     THEME_CUSTOMIZATION_FILE_PATH = values.Value(
         os.path.join(BASE_DIR, "drive/configuration/theme/default.json"),
         environ_name="THEME_CUSTOMIZATION_FILE_PATH",
