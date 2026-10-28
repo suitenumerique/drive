@@ -1417,10 +1417,15 @@ class Item(TreeModel, BaseModel):
         return Item.objects.alias(parent_path=ParentPath("path")).filter(parent_path=self.path)
 
     def siblings(self):
-        """Return the items at the same level under the same parent, excluding the item."""
-        return Item.objects.filter(
-            path__descendants=str(self.path[:-1]), path__depth=len(self.path)
-        ).exclude(path=self.path)
+        """
+        Return the other children of the parent of the item, looked up on the parent
+        path index like children.
+        """
+        return (
+            Item.objects.alias(parent_path=ParentPath("path"))
+            .filter(parent_path=str(self.path[:-1]))
+            .exclude(id=self.id)
+        )
 
     def set_quota_excluded(self, value):
         """Set quota_excluded on the item and its descendants, return the updated count."""
