@@ -9,6 +9,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from core import factories, models
+from wopi.services.access import hash_access_token
 from wopi.tasks.configure_wopi import WOPI_CONFIGURATION_CACHE_KEY
 
 pytestmark = pytest.mark.django_db
@@ -86,7 +87,8 @@ def test_api_items_wopi_anonymous_user_item_public(
     assert data["access_token"] is not None
     assert data["access_token_ttl"] > timestamp_now
     assert data["launch_url"] == (
-        f"{valid_wopi_launch_url}?WOPISrc={wopi_src}&closebutton=false&lang=en-us"
+        f"{valid_wopi_launch_url}?WOPISrc={wopi_src}&closebutton=false"
+        f"&usid={hash_access_token(data['access_token'])}&lang=en-us"
     )
 
 
@@ -213,7 +215,8 @@ def test_api_items_wopi_authenticated_can_access_retricted_item(
     assert data["access_token"] is not None
     assert data["access_token_ttl"] > timestamp_now
     assert data["launch_url"] == (
-        f"{valid_wopi_launch_url}?WOPISrc={wopi_src}&closebutton=false&lang={user.language}"
+        f"{valid_wopi_launch_url}?WOPISrc={wopi_src}&closebutton=false"
+        f"&usid={hash_access_token(data['access_token'])}&lang={user.language}"
     )
 
 
@@ -245,8 +248,8 @@ def test_api_items_wopi_authenticated_user_language_null(
     assert data["access_token"] is not None
     assert data["access_token_ttl"] > timestamp_now
     assert data["launch_url"] == (
-        f"{valid_wopi_launch_url}?WOPISrc={wopi_src}"
-        f"&closebutton=false&lang={settings.LANGUAGE_CODE}"
+        f"{valid_wopi_launch_url}?WOPISrc={wopi_src}&closebutton=false"
+        f"&usid={hash_access_token(data['access_token'])}&lang={settings.LANGUAGE_CODE}"
     )
 
 

@@ -621,6 +621,16 @@ def test_compute_wopi_launch_url_with_lang(settings):
     )
 
 
+def test_compute_wopi_launch_url_with_session_id(settings):
+    """Test the compute_wopi_launch_url function with a session id."""
+    settings.WOPI_SRC_BASE_URL = None
+    launch_url = "https://vendorA.com/launch_url"
+    get_file_info_path = "/api/v1.0/wopi/files/123"
+    assert compute_wopi_launch_url(launch_url, get_file_info_path, session_id="abc123") == (
+        f"{launch_url}?WOPISrc={quote_plus(get_file_info_path)}&closebutton=false&usid=abc123"
+    )
+
+
 def test_compute_wopi_launch_url_leading_question_mark(settings):
     """Test the compute_wopi_launch_url function with a leading question mark."""
 
