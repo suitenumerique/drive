@@ -75,7 +75,7 @@ def get_wopi_configuration():
     return cache.get(WOPI_CONFIGURATION_CACHE_KEY, default=WOPI_DEFAULT_CONFIGURATION)
 
 
-def compute_wopi_launch_url(launch_url, get_file_info_path, lang=None):
+def compute_wopi_launch_url(launch_url, get_file_info_path, lang=None, session_id=None):
     """
     Compute the WOPI launch URL for an item.
     """
@@ -91,6 +91,10 @@ def compute_wopi_launch_url(launch_url, get_file_info_path, lang=None):
         "WOPISrc": wopi_src,
         "closebutton": "false",  # Collabora specific
     }
+
+    if session_id:
+        # OnlyOffice specific, sent back in the X-WOPI-SessionId header
+        query_params["usid"] = session_id
 
     if lang:
         query_params["lang"] = lang

@@ -160,14 +160,15 @@ def test_logging_request_wopi_session(console_logs):
     client = APIClient()
     client.force_login(user)
 
-    access_token = client.get(f"/api/v1.0/items/{item.id}/wopi/").json()["access_token"]
+    data = client.get(f"/api/v1.0/items/{item.id}/wopi/").json()
     APIClient().get(
         f"/api/v1.0/wopi/files/{item.id}/",
-        HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        HTTP_AUTHORIZATION=f"Bearer {data['access_token']}",
         HTTP_X_WOPI_SESSIONID="editor-session-1",
     )
 
-    token_hash = hashlib.sha256(access_token.encode()).hexdigest()[:12]
+    token_hash = hashlib.sha256(data["access_token"].encode()).hexdigest()[:12]
+    assert f"&usid={token_hash}&" in data["launch_url"]
     finished = [line for line in console_logs if line["event"] == "request_finished"]
     assert finished[0]["request"] == f"GET /api/v1.0/items/{item.id}/wopi/"
     assert finished[0]["wopi_token_hash"] == token_hash
