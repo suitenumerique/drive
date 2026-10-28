@@ -289,6 +289,8 @@ class SearchIndexer(BaseItemIndexer):
             and item.type == models.ItemTypeChoices.FILE
             and filesize < self.max_content_size
             and is_allowed_mimetype(mimetype, self.allowed_mimetypes)
+            # Stored content is ciphertext: nothing readable to index.
+            and not item.is_encrypted
         )
 
     def serialize_item(self, item, accesses):

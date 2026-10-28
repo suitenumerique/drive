@@ -46,6 +46,10 @@ def export_descendants(folder):
         # Restrictions are tree entries: their target lives in another subtree
         if descendant.type == models.ItemTypeChoices.RESTRICTION:
             continue
+        # The server only holds ciphertext for encrypted items: leaving them out
+        # also drops their subtree, whose paths are never registered below.
+        if descendant.is_encrypted:
+            continue
 
         parent_key = str(descendant.path).rsplit(".", 1)[0]
         parent_relative = relative_paths.get(parent_key)

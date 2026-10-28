@@ -198,3 +198,135 @@ def test_models_user_reconciliation_toggles_is_active_and_sends_done_email():
     assert len(mail.outbox) == 1
     # pylint: disable-next=no-member
     assert mail.outbox[0].to == ["active@example.com"]
+
+
+def _encrypted_item_with_keys(**accesses):
+    """
+    Create an encrypted item and one access per given user, mapping each user to
+    a (role, wrapped key, key version) tuple, a null key for a pending user.
+    """
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, is_encrypted=True)
+    created = {}
+    for name, (user, role, key, version) in accesses.items():
+        created[name] = factories.UserItemAccessFactory(item=item, user=user, role=role)
+        if key:
+            factories.ItemEncryptionKeyWrapFactory(
+                item=item, user=user, wrapped_key=key, encryption_public_key_version=version
+            )
+    return item, created
+
+
+def _wrap_of(access):
+    """Return the wrap of the access's item key held by its user, if any."""
+    return models.ItemEncryptionKeyWrap.objects.filter(item=access.item, user=access.user).first()
+
+
+def test_models_user_reconciliation_encrypted_transferred_access_becomes_pending():
+    """
+    A wrapped key belongs to the identity of the inactive user: when another member
+    still holds a key on the item, the transferred access becomes pending.
+    """
+    active = factories.UserFactory(email="active@example.com")
+    inactive = factories.UserFactory(email="inactive@example.com")
+    _item, accesses = _encrypted_item_with_keys(
+        inactive=(inactive, models.RoleChoices.EDITOR, "inactive_key", 2),
+        other=(factories.UserFactory(), models.RoleChoices.OWNER, "other_key", 1),
+    )
+
+    create_reconciliation(active, inactive).process_reconciliation_request()
+
+    access = accesses["inactive"]
+    access.refresh_from_db()
+    assert access.user == active
+    assert access.role == models.RoleChoices.EDITOR
+    assert _wrap_of(access) is None
+    assert not models.ItemEncryptionKeyWrap.objects.filter(user=inactive).exists()
+
+    assert _wrap_of(accesses["other"]).wrapped_key == "other_key"
+
+
+def test_models_user_reconciliation_encrypted_last_wrapped_key_is_kept():
+    """
+    The last wrapped key on an item is kept on the transferred access: dropping it
+    would leave the content with nobody able to re-share its key.
+    """
+    active = factories.UserFactory(email="active@example.com")
+    inactive = factories.UserFactory(email="inactive@example.com")
+    _item, accesses = _encrypted_item_with_keys(
+        inactive=(inactive, models.RoleChoices.OWNER, "inactive_key", 2),
+        pending=(factories.UserFactory(), models.RoleChoices.READER, None, None),
+    )
+
+    create_reconciliation(active, inactive).process_reconciliation_request()
+
+    access = accesses["inactive"]
+    access.refresh_from_db()
+    assert access.user == active
+    wrap = _wrap_of(access)
+    assert wrap.wrapped_key == "inactive_key"
+    assert wrap.encryption_public_key_version == 2
+
+
+def test_models_user_reconciliation_encrypted_last_wrapped_key_copied_on_conflict():
+    """
+    When the active user already has a pending access on the item, the last wrapped
+    key is copied onto it before the access of the inactive user is removed.
+    """
+    active = factories.UserFactory(email="active@example.com")
+    inactive = factories.UserFactory(email="inactive@example.com")
+    item, accesses = _encrypted_item_with_keys(
+        active=(active, models.RoleChoices.READER, None, None),
+        inactive=(inactive, models.RoleChoices.READER, "inactive_key", 2),
+    )
+
+    create_reconciliation(active, inactive).process_reconciliation_request()
+
+    assert not models.ItemAccess.objects.filter(pk=accesses["inactive"].pk).exists()
+    active_access = models.ItemAccess.objects.get(item=item, user=active)
+    assert active_access.role == models.RoleChoices.READER
+    wrap = _wrap_of(active_access)
+    assert wrap.wrapped_key == "inactive_key"
+    assert wrap.encryption_public_key_version == 2
+
+
+def test_models_user_reconciliation_encrypted_conflict_keeps_active_access_pending():
+    """
+    When another member holds a key, the key of the inactive user is dropped with its
+    access and the access of the active user keeps its own state, merging the role.
+    """
+    active = factories.UserFactory(email="active@example.com")
+    inactive = factories.UserFactory(email="inactive@example.com")
+    item, accesses = _encrypted_item_with_keys(
+        active=(active, models.RoleChoices.READER, None, None),
+        inactive=(inactive, models.RoleChoices.EDITOR, "inactive_key", 2),
+        other=(factories.UserFactory(), models.RoleChoices.OWNER, "other_key", 1),
+    )
+
+    create_reconciliation(active, inactive).process_reconciliation_request()
+
+    assert not models.ItemAccess.objects.filter(pk=accesses["inactive"].pk).exists()
+    active_access = models.ItemAccess.objects.get(item=item, user=active)
+    assert active_access.role == models.RoleChoices.EDITOR
+    assert _wrap_of(active_access) is None
+    assert not models.ItemEncryptionKeyWrap.objects.filter(user=inactive).exists()
+
+
+def test_models_user_reconciliation_plain_access_conflict_same_role_untouched():
+    """On a plaintext item, an access of the active user with the same role is left as is."""
+    active = factories.UserFactory(email="active@example.com")
+    inactive = factories.UserFactory(email="inactive@example.com")
+    item = factories.ItemFactory()
+    active_access = factories.UserItemAccessFactory(
+        item=item, user=active, role=models.RoleChoices.EDITOR
+    )
+    inactive_access = factories.UserItemAccessFactory(
+        item=item, user=inactive, role=models.RoleChoices.EDITOR
+    )
+    reconciliation = create_reconciliation(active, inactive)
+
+    updated, removed = reconciliation.prepare_itemaccess_reconciliation()
+
+    assert updated == []
+    assert removed == [inactive_access]
+    active_access.refresh_from_db()
+    assert active_access.role == models.RoleChoices.EDITOR

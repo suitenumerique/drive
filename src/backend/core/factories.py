@@ -160,6 +160,18 @@ class UserItemAccessFactory(factory.django.DjangoModelFactory):
     role = factory.fuzzy.FuzzyChoice([r[0] for r in RoleChoices.choices])
 
 
+class ItemEncryptionKeyWrapFactory(factory.django.DjangoModelFactory):
+    """Create fake wraps of encrypted items' keys for testing."""
+
+    class Meta:
+        model = models.ItemEncryptionKeyWrap
+
+    item = factory.SubFactory(ItemFactory)
+    user = factory.SubFactory(UserFactory)
+    wrapped_key = factory.Faker("pystr", min_chars=32, max_chars=32)
+    encryption_public_key_version = 1
+
+
 class TeamItemAccessFactory(factory.django.DjangoModelFactory):
     """Create fake item team accesses for testing."""
 

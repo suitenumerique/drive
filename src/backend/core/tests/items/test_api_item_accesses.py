@@ -271,6 +271,7 @@ def test_api_item_accesses_list_authenticated_related_privileged(
                     "language": access.user.language,
                     "full_name": access.user.full_name,
                     "short_name": access.user.short_name,
+                    "sub": access.user.sub,
                     "last_release_note_seen": None,
                     "column_preferences": None,
                 }
@@ -285,6 +286,7 @@ def test_api_item_accesses_list_authenticated_related_privileged(
                 "role": access.role,
                 "abilities": access.get_abilities(user),
                 "is_explicit": access.item_id == item.id,
+                "is_pending_encryption": False,
             }
             for access in ancestors_accesses + item_accesses
         ],
@@ -613,6 +615,7 @@ def test_api_item_accesses_retrieve_authenticated_related(via, user_role, mock_u
             "depth": item.depth,
         },
         "is_explicit": True,
+        "is_pending_encryption": False,
     }
 
 
@@ -1491,6 +1494,7 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
                 "language": other_admin_access.user.language,
                 "full_name": other_admin_access.user.full_name,
                 "short_name": other_admin_access.user.short_name,
+                "sub": other_admin_access.user.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -1507,6 +1511,7 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
             "max_ancestors_role_item_id": str(root.id),
             "max_role": "administrator",
             "is_explicit": False,
+            "is_pending_encryption": False,
         },
         {
             "id": str(other_owner_access.id),
@@ -1521,6 +1526,7 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
                 "language": other_owner_access.user.language,
                 "full_name": other_owner_access.user.full_name,
                 "short_name": other_owner_access.user.short_name,
+                "sub": other_owner_access.user.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -1537,6 +1543,7 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
             "max_ancestors_role_item_id": str(root.id),
             "max_role": "owner",
             "is_explicit": False,
+            "is_pending_encryption": False,
         },
         {
             "id": str(item_access.id),
@@ -1551,6 +1558,7 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
                 "language": user.language,
                 "full_name": user.full_name,
                 "short_name": user.short_name,
+                "sub": user.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -1567,6 +1575,7 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
             "max_ancestors_role_item_id": str(root.id),
             "max_role": "owner",
             "is_explicit": True,
+            "is_pending_encryption": False,
         },
     ]
 
@@ -1595,6 +1604,7 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
                 "language": other_admin_access.user.language,
                 "full_name": other_admin_access.user.full_name,
                 "short_name": other_admin_access.user.short_name,
+                "sub": other_admin_access.user.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -1611,6 +1621,7 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
             "max_ancestors_role_item_id": str(root.id),
             "max_role": "administrator",
             "is_explicit": False,
+            "is_pending_encryption": False,
         },
         {
             "id": str(other_owner_access.id),
@@ -1625,6 +1636,7 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
                 "language": other_owner_access.user.language,
                 "full_name": other_owner_access.user.full_name,
                 "short_name": other_owner_access.user.short_name,
+                "sub": other_owner_access.user.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -1641,6 +1653,7 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
             "max_ancestors_role_item_id": str(root.id),
             "max_role": "owner",
             "is_explicit": False,
+            "is_pending_encryption": False,
         },
         {
             "id": str(owner_access.id),
@@ -1655,6 +1668,7 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
                 "language": owner_access.user.language,
                 "full_name": owner_access.user.full_name,
                 "short_name": owner_access.user.short_name,
+                "sub": owner_access.user.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -1671,6 +1685,7 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
             "max_ancestors_role_item_id": str(root.id),
             "max_role": "owner",
             "is_explicit": False,
+            "is_pending_encryption": False,
         },
         {
             "id": str(item_access.id),
@@ -1685,6 +1700,7 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
                 "language": user.language,
                 "full_name": user.full_name,
                 "short_name": user.short_name,
+                "sub": user.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -1701,6 +1717,7 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
             "max_ancestors_role_item_id": str(parent.id),
             "max_role": "owner",
             "is_explicit": True,
+            "is_pending_encryption": False,
         },
     ]
 
@@ -1743,6 +1760,7 @@ def test_api_item_accesses_other_user_accesses():
                 "language": user.language,
                 "full_name": user.full_name,
                 "short_name": user.short_name,
+                "sub": user.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -1759,6 +1777,7 @@ def test_api_item_accesses_other_user_accesses():
             "max_ancestors_role_item_id": str(grand_parent.id),
             "max_role": "owner",
             "is_explicit": False,
+            "is_pending_encryption": False,
         },
         {
             "id": str(other_user_access.id),
@@ -1773,6 +1792,7 @@ def test_api_item_accesses_other_user_accesses():
                 "language": other_user.language,
                 "full_name": other_user.full_name,
                 "short_name": other_user.short_name,
+                "sub": other_user.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -1789,6 +1809,7 @@ def test_api_item_accesses_other_user_accesses():
             "max_ancestors_role_item_id": str(grand_parent.id),
             "max_role": "administrator",
             "is_explicit": False,
+            "is_pending_encryption": False,
         },
     ]
 
@@ -1846,6 +1867,7 @@ def test_api_item_accesses_with_inherited_accesses():
                 "language": user.language,
                 "full_name": user.full_name,
                 "short_name": user.short_name,
+                "sub": user.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -1862,6 +1884,7 @@ def test_api_item_accesses_with_inherited_accesses():
             "max_ancestors_role_item_id": str(grand_parent.id),
             "max_role": "owner",
             "is_explicit": False,
+            "is_pending_encryption": False,
         },
         {
             "id": str(administrator_access.id),
@@ -1876,6 +1899,7 @@ def test_api_item_accesses_with_inherited_accesses():
                 "language": collaborator.language,
                 "full_name": collaborator.full_name,
                 "short_name": collaborator.short_name,
+                "sub": collaborator.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -1892,6 +1916,7 @@ def test_api_item_accesses_with_inherited_accesses():
             "max_ancestors_role_item_id": str(parent.id),
             "max_role": "administrator",
             "is_explicit": False,
+            "is_pending_encryption": False,
         },
     ]
 
@@ -1935,6 +1960,7 @@ def test_api_item_accesses_inherited_from_root():
                 "language": user.language,
                 "full_name": user.full_name,
                 "short_name": user.short_name,
+                "sub": user.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -1951,6 +1977,7 @@ def test_api_item_accesses_inherited_from_root():
             "max_ancestors_role_item_id": None,
             "max_role": "owner",
             "is_explicit": True,
+            "is_pending_encryption": False,
         },
         {
             "id": str(collaborator_root_access.id),
@@ -1965,6 +1992,7 @@ def test_api_item_accesses_inherited_from_root():
                 "language": collaborator.language,
                 "full_name": collaborator.full_name,
                 "short_name": collaborator.short_name,
+                "sub": collaborator.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -1981,6 +2009,7 @@ def test_api_item_accesses_inherited_from_root():
             "max_ancestors_role_item_id": None,
             "max_role": "administrator",
             "is_explicit": True,
+            "is_pending_encryption": False,
         },
     ]
 
@@ -2003,6 +2032,7 @@ def test_api_item_accesses_inherited_from_root():
                 "language": user.language,
                 "full_name": user.full_name,
                 "short_name": user.short_name,
+                "sub": user.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -2019,6 +2049,7 @@ def test_api_item_accesses_inherited_from_root():
             "max_ancestors_role_item_id": str(root.id),
             "max_role": "owner",
             "is_explicit": False,
+            "is_pending_encryption": False,
         },
         {
             "id": str(collaborator_root_access.id),
@@ -2033,6 +2064,7 @@ def test_api_item_accesses_inherited_from_root():
                 "language": collaborator.language,
                 "full_name": collaborator.full_name,
                 "short_name": collaborator.short_name,
+                "sub": collaborator.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -2049,6 +2081,7 @@ def test_api_item_accesses_inherited_from_root():
             "max_ancestors_role_item_id": str(root.id),
             "max_role": "administrator",
             "is_explicit": False,
+            "is_pending_encryption": False,
         },
     ]
 
@@ -2101,6 +2134,7 @@ def test_api_item_accesses_in_tree():
                 "language": user.language,
                 "full_name": user.full_name,
                 "short_name": user.short_name,
+                "sub": user.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -2117,6 +2151,7 @@ def test_api_item_accesses_in_tree():
             "max_ancestors_role_item_id": str(root.id),
             "max_role": "owner",
             "is_explicit": False,
+            "is_pending_encryption": False,
         },
         {
             "id": str(collaborator_folder1_access.id),
@@ -2131,6 +2166,7 @@ def test_api_item_accesses_in_tree():
                 "language": collaborator.language,
                 "full_name": collaborator.full_name,
                 "short_name": collaborator.short_name,
+                "sub": collaborator.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -2147,6 +2183,7 @@ def test_api_item_accesses_in_tree():
             "max_ancestors_role_item_id": None,
             "max_role": "administrator",
             "is_explicit": True,
+            "is_pending_encryption": False,
         },
     ]
 
@@ -2170,6 +2207,7 @@ def test_api_item_accesses_in_tree():
                 "language": user.language,
                 "full_name": user.full_name,
                 "short_name": user.short_name,
+                "sub": user.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -2186,6 +2224,7 @@ def test_api_item_accesses_in_tree():
             "max_ancestors_role_item_id": str(root.id),
             "max_role": "owner",
             "is_explicit": False,
+            "is_pending_encryption": False,
         },
         {
             "id": str(collaborator_folder1_access.id),
@@ -2200,6 +2239,7 @@ def test_api_item_accesses_in_tree():
                 "language": collaborator.language,
                 "full_name": collaborator.full_name,
                 "short_name": collaborator.short_name,
+                "sub": collaborator.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -2216,6 +2256,7 @@ def test_api_item_accesses_in_tree():
             "max_ancestors_role_item_id": str(folder1.id),
             "max_role": "administrator",
             "is_explicit": False,
+            "is_pending_encryption": False,
         },
     ]
 
@@ -2243,6 +2284,7 @@ def test_api_item_accesses_in_tree():
                 "language": user.language,
                 "full_name": user.full_name,
                 "short_name": user.short_name,
+                "sub": user.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -2259,6 +2301,7 @@ def test_api_item_accesses_in_tree():
             "max_ancestors_role_item_id": str(root.id),
             "max_role": "owner",
             "is_explicit": False,
+            "is_pending_encryption": False,
         },
         {
             "id": str(collaborator_folder1_access.id),
@@ -2273,6 +2316,7 @@ def test_api_item_accesses_in_tree():
                 "language": collaborator.language,
                 "full_name": collaborator.full_name,
                 "short_name": collaborator.short_name,
+                "sub": collaborator.sub,
                 "last_release_note_seen": None,
                 "column_preferences": None,
             },
@@ -2289,6 +2333,7 @@ def test_api_item_accesses_in_tree():
             "max_ancestors_role_item_id": str(folder1.id),
             "max_role": "administrator",
             "is_explicit": False,
+            "is_pending_encryption": False,
         },
     ]
 

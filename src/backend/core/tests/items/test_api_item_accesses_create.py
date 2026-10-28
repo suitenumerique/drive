@@ -192,6 +192,7 @@ def test_api_item_accesses_create_authenticated_administrator(
         "max_ancestors_role_item_id": None,
         "max_role": role,
         "is_explicit": True,
+        "is_pending_encryption": False,
     }
     assert len(mail.outbox) == 1
     email = mail.outbox[0]
@@ -252,6 +253,7 @@ def test_api_item_accesses_create_authenticated_owner(via, depth, mock_user_team
     assert response.json() == {
         "id": str(new_item_access.id),
         "is_explicit": True,
+        "is_pending_encryption": False,
         "user": other_user,
         "team": "",
         "role": role,
@@ -487,3 +489,41 @@ def test_api_item_accesses_create_posthog_event(posthog_capture_mock):
     )
     properties = posthog_capture_mock.call_args.kwargs["properties"]
     assert properties.items() >= {"id": access.id, "role": "editor", "item_id": item.id}.items()
+
+
+def test_api_item_accesses_create_synchronize_descendants_keeps_wrapped_keys():
+    """
+    Synchronizing descendants removes lower accesses, on encrypted items too, but not
+    the keys they gave: the user keeps reaching the item through the new access.
+    """
+    user = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+    plain_item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    encrypted_item = factories.ItemFactory(
+        parent=parent, type=models.ItemTypeChoices.FOLDER, is_encrypted=True
+    )
+
+    factories.UserItemAccessFactory(item=root, user=user, role="owner")
+    factories.UserItemAccessFactory(item=plain_item, user=other_user, role="editor")
+    factories.UserItemAccessFactory(item=encrypted_item, user=other_user, role="editor")
+    factories.ItemEncryptionKeyWrapFactory(
+        item=encrypted_item, user=other_user, wrapped_key="other_user_key"
+    )
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/accesses/",
+        {"user_id": str(other_user.id), "role": "administrator"},
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert not models.ItemAccess.objects.filter(item=plain_item, user=other_user).exists()
+    assert not models.ItemAccess.objects.filter(item=encrypted_item, user=other_user).exists()
+    wrap = models.ItemEncryptionKeyWrap.objects.get(item=encrypted_item, user=other_user)
+    assert wrap.wrapped_key == "other_user_key"

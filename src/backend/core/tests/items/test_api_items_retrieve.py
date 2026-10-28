@@ -69,6 +69,13 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "accesses_user_ids": None,
+        "encrypted_item_symmetric_key_for_user": None,
+        "encryption_public_key_version_for_user": None,
+        "is_encrypted": False,
+        "is_encryption_root": False,
+        "is_inside_encrypted_subtree": False,
+        "is_pending_encryption_for_user": False,
         "quota_excluded": False,
     }
 
@@ -129,6 +136,13 @@ def test_api_items_retrieve_anonymous_public_parent():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "accesses_user_ids": None,
+        "encrypted_item_symmetric_key_for_user": None,
+        "encryption_public_key_version_for_user": None,
+        "is_encrypted": False,
+        "is_encryption_root": False,
+        "is_inside_encrypted_subtree": False,
+        "is_pending_encryption_for_user": False,
         "quota_excluded": False,
     }
 
@@ -236,6 +250,13 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "accesses_user_ids": [],
+        "encrypted_item_symmetric_key_for_user": None,
+        "encryption_public_key_version_for_user": None,
+        "is_encrypted": False,
+        "is_encryption_root": False,
+        "is_inside_encrypted_subtree": False,
+        "is_pending_encryption_for_user": False,
         "quota_excluded": False,
     }
     assert models.LinkTrace.objects.filter(item=item, user=user).exists() is True
@@ -302,6 +323,13 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "accesses_user_ids": [],
+        "encrypted_item_symmetric_key_for_user": None,
+        "encryption_public_key_version_for_user": None,
+        "is_encrypted": False,
+        "is_encryption_root": False,
+        "is_inside_encrypted_subtree": False,
+        "is_pending_encryption_for_user": False,
         "quota_excluded": False,
     }
 
@@ -399,7 +427,7 @@ def test_api_items_retrieve_authenticated_related_direct():
 
     item = factories.ItemFactory()
     access = factories.UserItemAccessFactory(item=item, user=user)
-    factories.UserItemAccessFactory(item=item)
+    other_access = factories.UserItemAccessFactory(item=item)
 
     response = client.get(
         f"/api/v1.0/items/{item.id!s}/",
@@ -446,6 +474,13 @@ def test_api_items_retrieve_authenticated_related_direct():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "accesses_user_ids": sorted([user.sub, other_access.user.sub]),
+        "encrypted_item_symmetric_key_for_user": None,
+        "encryption_public_key_version_for_user": None,
+        "is_encrypted": False,
+        "is_encryption_root": False,
+        "is_inside_encrypted_subtree": False,
+        "is_pending_encryption_for_user": False,
         "quota_excluded": False,
     }
 
@@ -469,7 +504,7 @@ def test_api_items_retrieve_authenticated_related_parent():
     item = factories.ItemFactory(parent=parent, link_reach="restricted")
 
     access = factories.UserItemAccessFactory(item=grand_parent, user=user)
-    factories.UserItemAccessFactory(item=grand_parent)
+    other_access = factories.UserItemAccessFactory(item=grand_parent)
 
     response = client.get(
         f"/api/v1.0/items/{item.id!s}/",
@@ -516,6 +551,13 @@ def test_api_items_retrieve_authenticated_related_parent():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "accesses_user_ids": sorted([user.sub, other_access.user.sub]),
+        "encrypted_item_symmetric_key_for_user": None,
+        "encryption_public_key_version_for_user": None,
+        "is_encrypted": False,
+        "is_encryption_root": False,
+        "is_inside_encrypted_subtree": False,
+        "is_pending_encryption_for_user": False,
         "quota_excluded": False,
     }
 
@@ -696,6 +738,13 @@ def test_api_items_retrieve_authenticated_related_team_members(teams, role, mock
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "accesses_user_ids": [],
+        "encrypted_item_symmetric_key_for_user": None,
+        "encryption_public_key_version_for_user": None,
+        "is_encrypted": False,
+        "is_encryption_root": False,
+        "is_inside_encrypted_subtree": False,
+        "is_pending_encryption_for_user": False,
         "quota_excluded": False,
     }
 
@@ -774,6 +823,13 @@ def test_api_items_retrieve_authenticated_related_team_administrators(teams, rol
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "accesses_user_ids": [],
+        "encrypted_item_symmetric_key_for_user": None,
+        "encryption_public_key_version_for_user": None,
+        "is_encrypted": False,
+        "is_encryption_root": False,
+        "is_inside_encrypted_subtree": False,
+        "is_pending_encryption_for_user": False,
         "quota_excluded": False,
     }
 
@@ -852,6 +908,13 @@ def test_api_items_retrieve_authenticated_related_team_owners(teams, mock_user_t
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "accesses_user_ids": [],
+        "encrypted_item_symmetric_key_for_user": None,
+        "encryption_public_key_version_for_user": None,
+        "is_encrypted": False,
+        "is_encryption_root": False,
+        "is_inside_encrypted_subtree": False,
+        "is_pending_encryption_for_user": False,
         "quota_excluded": False,
     }
 
@@ -1252,6 +1315,13 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "accesses_user_ids": [user.sub],
+        "encrypted_item_symmetric_key_for_user": None,
+        "encryption_public_key_version_for_user": None,
+        "is_encrypted": False,
+        "is_encryption_root": False,
+        "is_inside_encrypted_subtree": False,
+        "is_pending_encryption_for_user": False,
         "quota_excluded": False,
     }
 
@@ -1328,6 +1398,13 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "accesses_user_ids": [user.sub],
+        "encrypted_item_symmetric_key_for_user": None,
+        "encryption_public_key_version_for_user": None,
+        "is_encrypted": False,
+        "is_encryption_root": False,
+        "is_inside_encrypted_subtree": False,
+        "is_pending_encryption_for_user": False,
         "quota_excluded": False,
     }
 
@@ -1396,6 +1473,13 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "accesses_user_ids": [user.sub],
+        "encrypted_item_symmetric_key_for_user": None,
+        "encryption_public_key_version_for_user": None,
+        "is_encrypted": False,
+        "is_encryption_root": False,
+        "is_inside_encrypted_subtree": False,
+        "is_pending_encryption_for_user": False,
         "quota_excluded": False,
     }
 
@@ -1521,6 +1605,13 @@ def test_api_items_retrieve_file_analysing_not_creator():
         "is_restricted": False,
         "target": None,
         "is_wopi_supported": False,
+        "accesses_user_ids": [user.sub],
+        "encrypted_item_symmetric_key_for_user": None,
+        "encryption_public_key_version_for_user": None,
+        "is_encrypted": False,
+        "is_encryption_root": False,
+        "is_inside_encrypted_subtree": False,
+        "is_pending_encryption_for_user": False,
         "quota_excluded": False,
         "link_reach": "public",
         "link_role": item.link_role,

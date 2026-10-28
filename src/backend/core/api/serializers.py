@@ -21,6 +21,7 @@ from rest_framework import serializers
 from core import enums, models
 from core.api import utils
 from core.api.fields import SchemaField
+from core.services.encryption_key_wraps import chain_key_wraps
 from core.storage import get_storage_compute_backend
 from wopi import utils as wopi_utils
 
@@ -48,6 +49,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = models.User
         fields = [
             "id",
+            "sub",
             "email",
             "full_name",
             "short_name",
@@ -55,7 +57,7 @@ class UserSerializer(serializers.ModelSerializer):
             "last_release_note_seen",
             "column_preferences",
         ]
-        read_only_fields = ["id", "email", "full_name", "short_name"]
+        read_only_fields = ["id", "sub", "email", "full_name", "short_name"]
 
 
 class UserLightSerializer(UserSerializer):
@@ -132,6 +134,13 @@ class ItemAccessSerializer(serializers.ModelSerializer):
     max_role = serializers.SerializerMethodField(read_only=True)
     item = ItemLightSerializer(read_only=True)
     is_explicit = serializers.SerializerMethodField(read_only=True)
+    encrypted_item_symmetric_key_for_user = serializers.CharField(
+        required=False, allow_blank=True, write_only=True
+    )
+    encryption_public_key_version = serializers.IntegerField(
+        required=False, allow_null=True, min_value=1, write_only=True
+    )
+    is_pending_encryption = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = models.ItemAccess
@@ -148,6 +157,9 @@ class ItemAccessSerializer(serializers.ModelSerializer):
             "max_role",
             "item",
             "is_explicit",
+            "encrypted_item_symmetric_key_for_user",
+            "encryption_public_key_version",
+            "is_pending_encryption",
         ]
         read_only_fields = [
             "id",
@@ -157,7 +169,52 @@ class ItemAccessSerializer(serializers.ModelSerializer):
             "max_role",
             "item",
             "is_explicit",
+            "is_pending_encryption",
         ]
+
+    def get_is_pending_encryption(self, instance):
+        """True when the item the accesses are listed for is encrypted and this
+        access's user holds no wrap on its key chain: they were given a role (here
+        or on an ancestor) before enabling encryption, and a member holding the key
+        must "accept" them (wrap it for them) before they can decrypt.
+
+        The holders are listed once per request in the `key_holder_ids` context;
+        without it, only the access's own item is looked at.
+        """
+        if instance.user_id is None:
+            return False
+        item = self.context.get("item") or instance.item
+        if not item.is_encrypted:
+            return False
+        key_holder_ids = self.context.get("key_holder_ids")
+        if key_holder_ids is None:
+            return not chain_key_wraps(item).filter(user_id=instance.user_id).exists()
+        return instance.user_id not in key_holder_ids
+
+    def get_fields(self):
+        """Dynamically adjust encryption fields based on item encryption state.
+
+        For encrypted items the key is *optional* at serializer level: the
+        viewset decides whether omitting it is legitimate (invitee has no
+        public key yet → access created, user pending) or a 400 (invitee does
+        have a key and the caller simply forgot to wrap it).
+        """
+        fields = super().get_fields()
+        # The key is write-only: reading accesses never needs the item's state
+        if not hasattr(self, "initial_data"):
+            return fields
+        # The key comes with the creation only, an update changes the role
+        if self.instance is not None:
+            fields.pop("encrypted_item_symmetric_key_for_user", None)
+            fields.pop("encryption_public_key_version", None)
+            return fields
+        item = self.context.get("item")
+        resource_id = self.context.get("resource_id")
+        if item is None and resource_id:
+            item = models.Item.objects.only("is_encrypted").filter(pk=resource_id).first()
+        if item is not None and not item.is_encrypted:
+            fields.pop("encrypted_item_symmetric_key_for_user", None)
+        return fields
 
     def get_abilities(self, instance):
         """Return abilities of the logged-in user on the instance."""
@@ -279,6 +336,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     """Serialize items with limited fields for display in lists."""
 
     abilities = serializers.SerializerMethodField(read_only=True)
+    accesses_user_ids = serializers.SerializerMethodField(read_only=True)
     is_favorite = serializers.BooleanField(read_only=True)
     nb_accesses = serializers.IntegerField(read_only=True)
     user_role = serializers.SerializerMethodField()
@@ -289,6 +347,105 @@ class ListItemSerializer(serializers.ModelSerializer):
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
     is_wopi_supported = serializers.SerializerMethodField()
     target = RestrictionTargetSerializer(read_only=True, allow_null=True)
+    is_encryption_root = serializers.SerializerMethodField(read_only=True)
+    is_inside_encrypted_subtree = serializers.SerializerMethodField(read_only=True)
+    is_pending_encryption_for_user = serializers.SerializerMethodField(read_only=True)
+    encryption_public_key_version_for_user = serializers.SerializerMethodField(read_only=True)
+
+    def get_encryption_public_key_version_for_user(self, item):
+        """Version of the user's encryption public key AT THE TIME they
+        were granted access. Stored with their wrapped symmetric key.
+
+        Clients use this to tell the user which key the document was
+        encrypted for if decryption fails with "wrong secret key":
+        the user can compare it to their current key's version and
+        understand that a collaborator needs to re-add them so the key
+        gets wrapped against their current public key.
+
+        Looks up the same wraps `is_pending_encryption_for_user` does (any
+        ancestor on the subtree's key chain). Read from
+        `annotate_encryption_state` when the queryset was annotated.
+        """
+        if not item.is_encrypted:
+            return None
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        if hasattr(item, "annotated_encryption_public_key_version"):
+            return item.annotated_encryption_public_key_version
+        return (
+            chain_key_wraps(item)
+            .filter(user=request.user)
+            .values_list("encryption_public_key_version", flat=True)
+            .first()
+        )
+
+    def get_is_pending_encryption_for_user(self, item):
+        """True when the user sees this encrypted item but holds no wrap on
+        its key chain: they were given a role (here or on an ancestor) before
+        enabling encryption, so a member holding the key must "accept" them
+        before they can decrypt.
+
+        The chain is the item and its ancestors: the client walks up to the
+        first wrap it holds.
+        """
+        if not item.is_encrypted:
+            return False
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        if hasattr(item, "annotated_has_encryption_chain_key"):
+            return not item.annotated_has_encryption_chain_key
+        return not chain_key_wraps(item).filter(user=request.user).exists()
+
+    def get_is_encryption_root(self, item):
+        """True when this item is the root of its encrypted subtree.
+
+        Root items have their symmetric key wrapped per user in
+        ItemEncryptionKeyWrap (so `encrypted_symmetric_key` on the Item itself
+        is NULL).
+        Descendants of the root store their key wrapped by the parent
+        folder's key in `Item.encrypted_symmetric_key`. Both fields are
+        already loaded on the instance, so this is free.
+        """
+        return bool(item.is_encrypted and item.encrypted_symmetric_key is None)
+
+    def get_is_inside_encrypted_subtree(self, item):
+        """True when any ancestor of this item is encrypted.
+
+        Used to gate encrypt / remove-encryption actions on the client:
+        once an ancestor is encrypted, the subtree must be operated on
+        at the outermost encryption root, otherwise we'd end up with a
+        descendant in a state that conflicts with its ancestor's scope
+        (e.g. plaintext sub inside encrypted T4 with no way back).
+        """
+        if hasattr(item, "annotated_inside_encrypted_subtree"):
+            return item.annotated_inside_encrypted_subtree
+        return item.ancestors().filter(is_encrypted=True).exists()
+
+    def get_accesses_user_ids(self, item):
+        """Return the list of user OIDC sub identifiers with access to this item.
+
+        Access in Drive is inherited: a file inside a folder inherits
+        permissions from its ancestors. We query the item itself AND all
+        its ancestors so that files without direct ItemAccess records
+        (the common case for files inside shared folders) still return
+        the users who can actually access them.
+        """
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        if getattr(item, "annotated_accesses_user_ids", None) is not None:
+            return item.annotated_accesses_user_ids
+        return list(
+            models.ItemAccess.objects.filter(
+                item__path__ancestors=item.path,
+                user__isnull=False,
+            )
+            .order_by("user__sub")
+            .values_list("user__sub", flat=True)
+            .distinct()
+        )
 
     class Meta:
         model = models.Item
@@ -296,6 +453,7 @@ class ListItemSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "abilities",
+            "accesses_user_ids",
             "ancestors_link_reach",
             "ancestors_link_role",
             "computed_link_reach",
@@ -303,6 +461,11 @@ class ListItemSerializer(serializers.ModelSerializer):
             "created_at",
             "creator",
             "depth",
+            "is_encrypted",
+            "is_encryption_root",
+            "is_inside_encrypted_subtree",
+            "is_pending_encryption_for_user",
+            "encryption_public_key_version_for_user",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -333,6 +496,7 @@ class ListItemSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "abilities",
+            "accesses_user_ids",
             "ancestors_link_reach",
             "ancestors_link_role",
             "computed_link_reach",
@@ -340,6 +504,11 @@ class ListItemSerializer(serializers.ModelSerializer):
             "created_at",
             "creator",
             "depth",
+            "is_encrypted",
+            "is_encryption_root",
+            "is_inside_encrypted_subtree",
+            "is_pending_encryption_for_user",
+            "encryption_public_key_version_for_user",
             "is_favorite",
             "is_restricted",
             "link_role",
@@ -445,6 +614,9 @@ class ListItemSerializer(serializers.ModelSerializer):
 
     def get_is_wopi_supported(self, item):
         """Return whether the item is supported by WOPI protocol."""
+        # A WOPI client would only ever receive ciphertext
+        if item.is_encrypted:
+            return False
         request = self.context.get("request")
         return wopi_utils.is_item_wopi_supported(
             item,
@@ -476,6 +648,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "created_at",
             "creator",
             "depth",
+            "is_encrypted",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -506,6 +679,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "created_at",
             "creator",
             "depth",
+            "is_encrypted",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -542,6 +716,12 @@ class SearchItemSerializer(ListItemSerializer):
 class ItemSerializer(ListItemSerializer):
     """Serialize items with all fields for display in detail views."""
 
+    encrypted_item_symmetric_key_for_user = serializers.SerializerMethodField(read_only=True)
+    # `is_pending_encryption_for_user` and `get_is_pending_encryption_for_user`
+    # are inherited from ListItemSerializer — declaring them again here
+    # would drift. Kept only in the Meta.fields list below.
+    accesses_user_ids = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = models.Item
         fields = [
@@ -554,6 +734,9 @@ class ItemSerializer(ListItemSerializer):
             "created_at",
             "creator",
             "depth",
+            "is_encrypted",
+            "is_encryption_root",
+            "is_inside_encrypted_subtree",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -579,6 +762,10 @@ class ItemSerializer(ListItemSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "encrypted_item_symmetric_key_for_user",
+            "is_pending_encryption_for_user",
+            "encryption_public_key_version_for_user",
+            "accesses_user_ids",
             "quota_excluded",
         ]
         read_only_fields = [
@@ -591,6 +778,9 @@ class ItemSerializer(ListItemSerializer):
             "created_at",
             "creator",
             "depth",
+            "is_encrypted",
+            "is_encryption_root",
+            "is_inside_encrypted_subtree",
             "is_favorite",
             "is_restricted",
             "nb_accesses",
@@ -611,8 +801,25 @@ class ItemSerializer(ListItemSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "encrypted_item_symmetric_key_for_user",
+            "is_pending_encryption_for_user",
+            "encryption_public_key_version_for_user",
+            "accesses_user_ids",
             "quota_excluded",
         ]
+
+    def get_encrypted_item_symmetric_key_for_user(self, item):
+        """Return the encrypted symmetric key for the current user, if the item is encrypted."""
+        if not item.is_encrypted:
+            return None
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        return (
+            models.ItemEncryptionKeyWrap.objects.filter(item=item, user=request.user)
+            .values_list("wrapped_key", flat=True)
+            .first()
+        )
 
     def create(self, validated_data):
         raise NotImplementedError("Create method can not be used.")
@@ -649,6 +856,10 @@ class CreateItemSerializer(ItemSerializer):
         write_only=True,
     )
 
+    encrypted_symmetric_key = serializers.CharField(
+        required=False, allow_blank=True, write_only=True
+    )
+
     class Meta:
         model = models.Item
         fields = [
@@ -661,6 +872,7 @@ class CreateItemSerializer(ItemSerializer):
             "created_at",
             "creator",
             "depth",
+            "is_encrypted",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -682,6 +894,7 @@ class CreateItemSerializer(ItemSerializer):
             "description",
             "hard_delete_at",
             "extension",
+            "encrypted_symmetric_key",
         ]
         read_only_fields = [
             "abilities",
@@ -963,21 +1176,76 @@ class MoveItemSerializer(serializers.Serializer):
     """
     Serializer for validating input data to move an item within the tree structure.
 
-    Fields:
-        - target_item_id (UUIDField): The ID of the target parent item where the
-            item should be moved. This field is required and must be a valid UUID.
+    Encryption-aware. The driver picks one of four shapes depending on the
+    source/target encryption state. The viewset validates each shape and
+    applies it atomically with the position change.
 
-    Example:
-        Input payload for moving a item:
-        {
-            "target_item_id": "123e4567-e89b-12d3-a456-426614174000",
-        }
+    Plain → plain (no encryption involved):
+        {"target_item_id": "..."}
 
-    Notes:
-        - The `target_item_id` is optional. If not provided, the item will be moved to the root.
+    Encrypted → encrypted, SAME tree (chain rewrap of `K_item`):
+        {"target_item_id": "...", "encrypted_symmetric_key": "<base64>"}
+
+    Encrypted → plaintext (RE-ANCHOR — item becomes its own encryption root,
+    `K_item` re-wrapped per collaborator):
+        {"target_item_id": "..." | null,
+         "is_encryption_root": true,
+         "per_user_encrypted_keys": {"<sub>": "<base64>" | null, ...},
+         "encryption_public_key_versions": {"<sub>": <version:int> | null, ...}}
+        - The caller's own sub MUST map to a non-null wrapped key. Other
+          users may be `null` (no wrap stored: pending until they finish
+          encryption onboarding — symmetric to /encrypt/).
+
+    Self-rooted encrypted → encrypted (DEMOTE — item attaches under a
+    destination chain, per-user wraps preserved as side-doors):
+        {"target_item_id": "...",
+         "is_encryption_root": false,
+         "encrypted_symmetric_key": "<base64>"}
+
+    Plaintext → encrypted (ENCRYPT-ON-MOVE — item enters the chain
+    fully chain-wrapped, NO per-user wraps anywhere). Mirrors
+    /encrypt/'s descendant shape but produces a chain wrap on the
+    moved item instead of a per-user wrap:
+        {"target_item_id": "...",
+         "encrypted_symmetric_key": "<base64 chain wrap of K_item>",
+         "encrypted_keys_for_descendants": {"<uuid>": "<base64>", ...},
+         "file_key_mapping": {"<uuid>": "<new S3 filename>", ...}}
+        - The presence of `encrypted_keys_for_descendants` (even
+          empty for a single-file move) is what tells the backend
+          this is encrypt-on-move, not a chain rewrap. The
+          default-dict on the field is required so a missing key
+          from the client maps to "no descendants" rather than
+          tripping rewrap validation.
     """
 
     target_item_id = serializers.UUIDField(required=False)
+    encrypted_symmetric_key = serializers.CharField(required=False, allow_blank=True)
+    is_encryption_root = serializers.BooleanField(required=False)
+    per_user_encrypted_keys = serializers.DictField(
+        # Mapping of user OIDC sub → wrapped K_item (base64). Null means
+        # "user has access but no published pubkey yet": no wrap is stored
+        # and the user is pending, until another collaborator wraps the key
+        # for them via PUT /items/{id}/encryption-key-wraps/.
+        child=serializers.CharField(allow_null=True),
+        required=False,
+    )
+    encryption_public_key_versions = serializers.DictField(
+        child=serializers.IntegerField(allow_null=True, min_value=1),
+        required=False,
+    )
+    # Encrypt-on-move payload (plaintext → encrypted). Snake_case here
+    # rather than copying /encrypt/'s camelCase outlier — the rest of
+    # MoveItemSerializer is snake_case and mixing within one payload
+    # would be jarring. /encrypt/'s naming is a legacy quirk (see its
+    # own serializer) we don't want to propagate.
+    encrypted_keys_for_descendants = serializers.DictField(
+        child=serializers.CharField(),
+        required=False,
+    )
+    file_key_mapping = serializers.DictField(
+        child=serializers.CharField(),
+        required=False,
+    )
 
 
 BATCH_SHARE_MAX_ROWS = 100  # Keep in sync with the ui-kit share import modal max rows
@@ -1021,3 +1289,114 @@ class SDKRelayEventSerializer(serializers.Serializer):
             )
 
         return value
+
+
+# pylint: disable=abstract-method
+class AcceptEncryptionAccessSerializer(serializers.Serializer):
+    """Payload for PUT /items/{id}/encryption-key-wraps/ — used to "accept"
+    a pending collaborator by wrapping the item's key for their
+    (now-available) public key.
+    """
+
+    user_id = serializers.PrimaryKeyRelatedField(
+        queryset=models.User.objects.all(),
+        source="user",
+        help_text="The pending user to give the key to.",
+    )
+    encrypted_item_symmetric_key_for_user = serializers.CharField(
+        required=True,
+        allow_null=False,
+        allow_blank=False,
+        help_text=(
+            "The item's symmetric key wrapped for the pending user, base64-encoded. "
+            "Null / empty is not allowed: this endpoint only gives the key. To "
+            "revoke it, remove the user's access instead."
+        ),
+    )
+    encryption_public_key_version = serializers.IntegerField(
+        required=True,
+        allow_null=False,
+        min_value=1,
+    )
+
+
+class EncryptItemSerializer(serializers.Serializer):
+    """Serializer for encrypting an item or subtree.
+
+    The frontend uploads encrypted file content to new S3 keys (with a new
+    random filename), then calls this endpoint. The backend atomically updates
+    filenames in the DB, which changes the S3 key (title stays the same).
+    If the transaction fails, old filenames/keys are still valid.
+    After commit, old S3 objects are cleaned up.
+    """
+
+    encrypted_symmetric_key_per_user = serializers.DictField(
+        # Value is either a base64 wrapped key (validated user) or
+        # explicit null (user is on the access list but has no public key
+        # yet: no wrap is stored and they are pending, to be "accepted"
+        # later by another validated collaborator).
+        child=serializers.CharField(allow_null=True),
+        required=True,
+        help_text=(
+            "Mapping of user OIDC sub → wrapped symmetric key (base64), "
+            "or null to mark the user as pending their encryption "
+            "onboarding. The caller's own sub must be a wrapped key, "
+            "never null."
+        ),
+    )
+    encryption_public_key_version_per_user = serializers.DictField(
+        # Required: the client must send a version entry for every
+        # user it sent a wrapped-key entry for. Symmetric keys and
+        # versions travel as matched pairs — keeping them coupled
+        # means a stored wrap always has the "what key was
+        # this wrapped for" staleness marker stored alongside.
+        #
+        # Not security-sensitive in the crypto sense — the actual wrap
+        # is the wrapped key itself. The version is a staleness marker
+        # surfaced in the client's key-mismatch panel. Since it comes
+        # from the encrypting client, we trust it as we trust any
+        # other client-provided metadata; a malicious client could
+        # send wrong values, but the worst it achieves is confusing
+        # the very user whose client was sending the lie.
+        child=serializers.IntegerField(allow_null=True, min_value=1),
+        required=True,
+        help_text=(
+            "Mapping of user OIDC sub → version of their encryption public "
+            "key at encryption time. Must cover the same set of users as "
+            "`encrypted_symmetric_key_per_user`; null is valid for "
+            "pending users (no public key to version yet)."
+        ),
+    )
+    encrypted_keys_for_descendants = serializers.DictField(
+        child=serializers.CharField(),
+        required=False,
+        default=dict,
+        help_text=(
+            "Mapping of descendant item UUID to its symmetric key wrapped by its parent's key. "
+            "Empty for standalone file encryption."
+        ),
+    )
+    file_key_mapping = serializers.DictField(
+        child=serializers.CharField(),
+        required=False,
+        default=dict,
+        help_text=(
+            "Mapping of file item UUID to the new filename (S3 key component) where "
+            "the encrypted content was uploaded. The backend atomically updates "
+            "the filename; old S3 objects are cleaned up after commit."
+        ),
+    )
+
+
+# pylint: disable=abstract-method
+class RemoveEncryptionSerializer(serializers.Serializer):
+    """Serializer for removing encryption from an item or subtree."""
+
+    file_key_mapping = serializers.DictField(
+        child=serializers.CharField(),
+        required=False,
+        default=dict,
+        help_text=(
+            "Mapping of file item UUID to the new S3 key where the decrypted content was uploaded."
+        ),
+    )

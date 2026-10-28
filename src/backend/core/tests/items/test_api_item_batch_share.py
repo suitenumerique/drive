@@ -374,3 +374,51 @@ def test_api_item_batch_share_synchronizes_descendants():
     assert response.status_code == 200
     assert models.ItemAccess.objects.filter(item=item, user=shared_user, role="editor").exists()
     assert not models.ItemAccess.objects.filter(item=child, user=shared_user).exists()
+
+
+@override_settings(ALLOW_SHARE_IMPORT_FILE=True)
+def test_api_item_batch_share_encrypted_item_creates_pending_accesses():
+    """
+    Sharing an encrypted item creates accesses without a wrapped key: the new members
+    are pending until a key holder wraps the key for them. Their lower accesses on
+    descendants go, but not the keys they gave.
+    """
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER, is_encrypted=True
+    )
+    factories.ItemEncryptionKeyWrapFactory(item=item, user=user, wrapped_key="owner_key")
+    child = factories.ItemFactory(
+        parent=item,
+        type=models.ItemTypeChoices.FOLDER,
+        is_encrypted=True,
+        encrypted_symmetric_key="child_wrapped",
+    )
+    shared_user = factories.UserFactory(email="alice@example.com")
+    factories.UserItemAccessFactory(item=child, user=shared_user, role="reader")
+    factories.ItemEncryptionKeyWrapFactory(
+        item=child, user=shared_user, wrapped_key="alice_child_key"
+    )
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        batch_share_url(item),
+        {"rows": [{"email": "alice@example.com", "role": "editor"}]},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert response.json()["accesses_created"] == 1
+    access = models.ItemAccess.objects.get(item=item, user=shared_user)
+    assert access.role == "editor"
+    assert not models.ItemEncryptionKeyWrap.objects.filter(item=item, user=shared_user).exists()
+
+    assert not models.ItemAccess.objects.filter(item=child, user=shared_user).exists()
+    wrap = models.ItemEncryptionKeyWrap.objects.get(item=child, user=shared_user)
+    assert wrap.wrapped_key == "alice_child_key"
+
+    accesses = client.get(f"/api/v1.0/items/{item.id!s}/accesses/").json()
+    pending = {entry["user"]["id"]: entry["is_pending_encryption"] for entry in accesses}
+    assert pending == {str(user.id): False, str(shared_user.id): True}

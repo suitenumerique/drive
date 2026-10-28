@@ -74,6 +74,10 @@ def test_models_sub_item_abilities_downgraded():
         "upload_ended": True,
         "wopi": True,
         "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": True,
+        "key_chain": True,
+        "remove_encryption": False,
     }
 
     # Downgrade the role on the root item
@@ -111,6 +115,10 @@ def test_models_sub_item_abilities_downgraded():
         "upload_ended": False,
         "wopi": True,
         "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": False,
+        "key_chain": True,
+        "remove_encryption": False,
     }
 
 
@@ -166,6 +174,10 @@ def test_models_items_root_get_abilities_owner(
         "upload_ended": True,
         "wopi": True,
         "convert": False,
+        "encrypt": True,
+        "encryption_upload_url": True,
+        "key_chain": True,
+        "remove_encryption": True,
     }
     # A folder at the tree root checks for a targeting restriction
     nb_queries = 2 if item_type == models.ItemTypeChoices.FOLDER else 1
@@ -199,6 +211,10 @@ def test_models_items_root_get_abilities_owner(
         "upload_ended": False,
         "wopi": False,
         "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": False,
+        "key_chain": False,
+        "remove_encryption": False,
     }
 
 
@@ -257,6 +273,10 @@ def test_models_items_root_get_abilities_administrator(
         "upload_ended": True,
         "wopi": True,
         "convert": False,
+        "encrypt": True,
+        "encryption_upload_url": True,
+        "key_chain": True,
+        "remove_encryption": True,
     }
     # A folder at the tree root checks for a targeting restriction
     nb_queries = 2 if item_type == models.ItemTypeChoices.FOLDER else 1
@@ -326,6 +346,10 @@ def test_models_items_root_get_abilities_editor_user(
         "upload_ended": True,
         "wopi": True,
         "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": True,
+        "key_chain": True,
+        "remove_encryption": False,
     }
     with django_assert_num_queries(1):
         assert item.get_abilities(user) == expected_abilities
@@ -380,6 +404,10 @@ def test_models_items_root_get_abilities_reader_user(
         "upload_ended": access_from_link,
         "wopi": True,
         "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": access_from_link,
+        "key_chain": True,
+        "remove_encryption": False,
     }
     with django_assert_num_queries(1):
         assert item.get_abilities(user) == expected_abilities

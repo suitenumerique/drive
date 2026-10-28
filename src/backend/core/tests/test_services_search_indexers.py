@@ -266,6 +266,8 @@ def test_services_is_allowed_mimetype():
             },
             False,
         ),
+        # The stored content of an encrypted file is ciphertext
+        ({"mimetype": "text/plain", "is_encrypted": True}, False),
     ],
 )
 def test_services_search_can_serialize_content(indexer_settings, kwargs, expected):
@@ -636,6 +638,30 @@ def test_services_search_indexers_ignore_content_if_not_ready(mock_push):
         str(pdf_item.id): "",
         **{str(item.id): "" for item in not_ready_items},
     }
+
+
+@patch.object(SearchIndexer, "push")
+@pytest.mark.usefixtures("indexer_settings")
+def test_services_search_indexers_ignore_content_if_encrypted(mock_push):
+    """The stored content of an encrypted file is ciphertext and must never be indexed."""
+    item = factories.ItemFactory(
+        mimetype="text/plain",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        upload_bytes="this is a text",
+    )
+    encrypted_item = factories.ItemFactory(
+        mimetype="text/plain",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        upload_bytes="this is ciphertext",
+        is_encrypted=True,
+    )
+
+    assert SearchIndexer().index() == 2
+
+    results = {item["id"]: item["content"] for item in mock_push.call_args[0][0]}
+    assert results == {str(item.id): "this is a text", str(encrypted_item.id): ""}
 
 
 @patch.object(SearchIndexer, "push")

@@ -492,6 +492,7 @@ class UserReconciliation(BaseModel):
 
         # Prepare the data to perform the reconciliation on
         updated_accesses, removed_accesses = self.prepare_itemaccess_reconciliation()
+        updated_key_wraps, removed_key_wraps = self.prepare_key_wrap_reconciliation()
         updated_linktraces, removed_linktraces = self.prepare_linktrace_reconciliation()
         updated_favorites, removed_favorites = self.prepare_itemfavorite_reconciliation()
         updated_items = self.prepare_item_creator_reconciliation()
@@ -510,6 +511,11 @@ class UserReconciliation(BaseModel):
             items_to_invalidate = {entry.item_id: entry.item for entry in removed_accesses}
             for item in items_to_invalidate.values():
                 item.invalidate_nb_accesses_cache()
+
+        ItemEncryptionKeyWrap.objects.filter(
+            id__in=[entry.id for entry in removed_key_wraps]
+        ).delete()
+        ItemEncryptionKeyWrap.objects.bulk_update(updated_key_wraps, ["user"])
 
         ItemFavorite.objects.bulk_update(updated_favorites, ["user"])
         if removed_favorites:
@@ -572,6 +578,31 @@ class UserReconciliation(BaseModel):
                 updated_accesses.append(entry)
 
         return updated_accesses, removed_accesses
+
+    def prepare_key_wrap_reconciliation(self):
+        """
+        Prepare the transfer of the inactive user's wrapped keys to the active user.
+
+        A wrapped key belongs to the encryption identity of the inactive user, which
+        the active user does not hold, so it is dropped and the active user becomes
+        pending: a member holding the key wraps it for them once they have enabled
+        encryption. It is kept only when it is the last one on its item, as dropping
+        it would leave the encrypted content with nobody able to share its key.
+        """
+        updated_key_wraps = []
+        removed_key_wraps = []
+        for entry in ItemEncryptionKeyWrap.objects.filter(user=self.inactive_user):
+            is_last_wrap = (
+                not ItemEncryptionKeyWrap.objects.filter(item_id=entry.item_id)
+                .exclude(pk=entry.pk)
+                .exists()
+            )
+            if is_last_wrap:
+                entry.user = self.active_user
+                updated_key_wraps.append(entry)
+            else:
+                removed_key_wraps.append(entry)
+        return updated_key_wraps, removed_key_wraps
 
     def prepare_itemfavorite_reconciliation(self):
         """
@@ -1112,6 +1143,67 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
             user_roles=models.Value([], output_field=output_field),
         )
 
+    def annotate_encryption_state(self, user):
+        """
+        Annotate the per-user encryption fields read by the item serializers, so that
+        listing encrypted items costs no query per item. The subqueries on the user's
+        key chain only run for encrypted rows.
+        """
+        inside_encrypted_subtree = models.Exists(
+            Item.objects.filter(path__ancestors=models.OuterRef("path"), is_encrypted=True).exclude(
+                pk=models.OuterRef("pk")
+            )
+        )
+        if not user.is_authenticated:
+            return self.annotate(
+                annotated_inside_encrypted_subtree=inside_encrypted_subtree,
+                annotated_accesses_user_ids=models.Value(
+                    None, output_field=ArrayField(base_field=models.CharField())
+                ),
+                annotated_has_encryption_chain_key=models.Value(False),
+                annotated_encryption_public_key_version=models.Value(
+                    None, output_field=models.IntegerField()
+                ),
+            )
+
+        accesses_user_ids = (
+            ItemAccess.objects.filter(
+                item__path__ancestors=models.OuterRef("path"), user__isnull=False
+            )
+            .order_by("user__sub")
+            .values_list("user__sub", flat=True)
+            .distinct()
+        )
+        chain_keys = ItemEncryptionKeyWrap.objects.filter(
+            item__path__ancestors=models.OuterRef("path"), user=user
+        )
+
+        def only_if_encrypted(expression, default):
+            return models.Case(
+                models.When(is_encrypted=True, then=expression),
+                default=default,
+                output_field=expression.output_field,
+            )
+
+        return self.annotate(
+            annotated_inside_encrypted_subtree=inside_encrypted_subtree,
+            annotated_accesses_user_ids=models.Func(
+                accesses_user_ids,
+                function="ARRAY",
+                output_field=ArrayField(base_field=models.CharField()),
+            ),
+            annotated_has_encryption_chain_key=only_if_encrypted(
+                models.Exists(chain_keys), models.Value(False)
+            ),
+            annotated_encryption_public_key_version=only_if_encrypted(
+                models.Subquery(
+                    chain_keys.order_by("-created_at").values("encryption_public_key_version")[:1],
+                    output_field=models.IntegerField(),
+                ),
+                models.Value(None, output_field=models.IntegerField()),
+            ),
+        )
+
     def annotate_with_numchild(self):
         """
         Annotate queryset with the count of direct non-deleted children (_numchild)
@@ -1260,6 +1352,25 @@ class Item(TreeModel, BaseModel):
         blank=True,
         default=dict,
         help_text=_("Malware detection info when the analysis status is unsafe."),
+    )
+
+    # Encryption fields
+    is_encrypted = models.BooleanField(
+        default=False,
+        # Also in the database: raw inserts (the performance dataset) leave it out.
+        db_default=False,
+        help_text=_(
+            "Whether this item is encrypted (standalone file or part of an encrypted subtree)."
+        ),
+    )
+    encrypted_symmetric_key = models.TextField(
+        null=True,
+        blank=True,
+        help_text=_(
+            "This item's symmetric key, wrapped (encrypted) by the parent folder's symmetric key. "
+            "NULL for encryption roots (standalone files or topmost encrypted folders, whose key "
+            "is wrapped per user in ItemEncryptionKeyWrap instead) and for unencrypted items."
+        ),
     )
 
     label_size = 7
@@ -1961,6 +2072,16 @@ class Item(TreeModel, BaseModel):
                     )
                 }
             )
+        # Detaching a folder from an encrypted tree would cut its key chain
+        if item.is_encrypted:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("An encrypted folder cannot be restricted"),
+                        code="item_restrict_encrypted",
+                    )
+                }
+            )
 
         parent = item.parent()
 
@@ -2050,6 +2171,17 @@ class Item(TreeModel, BaseModel):
         parent = None
         if restriction.ancestors_deleted_at is None:
             parent = restriction.parent()
+        # Reattaching would drop the explicit accesses holding the wrapped keys
+        # of an encrypted folder, or put a plaintext folder in an encrypted tree
+        if parent and (item.is_encrypted or parent.is_encrypted):
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("Restriction cannot be lifted on or into an encrypted folder"),
+                        code="item_unrestrict_encrypted",
+                    )
+                }
+            )
         self._meta.model.objects.filter(pk=restriction.pk).delete()
 
         if parent:
@@ -2339,6 +2471,57 @@ class ItemAccess(BaseModel):
             "retrieve": (self.user and self.user.id == user.id) or is_owner_or_admin,
             "set_role_to": set_role_to,
         }
+
+
+class ItemEncryptionKeyWrap(BaseModel):
+    """
+    An encrypted item's symmetric key, wrapped by the encryption vault for one user.
+
+    Kept apart from ItemAccess, which only grants roles: a user holding a role on an
+    encrypted item (directly or inherited from an ancestor) but no wrap on its key
+    chain is pending, until a member holding the key wraps it for them. Wraps sit on
+    encryption roots, and on a former root moved into another tree for the users of
+    its own accesses.
+    """
+
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        related_name="encryption_key_wraps",
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="encryption_key_wraps",
+    )
+    wrapped_key = models.TextField(
+        help_text=_("The item's symmetric key, wrapped for this user's public key, base64."),
+    )
+    encryption_public_key_version = models.PositiveIntegerField(
+        _("encryption public key version"),
+        null=True,
+        blank=True,
+        help_text=_(
+            "Version of the user's encryption public key the wrap was made for. A user whose "
+            "current version differs needs the key wrapped again."
+        ),
+    )
+
+    class Meta:
+        db_table = "drive_item_encryption_key_wrap"
+        ordering = ("-created_at",)
+        verbose_name = _("Item encryption key wrap")
+        verbose_name_plural = _("Item encryption key wraps")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["item", "user"],
+                name="unique_item_encryption_key_wrap",
+                violation_error_message=_("This user already holds a key for this item."),
+            ),
+        ]
+
+    def __str__(self):
+        return f"key of item {self.item!s} wrapped for {self.user!s}"
 
 
 class ItemInvitationQuerySet(AnnotateUserRoleQuerySetMixin, models.QuerySet):

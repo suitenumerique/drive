@@ -107,17 +107,24 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
             and self.user.is_authenticated
             and self.item.type == models.ItemTypeChoices.FILE
             and self.item.upload_state == models.ItemUploadStateChoices.READY
+            # The copy would hold ciphertext without the key material to read it
+            and not self.item.is_encrypted
         )
 
     def can_export(self) -> bool:
         """Return whether the user can export the folder as an archive."""
-        return self.can_get() and self.item.type == models.ItemTypeChoices.FOLDER
+        return (
+            self.can_get()
+            and self.item.type == models.ItemTypeChoices.FOLDER
+            and not self.item.is_encrypted
+        )
 
     def can_convert(self) -> bool:
         """Return whether the user can convert the file to another format."""
         return (
             self.can_update()
             and self.item.type == models.ItemTypeChoices.FILE
+            and not self.item.is_encrypted
             and self.item.upload_state
             in (
                 models.ItemUploadStateChoices.READY,
@@ -135,6 +142,8 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
             self.is_owner
             and not self.is_deleted
             and self.item.type == models.ItemTypeChoices.FOLDER
+            # Moving an encrypted folder in or out of its tree breaks its key chain
+            and not self.item.is_encrypted
             and (self.item.depth > 1 or self.is_restricted)
         )
 
@@ -149,6 +158,22 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
     def can_restore(self) -> bool:
         """Return whether the user can restore the item from the trash."""
         return self.is_owner
+
+    def can_use_wopi(self) -> bool:
+        """Return whether the user can open the file in a WOPI editor, never with ciphertext."""
+        return self.can_get() and not self.item.is_encrypted
+
+    def can_encrypt(self) -> bool:
+        """Return whether the user can encrypt the item or remove its encryption."""
+        return self.can_manage() and self.user.is_authenticated
+
+    def can_upload_encrypted_content(self) -> bool:
+        """Return whether the user can get an upload URL for encrypted content."""
+        return self.can_update() and self.user.is_authenticated
+
+    def can_get_key_chain(self) -> bool:
+        """Return whether the user can read the wrapped keys leading to the item."""
+        return self.can_get() and self.user.is_authenticated
 
     def can_upload_ended(self) -> bool:
         """Return whether the user can mark an upload on the item as ended."""
@@ -165,13 +190,17 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
             "destroy": self.can_destroy(),
             "download": self.can_get(),
             "duplicate": self.can_duplicate(),
+            "encrypt": self.can_encrypt(),
+            "encryption_upload_url": self.can_upload_encrypted_content(),
             "export": self.can_export(),
             "hard_delete": self.can_hard_delete(),
             "favorite": self.can_favorite(),
+            "key_chain": self.can_get_key_chain(),
             "link_configuration": self.can_manage(),
             "invite_owner": self.can_invite_owner(),
             "link_select_options": self.link_select_options(),
             "move": self.can_move(),
+            "remove_encryption": self.can_encrypt(),
             "restrict": self.can_restrict(),
             "restore": self.can_restore(),
             "retrieve": self.can_retrieve(),
@@ -180,7 +209,7 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
             "partial_update": self.can_update(),
             "update": self.can_update(),
             "upload_ended": self.can_upload_ended(),
-            "wopi": self.can_get(),
+            "wopi": self.can_use_wopi(),
             "convert": self.can_convert(),
         }
 

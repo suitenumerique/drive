@@ -2,6 +2,8 @@
 Test moving items within the item tree via an detail action API endpoint.
 """
 
+# pylint: disable=too-many-lines
+
 import random
 from unittest import mock
 from uuid import uuid4
@@ -973,3 +975,747 @@ def test_api_items_move_missing_permission_posthog_event(posthog_capture_mock):
     )
     properties = posthog_capture_mock.call_args.kwargs["properties"]
     assert properties.items() >= {"item_id": item.id}.items()
+
+
+# -----------------------------------------------------------------------------
+# Encryption-aware move tests
+#
+# The crypto itself runs client-side; the backend only routes payload fields
+# into the right DB columns and validates that the requested transition is
+# coherent with the item's current state. These tests stub plausible
+# base64-ish opaque blobs and assert state transitions, not crypto.
+# -----------------------------------------------------------------------------
+
+
+def _encrypted_root(user, role="owner"):
+    """Build a self-rooted encrypted folder owned by `user`.
+
+    Mirrors what the /encrypt/ endpoint produces: `is_encrypted=True`,
+    `encrypted_symmetric_key=NULL`, with the user's wrap of its key.
+    """
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        is_encrypted=True,
+        encrypted_symmetric_key=None,
+    )
+    factories.UserItemAccessFactory(item=item, user=user, role=role)
+    factories.ItemEncryptionKeyWrapFactory(item=item, user=user, wrapped_key="WRAP-USER-ROOT")
+    return item
+
+
+def _encrypted_child(parent, *, item_type=models.ItemTypeChoices.FOLDER):
+    """Build a chained-encrypted descendant of `parent`."""
+    return factories.ItemFactory(
+        type=item_type,
+        parent=parent,
+        is_encrypted=True,
+        encrypted_symmetric_key=f"CHAIN-WRAP-{uuid4().hex[:8]}",
+    )
+
+
+def test_api_items_move_encrypted_same_tree_rewrap():
+    """
+    Case 2: moving an encrypted descendant from one folder to another
+    inside the SAME encryption tree just rewrites its chain wrap.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = _encrypted_root(user)
+    folder_a = _encrypted_child(root)
+    folder_b = _encrypted_child(root)
+    file_item = _encrypted_child(folder_a, item_type=models.ItemTypeChoices.FILE)
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(folder_b.id),
+            "encrypted_symmetric_key": "NEW-CHAIN-WRAP-UNDER-B",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200
+    file_item.refresh_from_db()
+    assert file_item.is_encrypted is True
+    assert file_item.encrypted_symmetric_key == "NEW-CHAIN-WRAP-UNDER-B"
+    # No per-user wrap should land on the moved item.
+    assert not models.ItemEncryptionKeyWrap.objects.filter(item=file_item).exists()
+
+
+def test_api_items_move_encrypted_same_tree_missing_wrap_rejected():
+    """Same-tree rewrap must come with the new chain wrap."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = _encrypted_root(user)
+    folder_a = _encrypted_child(root)
+    folder_b = _encrypted_child(root)
+    file_item = _encrypted_child(folder_a, item_type=models.ItemTypeChoices.FILE)
+    original_wrap = file_item.encrypted_symmetric_key
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={"target_item_id": str(folder_b.id)},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "item_move_encrypted_key_required"
+    file_item.refresh_from_db()
+    # Item must NOT have moved on a rejected payload — atomicity matters
+    # since a half-applied move would leave the chain wrap stale.
+    assert file_item.encrypted_symmetric_key == original_wrap
+
+
+def test_api_items_move_re_anchor_to_plaintext():
+    """
+    Case 3: chained source → plaintext destination. The item flips to
+    its own encryption root, the chain wrap is cleared, and per-user
+    wraps land on this item, for the users who can reach it there only:
+    no access row is created for anyone.
+    """
+    user = factories.UserFactory()
+    other = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = _encrypted_root(user)
+    # `other` has access to the encrypted tree via an inherited row
+    # on the root — they don't have an ItemAccess on the file itself.
+    factories.UserItemAccessFactory(item=root, user=other, role="reader")
+    factories.ItemEncryptionKeyWrapFactory(
+        item=root, user=other, wrapped_key="WRAP-OTHER-ROOT", encryption_public_key_version=2
+    )
+    # `stranger` only reaches the file through the old tree.
+    stranger = factories.UserFactory()
+    factories.UserItemAccessFactory(item=root, user=stranger, role="reader")
+    factories.ItemEncryptionKeyWrapFactory(item=root, user=stranger)
+    file_item = _encrypted_child(root, item_type=models.ItemTypeChoices.FILE)
+
+    plain_target = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, "owner"), (other, "reader")],
+    )
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(plain_target.id),
+            "is_encryption_root": True,
+            "per_user_encrypted_keys": {
+                user.sub: "WRAP-USER-NEW-ROOT",
+                other.sub: "WRAP-OTHER-NEW-ROOT",
+                stranger.sub: "WRAP-STRANGER-NEW-ROOT",
+            },
+            "encryption_public_key_versions": {
+                user.sub: 3,
+                other.sub: 2,
+                stranger.sub: 1,
+            },
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200, response.json()
+    file_item.refresh_from_db()
+    assert file_item.is_encrypted is True
+    assert file_item.encrypted_symmetric_key is None  # promoted to root
+    # Roles come from the destination's accesses, as for any move
+    assert not models.ItemAccess.objects.filter(item=file_item).exists()
+    user_wrap = models.ItemEncryptionKeyWrap.objects.get(item=file_item, user=user)
+    assert user_wrap.wrapped_key == "WRAP-USER-NEW-ROOT"
+    assert user_wrap.encryption_public_key_version == 3
+    other_wrap = models.ItemEncryptionKeyWrap.objects.get(item=file_item, user=other)
+    assert other_wrap.wrapped_key == "WRAP-OTHER-NEW-ROOT"
+    # The key is not given to someone the move leaves without a role on the file
+    assert not models.ItemEncryptionKeyWrap.objects.filter(item=file_item, user=stranger).exists()
+
+
+def test_api_items_move_re_anchor_with_pending_collaborator():
+    """
+    Re-anchor must accept `null` per-user wraps for collaborators
+    without a published pubkey — they stay pending, with nothing stored
+    (mirrors /encrypt/'s "pending invite" semantics).
+    """
+    user = factories.UserFactory()
+    pending = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = _encrypted_root(user)
+    factories.UserItemAccessFactory(item=root, user=pending, role="reader")  # pending on root too
+    file_item = _encrypted_child(root, item_type=models.ItemTypeChoices.FILE)
+
+    plain_target = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, "owner"), (pending, "reader")],
+    )
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(plain_target.id),
+            "is_encryption_root": True,
+            "per_user_encrypted_keys": {
+                user.sub: "WRAP-USER-NEW-ROOT",
+                pending.sub: None,
+            },
+            "encryption_public_key_versions": {
+                user.sub: 3,
+                pending.sub: None,
+            },
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200, response.json()
+    assert not models.ItemAccess.objects.filter(item=file_item, user=pending).exists()
+    assert not models.ItemEncryptionKeyWrap.objects.filter(item=file_item, user=pending).exists()
+    retrieved = client.get(f"/api/v1.0/items/{file_item.id!s}/accesses/").json()
+    pending_by_user = {entry["user"]["id"]: entry["is_pending_encryption"] for entry in retrieved}
+    assert pending_by_user == {str(user.id): False, str(pending.id): True}
+
+
+def test_api_items_move_re_anchor_caller_must_have_wrap():
+    """
+    Re-anchor must refuse if the caller (mover) has a `null` wrap for
+    themselves — they'd lock themselves out of their own file. The
+    refusal is the ONE actor-only guard; other collaborators are
+    allowed null.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = _encrypted_root(user)
+    file_item = _encrypted_child(root, item_type=models.ItemTypeChoices.FILE)
+    plain_target = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, "owner")],
+    )
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(plain_target.id),
+            "is_encryption_root": True,
+            "per_user_encrypted_keys": {user.sub: None},
+            "encryption_public_key_versions": {user.sub: None},
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "item_move_caller_wrap_required"
+
+
+def test_api_items_move_re_anchor_into_encrypted_rejected():
+    """Cannot promote to encryption root inside another encrypted tree."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root_a = _encrypted_root(user)
+    file_item = _encrypted_child(root_a, item_type=models.ItemTypeChoices.FILE)
+    root_b = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(root_b.id),
+            "is_encryption_root": True,
+            "per_user_encrypted_keys": {user.sub: "WRAP"},
+            "encryption_public_key_versions": {user.sub: 1},
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "item_move_promote_into_encrypted"
+
+
+def test_api_items_move_demote_self_rooted_into_chain():
+    """
+    Case 4: a self-rooted encrypted item moving INTO an encrypted
+    subtree picks up a chain wrap and clears its per-user wraps.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    # Self-rooted file the user holds via per-user wrap.
+    file_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        is_encrypted=True,
+        encrypted_symmetric_key=None,
+    )
+    factories.UserItemAccessFactory(item=file_item, user=user, role="owner")
+    factories.ItemEncryptionKeyWrapFactory(
+        item=file_item,
+        user=user,
+        wrapped_key="WRAP-USER-FILE-ROOT",
+        encryption_public_key_version=3,
+    )
+
+    dest_root = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(dest_root.id),
+            "is_encryption_root": False,
+            "encrypted_symmetric_key": "CHAIN-WRAP-UNDER-DEST",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200, response.json()
+    file_item.refresh_from_db()
+    assert file_item.is_encrypted is True
+    assert file_item.encrypted_symmetric_key == "CHAIN-WRAP-UNDER-DEST"
+    # Per-user wrap KEPT alongside the chain wrap. The destination
+    # chain may not cover the same set of users that held explicit
+    # access on this self-rooted file; clearing the wrap would
+    # silently revoke collaborators outside the chain. Hybrid is fine
+    # — chain users use the chain, originals use their per-user wrap.
+    user_wrap = models.ItemEncryptionKeyWrap.objects.get(item=file_item, user=user)
+    assert user_wrap.wrapped_key == "WRAP-USER-FILE-ROOT"
+    assert user_wrap.encryption_public_key_version == 3
+
+
+def test_api_items_move_demote_preserves_outsider_wrap():
+    """
+    Demoting must NOT revoke collaborators who had explicit per-user
+    access on the self-rooted item but are not part of the destination
+    chain. Their wrap is the only path they have to decrypt — clearing
+    it would silently lock them out despite their ItemAccess.role
+    staying intact.
+    """
+    user = factories.UserFactory()
+    outsider = factories.UserFactory()  # has access to the file, NOT to dest tree
+    client = APIClient()
+    client.force_login(user)
+
+    # Self-rooted file shared with `user` and `outsider`.
+    file_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        is_encrypted=True,
+        encrypted_symmetric_key=None,
+    )
+    factories.UserItemAccessFactory(item=file_item, user=user, role="owner")
+    factories.ItemEncryptionKeyWrapFactory(item=file_item, user=user, wrapped_key="WRAP-USER-FILE")
+    factories.UserItemAccessFactory(item=file_item, user=outsider, role="reader")
+    factories.ItemEncryptionKeyWrapFactory(
+        item=file_item,
+        user=outsider,
+        wrapped_key="WRAP-OUTSIDER-FILE",
+        encryption_public_key_version=4,
+    )
+
+    # Destination tree only `user` has access to.
+    dest_root = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(dest_root.id),
+            "is_encryption_root": False,
+            "encrypted_symmetric_key": "CHAIN-WRAP-UNDER-DEST",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200, response.json()
+    # Outsider's per-user wrap survives the demote — their decryption
+    # path now bypasses the chain (which they can't reach) and uses
+    # their wrap on this item directly.
+    outsider_wrap = models.ItemEncryptionKeyWrap.objects.get(item=file_item, user=outsider)
+    assert outsider_wrap.wrapped_key == "WRAP-OUTSIDER-FILE"
+    assert outsider_wrap.encryption_public_key_version == 4
+
+
+def test_api_items_move_demote_requires_chain_wrap():
+    """Demote must come with `encrypted_symmetric_key`."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    file_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        is_encrypted=True,
+        encrypted_symmetric_key=None,
+    )
+    factories.UserItemAccessFactory(item=file_item, user=user, role="owner")
+    factories.ItemEncryptionKeyWrapFactory(item=file_item, user=user, wrapped_key="WRAP")
+    dest_root = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(dest_root.id),
+            "is_encryption_root": False,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "item_move_chain_wrap_required"
+
+
+def test_api_items_move_demote_to_plaintext_rejected():
+    """Demote requires the destination to be encrypted."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    file_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        is_encrypted=True,
+        encrypted_symmetric_key=None,
+    )
+    factories.UserItemAccessFactory(item=file_item, user=user, role="owner")
+    factories.ItemEncryptionKeyWrapFactory(item=file_item, user=user, wrapped_key="WRAP")
+    plain_target = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, "owner")],
+    )
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(plain_target.id),
+            "is_encryption_root": False,
+            "encrypted_symmetric_key": "WRAP",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "item_move_demote_to_plain"
+
+
+def test_api_items_move_plaintext_into_encrypted_rejected():
+    """
+    Plaintext → encrypted is refused at the move endpoint — the client
+    must encrypt the source first via /encrypt/, then retry the move.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    file_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        users=[(user, "owner")],
+    )
+    dest_root = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(dest_root.id),
+            "encrypted_symmetric_key": "WRAP",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "item_move_plaintext_into_encrypted"
+
+
+def test_api_items_move_encrypt_on_move_file():
+    """
+    Plaintext file → encrypted folder via encrypt-on-move: file becomes
+    chain-wrapped under the destination, NO per-user wrap stored for
+    inherited-only collaborators (the whole point of the new shape).
+    """
+    user = factories.UserFactory()
+    other = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    # Source is a plaintext folder both `user` and `other` have access
+    # to. Putting `other` here would normally cause /encrypt/ to
+    # store a per-user wrap for them — encrypt-on-move must
+    # not.
+    source_folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, "owner"), (other, "reader")],
+    )
+    file_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        parent=source_folder,
+    )
+    dest_root = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(dest_root.id),
+            "encrypted_symmetric_key": "CHAIN-WRAP-FILE-UNDER-DEST",
+            "encrypted_keys_for_descendants": {},
+            "file_key_mapping": {},
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200, response.json()
+    file_item.refresh_from_db()
+    assert file_item.is_encrypted is True
+    assert file_item.encrypted_symmetric_key == "CHAIN-WRAP-FILE-UNDER-DEST"
+    # No per-user wrap created for the inherited `other` collaborator.
+    # They had inherited access via the source folder; they no longer
+    # have any access to the file (it moved out of source's subtree).
+    # That's exactly the cleanup we wanted.
+    assert not models.ItemEncryptionKeyWrap.objects.filter(item=file_item).exists()
+
+
+def test_api_items_move_encrypt_on_move_folder_with_descendants():
+    """Folder with nested files: every effective descendant gets its
+    chain wrap; the root carries the chain wrap under the destination.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    src_folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, "owner")],
+    )
+    nested_folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        parent=src_folder,
+    )
+    file_a = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        parent=src_folder,
+    )
+    file_b = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        parent=nested_folder,
+    )
+    dest_root = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{src_folder.id!s}/move/",
+        data={
+            "target_item_id": str(dest_root.id),
+            "encrypted_symmetric_key": "CHAIN-WRAP-SRC-UNDER-DEST",
+            "encrypted_keys_for_descendants": {
+                str(nested_folder.id): "wrap-nested-under-src",
+                str(file_a.id): "wrap-file-a-under-src",
+                str(file_b.id): "wrap-file-b-under-nested",
+            },
+            "file_key_mapping": {
+                str(file_a.id): "encrypted_a.bin",
+                str(file_b.id): "encrypted_b.bin",
+            },
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200, response.json()
+    src_folder.refresh_from_db()
+    nested_folder.refresh_from_db()
+    file_a.refresh_from_db()
+    file_b.refresh_from_db()
+    assert src_folder.is_encrypted is True
+    assert src_folder.encrypted_symmetric_key == "CHAIN-WRAP-SRC-UNDER-DEST"
+    assert nested_folder.is_encrypted is True
+    assert nested_folder.encrypted_symmetric_key == "wrap-nested-under-src"
+    assert file_a.is_encrypted is True
+    assert file_a.encrypted_symmetric_key == "wrap-file-a-under-src"
+    assert file_a.filename == "encrypted_a.bin"
+    assert file_b.encrypted_symmetric_key == "wrap-file-b-under-nested"
+    assert file_b.filename == "encrypted_b.bin"
+
+
+def test_api_items_move_encrypt_on_move_subtree_mutation_rejected():
+    """If a descendant appears between frontend discovery and the
+    commit, the mismatched id set must abort with 409 — same contract
+    as /encrypt/.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    src_folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, "owner")],
+    )
+    file_a = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        parent=src_folder,
+    )
+    # Live extra: the client didn't see this one when it built the
+    # payload.
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE, parent=src_folder)
+    dest_root = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{src_folder.id!s}/move/",
+        data={
+            "target_item_id": str(dest_root.id),
+            "encrypted_symmetric_key": "wrap",
+            "encrypted_keys_for_descendants": {str(file_a.id): "wrap-a"},
+            "file_key_mapping": {},
+        },
+        format="json",
+    )
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "subtree_mutated"
+
+
+def test_api_items_move_encrypt_on_move_requires_chain_wrap():
+    """`encrypted_symmetric_key` is mandatory for encrypt-on-move."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    file_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        users=[(user, "owner")],
+    )
+    dest_root = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(dest_root.id),
+            "encrypted_keys_for_descendants": {},
+            "file_key_mapping": {},
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "item_move_chain_wrap_required"
+
+
+def test_api_items_move_encrypt_on_move_rejects_encrypted_source():
+    """Encrypt-on-move payload with an already-encrypted source is a
+    contract violation — the rewrap/demote shapes apply instead.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = _encrypted_root(user)
+    file_item = _encrypted_child(root, item_type=models.ItemTypeChoices.FILE)
+    dest_root = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(dest_root.id),
+            "encrypted_symmetric_key": "wrap",
+            "encrypted_keys_for_descendants": {},
+            "file_key_mapping": {},
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "item_move_encrypt_on_move_source_encrypted"
+
+
+def test_api_items_move_encrypt_on_move_rejects_plain_target():
+    """Encrypt-on-move with a plaintext destination is meaningless —
+    if the destination isn't encrypted there's no chain to attach to.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    file_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        users=[(user, "owner")],
+    )
+    plain_target = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, "owner")],
+    )
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(plain_target.id),
+            "encrypted_symmetric_key": "wrap",
+            "encrypted_keys_for_descendants": {},
+            "file_key_mapping": {},
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "item_move_encrypt_on_move_plain_target"
+
+
+def test_api_items_move_chained_to_plain_without_re_anchor_rejected():
+    """
+    Chained-encrypted → plaintext WITHOUT the re-anchor flag is refused
+    — the bare move would leave the item with a stale chain wrap and
+    no resolvable parent chain.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = _encrypted_root(user)
+    file_item = _encrypted_child(root, item_type=models.ItemTypeChoices.FILE)
+    plain_target = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, "owner")],
+    )
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={"target_item_id": str(plain_target.id)},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "item_move_re_anchor_required"
+
+
+def test_api_items_move_refused_when_it_strands_pending_users():
+    """
+    Moving an encryption root away from the only member holding its key is refused:
+    its other members could never get the key. Nothing moves.
+    """
+    owner = factories.UserFactory()
+    holder = factories.UserFactory()
+    shared = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        users=[(owner, models.RoleChoices.OWNER), (holder, models.RoleChoices.EDITOR)],
+    )
+    root = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        parent=shared,
+        is_encrypted=True,
+        encrypted_symmetric_key=None,
+    )
+    factories.ItemEncryptionKeyWrapFactory(item=root, user=holder)
+    private = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        users=[(owner, models.RoleChoices.OWNER)],
+    )
+
+    client = APIClient()
+    client.force_login(owner)
+    response = client.post(
+        f"/api/v1.0/items/{root.id!s}/move/",
+        {"target_item_id": str(private.id)},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "would_strand_pending_users"
+    root.refresh_from_db()
+    assert root.parent() == shared
+    assert models.ItemEncryptionKeyWrap.objects.filter(item=root, user=holder).exists()

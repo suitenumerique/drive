@@ -112,7 +112,13 @@ def generate_upload_policy(item):
 
     # Generate a unique key for the item
     key = f"{item.key_base}/{item.filename}"
+    return generate_upload_policy_for_key(key, item.size)
 
+
+def generate_upload_policy_for_key(key, size, content_type=None):
+    """
+    Generate a S3 upload policy writing exactly `size` bytes at `key`.
+    """
     # This settings should be used if the backend application and the frontend application
     # can't connect to the object storage with the same domain. This is the case in the
     # docker compose stack used in development. The frontend application will use localhost
@@ -137,10 +143,12 @@ def generate_upload_policy(item):
     params = {
         "Bucket": default_storage.bucket_name,
         "Key": key,
-        "ContentLength": item.size,
+        "ContentLength": size,
     }
     if settings.AWS_S3_UPLOAD_ACL and settings.AWS_S3_UPLOAD_ACL != "default":
         params["ACL"] = settings.AWS_S3_UPLOAD_ACL
+    if content_type:
+        params["ContentType"] = content_type
 
     # Generate the policy
     policy = s3_client.generate_presigned_url(

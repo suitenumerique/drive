@@ -328,6 +328,10 @@ def test_models_items_get_abilities_forbidden(
         "upload_ended": False,
         "wopi": False,
         "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": False,
+        "key_chain": False,
+        "remove_encryption": False,
     }
     nb_queries = 1 if is_authenticated else 0
     with django_assert_num_queries(nb_queries):
@@ -379,6 +383,10 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
         "upload_ended": False,
         "wopi": True,
         "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": False,
+        "key_chain": is_authenticated,
+        "remove_encryption": False,
     }
     nb_queries = 1 if is_authenticated else 0
     with django_assert_num_queries(nb_queries):
@@ -485,6 +493,10 @@ def test_models_items_get_abilities_editor(  # noqa: PLR0913
         "upload_ended": is_authenticated,
         "wopi": True,
         "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": is_authenticated,
+        "key_chain": is_authenticated,
+        "remove_encryption": False,
     }
     nb_queries = 1 if is_authenticated else 0
     with django_assert_num_queries(nb_queries):
@@ -556,6 +568,10 @@ def test_models_items_not_root_get_abilities_owner(
         "upload_ended": True,
         "wopi": True,
         "convert": False,
+        "encrypt": True,
+        "encryption_upload_url": True,
+        "key_chain": True,
+        "remove_encryption": True,
     }
     # A folder at the tree root checks for a targeting restriction
     nb_queries = 2 if item_type == models.ItemTypeChoices.FOLDER else 1
@@ -589,6 +605,10 @@ def test_models_items_not_root_get_abilities_owner(
         "upload_ended": False,
         "wopi": False,
         "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": False,
+        "key_chain": False,
+        "remove_encryption": False,
     }
 
 
@@ -650,6 +670,10 @@ def test_models_items_not_root_get_abilities_administrator(
         "upload_ended": True,
         "wopi": True,
         "convert": False,
+        "encrypt": True,
+        "encryption_upload_url": True,
+        "key_chain": True,
+        "remove_encryption": True,
     }
     # A folder at the tree root checks for a targeting restriction
     nb_queries = 2 if item_type == models.ItemTypeChoices.FOLDER else 1
@@ -723,6 +747,10 @@ def test_models_items_not_root_get_abilities_editor_user(
         "upload_ended": True,
         "wopi": True,
         "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": True,
+        "key_chain": True,
+        "remove_encryption": False,
     }
     with django_assert_num_queries(1):
         assert item.get_abilities(user) == expected_abilities
@@ -777,6 +805,10 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         "upload_ended": access_from_link,
         "wopi": True,
         "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": access_from_link,
+        "key_chain": True,
+        "remove_encryption": False,
     }
     with django_assert_num_queries(2):
         assert item.get_abilities(user) == expected_abilities
@@ -836,6 +868,10 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "upload_ended": True,
         "wopi": True,
         "convert": False,
+        "encrypt": True,
+        "encryption_upload_url": True,
+        "key_chain": True,
+        "remove_encryption": True,
     }
     with django_assert_num_queries(1):
         assert child.get_abilities(owner) == expected_abilities
@@ -868,6 +904,10 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "upload_ended": False,
         "wopi": False,
         "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": False,
+        "key_chain": False,
+        "remove_encryption": False,
     }
 
 

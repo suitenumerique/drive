@@ -373,3 +373,49 @@ def test_api_items_export_posthog_event_anonymous(posthog_capture_mock):
     assert response.status_code == 200
     posthog_capture_mock.assert_called_once()
     assert posthog_capture_mock.call_args.kwargs["distinct_id"] is None
+
+
+def test_api_items_export_skips_encrypted_descendants():
+    """Encrypted descendants and their subtree are left out of a plaintext folder export."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        title="root",
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    factories.ItemFactory(
+        parent=root,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        upload_bytes=b"plain",
+        upload_bytes__filename="plain.txt",
+    )
+    encrypted_file = factories.ItemFactory(
+        parent=root,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        upload_bytes=b"ciphertext",
+        upload_bytes__filename="secret.txt",
+    )
+    encrypted_folder = factories.ItemFactory(
+        parent=root, type=models.ItemTypeChoices.FOLDER, title="vault"
+    )
+    factories.ItemFactory(
+        parent=encrypted_folder,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        upload_bytes=b"ciphertext",
+        upload_bytes__filename="nested.txt",
+    )
+    models.Item.objects.filter(pk__in=[encrypted_file.pk, encrypted_folder.pk]).update(
+        is_encrypted=True
+    )
+    models.Item.objects.filter(path__descendants=encrypted_folder.path).update(is_encrypted=True)
+
+    response = client.get(f"/api/v1.0/items/{root.pk}/export/")
+
+    assert response.status_code == 200
+    assert _zip_names(response) == ["plain.txt"]

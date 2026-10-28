@@ -167,3 +167,34 @@ def test_services_item_exports_export_descendants_skips_soft_deleted_descendants
     descendants = list(export_descendants(folder))
 
     assert [archive_path for _, archive_path in descendants] == ["keep.txt"]
+
+
+def test_services_item_exports_export_descendants_skips_encrypted_descendants():
+    """The server only holds ciphertext for encrypted items: they and their subtree are skipped."""
+    folder = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    plain_file = factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        filename="plain.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        filename="secret.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        is_encrypted=True,
+    )
+    encrypted_folder = factories.ItemFactory(
+        parent=folder, type=models.ItemTypeChoices.FOLDER, title="vault", is_encrypted=True
+    )
+    factories.ItemFactory(
+        parent=encrypted_folder,
+        type=models.ItemTypeChoices.FILE,
+        filename="nested.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        is_encrypted=True,
+        encrypted_symmetric_key="wrapped",
+    )
+
+    assert list(export_descendants(folder)) == [(plain_file.file_key, "plain.txt")]
