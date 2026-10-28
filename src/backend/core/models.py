@@ -1391,11 +1391,12 @@ class Item(TreeModel, BaseModel):
             return
         transaction.on_commit(lambda: invalidate_storage_used_cache([self.creator_id]))
 
-    def delete(self, using=None, keep_parents=False):
+    def delete(self, using=None, keep_parents=False):  # pylint: disable=arguments-differ,arguments-renamed
         if self.deleted_at is None and self.ancestors_deleted_at is None:
             raise RuntimeError("The item must be soft deleted before being deleted.")
 
-        return super().delete(using, keep_parents)
+        # Skip TreeModel.delete, it moves the children under the parent
+        return models.Model.delete(self, using, keep_parents)
 
     def ancestors(self):
         """Return the ancestors of the item excluding the item itself."""
