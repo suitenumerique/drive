@@ -21,12 +21,16 @@ export const createFolderInCurrentFolder = async (
   return folderItem;
 };
 
+// Exact match: the "New folder" button's accessible name also contains "New".
+export const getNewButton = (page: Page) =>
+  page.getByRole("button", { name: "New", exact: true });
+
 export const createFileFromTemplate = async (
   page: Page,
   fileName: string,
   template: "New text document" | "New spreadsheet" | "New slides" = "New text document",
 ) => {
-  await page.getByRole("button", { name: "New" }).click();
+  await getNewButton(page).click();
   await page.getByRole("menuitem", { name: template }).click();
   await page.getByRole("textbox", { name: "File name" }).fill(fileName);
   await page.getByRole("button", { name: "Create" }).click();
