@@ -340,6 +340,27 @@ def test_api_items_restrictions_abilities_require_target_access(ability):
     assert response.json()["results"][0]["abilities"][ability] is True
 
 
+@pytest.mark.parametrize("has_access", [True, False])
+def test_api_items_restrictions_children_list_nb_accesses_from_target(has_access):
+    """A restriction entry reports the accesses of its target to the users holding one."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, "owner"), (factories.UserFactory(), "reader")],
+    )
+    folder = _create_restricted_folder(parent, factories.UserFactory())
+    if has_access:
+        factories.UserItemAccessFactory(item=folder, user=user, role="reader")
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.get(f"/api/v1.0/items/{parent.id!s}/children/")
+
+    assert response.status_code == 200
+    assert response.json()["results"][0]["nb_accesses"] == (2 if has_access else 0)
+
+
 def test_api_items_restrictions_delete_forbidden_for_reader():
     """A reader of the containing folder cannot detach a restriction."""
     reader = factories.UserFactory()

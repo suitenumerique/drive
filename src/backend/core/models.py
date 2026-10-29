@@ -1066,13 +1066,33 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         """Load restriction targets along with the accesses the user holds on them."""
         queryset = self.select_related("target")
         if not user.is_authenticated:
-            return queryset
+            return queryset.annotate(nb_target_accesses=models.Value(0))
+        viewer_accesses = ItemAccess.objects.filter(
+            models.Q(user=user) | models.Q(team__in=user.teams)
+        )
+        # Targets are roots, their direct accesses are all their accesses. Their
+        # number is told to the users holding one of them only.
+        nb_target_accesses = (
+            ItemAccess.objects.filter(item_id=models.OuterRef("target_id"))
+            .order_by()
+            .values("item_id")
+            .annotate(count=models.Count("id"))
+            .values("count")
+        )
+        queryset = queryset.annotate(
+            nb_target_accesses=models.Case(
+                models.When(
+                    models.Q(type=ItemTypeChoices.RESTRICTION)
+                    & models.Exists(viewer_accesses.filter(item_id=models.OuterRef("target_id"))),
+                    then=models.Subquery(nb_target_accesses, output_field=models.IntegerField()),
+                ),
+                default=models.Value(0),
+            )
+        )
         return queryset.prefetch_related(
             models.Prefetch(
                 "target__accesses",
-                queryset=ItemAccess.objects.filter(
-                    models.Q(user=user) | models.Q(team__in=user.teams)
-                ),
+                queryset=viewer_accesses,
                 to_attr="viewer_accesses",
             ),
             models.Prefetch(
@@ -1578,10 +1598,11 @@ class Item(TreeModel, BaseModel):
         Read the cached number of accesses of many items in a single cache round trip,
         items missing from the cache compute it when their `nb_accesses` is read.
         """
+        # Restrictions report their nb_target_accesses annotation, nothing to cache
         items_by_cache_key = {
             item.get_nb_accesses_cache_key(): item
             for item in items
-            if not hasattr(item, "_nb_accesses")
+            if not hasattr(item, "_nb_accesses") and item.type != ItemTypeChoices.RESTRICTION
         }
         for cache_key, nb_accesses in cache.get_many(list(items_by_cache_key)).items():
             if nb_accesses is not None:
@@ -1594,6 +1615,9 @@ class Item(TreeModel, BaseModel):
         try:
             return self._nb_accesses
         except AttributeError:
+            if self.type == ItemTypeChoices.RESTRICTION:
+                # Annotated by with_restriction_target for the users accessing the target
+                return getattr(self, "nb_target_accesses", 0)
             cache_key = self.get_nb_accesses_cache_key()
             nb_accesses = cache.get(cache_key)
 

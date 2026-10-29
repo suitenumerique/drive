@@ -1307,8 +1307,13 @@ class ItemViewSet(
             .values("count")
         )
         queryset = queryset.annotate(
-            _nb_accesses=db.Value(item_nb_accesses)
-            + Coalesce(db.Subquery(nb_direct_accesses, output_field=db.IntegerField()), 0),
+            _nb_accesses=db.Case(
+                # Annotated by with_restriction_target
+                db.When(type=models.ItemTypeChoices.RESTRICTION, then=db.F("nb_target_accesses")),
+                default=db.Value(item_nb_accesses)
+                + Coalesce(db.Subquery(nb_direct_accesses, output_field=db.IntegerField()), 0),
+                output_field=db.IntegerField(),
+            ),
         )
 
         # Pass ancestors' links paths mapping to the serializer as a context variable
