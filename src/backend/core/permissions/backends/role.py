@@ -83,6 +83,13 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods,too-many-instanc
             and self.item.is_restricted
         )
 
+    @cached_property
+    def can_reach_target(self) -> bool:
+        """Return whether the user can open the target of a restriction, True elsewhere."""
+        if self.item.type != models.ItemTypeChoices.RESTRICTION:
+            return True
+        return self.item.target.is_accessible_by(self.user)
+
     def has_access_role(self) -> bool:
         """Return whether the user holds a role through accesses on a live item."""
         # Based on accesses only so that anonymous users granted by a link
@@ -111,7 +118,7 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods,too-many-instanc
 
     def can_move(self) -> bool:
         """Return whether the user can move the item: a restricted folder must stay at the root."""
-        return self.can_manage() and not self.is_restricted
+        return self.can_manage() and not self.is_restricted and self.can_reach_target
 
     def can_update(self) -> bool:
         """Return whether the user can modify the item."""
@@ -188,7 +195,7 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods,too-many-instanc
 
     def can_favorite(self) -> bool:
         """Return whether the user can mark the item as favorite."""
-        return self.can_get() and self.user.is_authenticated
+        return self.can_get() and self.user.is_authenticated and self.can_reach_target
 
     def can_invite_owner(self) -> bool:
         """Return whether the user can invite another owner on the item."""

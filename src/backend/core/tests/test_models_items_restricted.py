@@ -409,21 +409,6 @@ def test_models_items_restricted_unrestrict_follows_moved_restriction():
     assert str(folder.path) == f"{other.id!s}.{folder.id!s}"
 
 
-def test_models_items_restricted_unrestrict_without_live_restriction():
-    """Deactivating restriction leaves the folder at the root when its restriction is trashed."""
-    user = factories.UserFactory()
-    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
-    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
-    folder = folder.restrict(user)
-    parent.soft_delete()
-
-    folder = folder.unrestrict()
-
-    assert folder.is_restricted is False
-    assert str(folder.path) == str(folder.id)
-    assert not models.Item.objects.filter(target=folder).exists()
-
-
 def test_models_items_restricted_unrestrict_removes_redundant_access():
     """Deactivating restriction removes explicit accesses inferior or equal to inherited."""
     parent_owner = factories.UserFactory()
@@ -440,6 +425,26 @@ def test_models_items_restricted_unrestrict_removes_redundant_access():
 
     assert not models.ItemAccess.objects.filter(item=folder, user=parent_owner).exists()
     assert folder.get_role(parent_owner) == models.RoleChoices.OWNER
+
+
+def test_models_items_restricted_unrestrict_removes_redundant_access_in_subtree():
+    """Deactivating restriction removes redundant explicit accesses in the whole subtree."""
+    reader = factories.UserFactory()
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(reader, models.RoleChoices.READER), (user, models.RoleChoices.OWNER)],
+    )
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    child = factories.ItemFactory(parent=folder, type=models.ItemTypeChoices.FOLDER)
+    factories.UserItemAccessFactory(item=child, user=reader, role="reader")
+
+    folder.unrestrict()
+
+    child.refresh_from_db()
+    assert not models.ItemAccess.objects.filter(item=child, user=reader).exists()
+    assert child.get_role(reader) == models.RoleChoices.READER
 
 
 def test_models_items_restricted_unrestrict_keeps_superior_access():
@@ -522,6 +527,30 @@ def test_models_items_restricted_unrestrict_resets_redundant_link_reach():
     folder = folder.unrestrict()
 
     assert folder.link_reach is None
+
+
+def test_models_items_restricted_unrestrict_resets_redundant_link_reach_in_subtree():
+    """Deactivating restriction resets redundant link reaches in the whole subtree."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=LinkReachChoices.PUBLIC,
+        link_role="reader",
+        users=[(user, "owner")],
+    )
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    child = factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=LinkReachChoices.PUBLIC,
+        link_role="reader",
+    )
+
+    folder.unrestrict()
+
+    child.refresh_from_db()
+    assert child.link_reach is None
 
 
 def test_models_items_restricted_unrestrict_keeps_superior_link_reach():

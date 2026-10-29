@@ -741,10 +741,14 @@ class ItemViewSet(
     def perform_destroy(self, instance):
         """Override to implement a soft delete instead of dumping the record in database."""
         if instance.type == models.ItemTypeChoices.RESTRICTION:
-            instance.detach()
-        else:
-            instance.soft_delete()
-            posthog_capture("item_deleted", self.request.user, {}, item=instance)
+            # The owner of the restricted folder deletes the folder itself,
+            # anyone else only lifts the restriction out of their folder
+            if instance.target.get_role(self.request.user) != models.RoleChoices.OWNER:
+                instance.detach()
+                return
+            instance = instance.target
+        instance.soft_delete(self.request.user)
+        posthog_capture("item_deleted", self.request.user, {}, item=instance)
 
     def perform_update(self, serializer):
         """Override to check if a file is renamed in order to rename file on storage."""
@@ -1091,6 +1095,12 @@ class ItemViewSet(
             self.queryset.select_related("creator")
             .annotate_has_restriction()
             .filter(deleted_at__gte=models.get_trashbin_cutoff())
+            .exclude(type=models.ItemTypeChoices.RESTRICTION)
+            # Restricted folders trashed along their tree come back with it
+            .exclude(
+                restriction__deleted_at__isnull=True,
+                restriction__ancestors_deleted_at__isnull=False,
+            )
             .trashed_owned_by(user)
         )
 
@@ -1106,6 +1116,22 @@ class ItemViewSet(
         queryset = queryset.annotate_with_numchild()
 
         return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
+
+    def _lift_restriction_moved_to_root(self, restriction, user):
+        """Lift the restriction of a folder its owner moves to the root, refuse anyone else."""
+        # The folder already lives at the root: dropping the restriction is the
+        # whole move. Nobody else can take a folder they do not own out of the tree.
+        if restriction.target.get_role(user) != models.RoleChoices.OWNER:
+            raise drf.exceptions.ValidationError(
+                {
+                    "target_item_id": (
+                        "Only an owner of the restricted folder can move it to the root."
+                    )
+                },
+                code="item_move_restriction_to_root_forbidden",
+            )
+        restriction.detach()
+        posthog_capture("item_moved", user, {}, item=restriction.target)
 
     @drf.decorators.action(detail=True, methods=["post"])
     @transaction.atomic
@@ -1146,6 +1172,12 @@ class ItemViewSet(
             posthog_capture("item_move_missing_permission", user, {}, item=item)
             raise drf.exceptions.ValidationError(
                 {"target_item_id": message}, code="item_move_missing_permission"
+            )
+
+        if item.type == models.ItemTypeChoices.RESTRICTION and not target_item:
+            self._lift_restriction_moved_to_root(item, user)
+            return drf.response.Response(
+                {"message": "item moved successfully."}, status=status.HTTP_200_OK
             )
 
         # Moving a file to the root without a direct access reassigns its creator
@@ -1269,9 +1301,27 @@ class ItemViewSet(
             .annotate(count=db.Count("id"))
             .values("count")
         )
+        # A restriction entry reports the accesses of its target, a root whose
+        # direct accesses are all its accesses
+        nb_target_accesses = (
+            models.ItemAccess.objects.filter(item_id=db.OuterRef("target_id"))
+            .order_by()
+            .values("item_id")
+            .annotate(count=db.Count("id"))
+            .values("count")
+        )
         queryset = queryset.annotate(
-            _nb_accesses=db.Value(item_nb_accesses)
-            + Coalesce(db.Subquery(nb_direct_accesses, output_field=db.IntegerField()), 0),
+            _nb_accesses=db.Case(
+                db.When(
+                    type=models.ItemTypeChoices.RESTRICTION,
+                    then=Coalesce(
+                        db.Subquery(nb_target_accesses, output_field=db.IntegerField()), 0
+                    ),
+                ),
+                default=db.Value(item_nb_accesses)
+                + Coalesce(db.Subquery(nb_direct_accesses, output_field=db.IntegerField()), 0),
+                output_field=db.IntegerField(),
+            ),
         )
 
         # Pass ancestors' links paths mapping to the serializer as a context variable
@@ -1447,6 +1497,7 @@ class ItemViewSet(
             .annotate_user_roles(request.user)
             .annotate_user_has_direct_access(request.user)
             .annotate_user_has_link_trace(request.user)
+            .with_restriction_target(request.user)
             .annotate_has_restriction()
             .annotate(has_restricted_descendent=db.Exists(restrictions))
         )

@@ -1556,6 +1556,13 @@ class Item(TreeModel, BaseModel):
         Read the cached number of accesses of many items in a single cache round trip,
         items missing from the cache compute it when their `nb_accesses` is read.
         """
+        # A restriction reports the accesses of its target
+        items = [
+            item.target
+            if item.type == ItemTypeChoices.RESTRICTION and not hasattr(item, "_nb_accesses")
+            else item
+            for item in items
+        ]
         items_by_cache_key = {
             item.get_nb_accesses_cache_key(): item
             for item in items
@@ -1572,6 +1579,8 @@ class Item(TreeModel, BaseModel):
         try:
             return self._nb_accesses
         except AttributeError:
+            if self.type == ItemTypeChoices.RESTRICTION:
+                return self.target.nb_accesses
             cache_key = self.get_nb_accesses_cache_key()
             nb_accesses = cache.get(cache_key)
 
@@ -1632,6 +1641,25 @@ class Item(TreeModel, BaseModel):
             roles = get_permissions_backend().roles_for(user, self)
 
         return RoleChoices.max(*roles)
+
+    def is_accessible_by(self, user):
+        """Return whether the user can open this root item, through an access or its link."""
+        if user is not None and user.is_authenticated:
+            # Prefetched by with_restriction_target, see viewer_accesses
+            accesses = getattr(self, "viewer_accesses", None)
+            if accesses is None:
+                has_access = ItemAccess.objects.filter(
+                    models.Q(user=user) | models.Q(team__in=user.teams), item=self
+                ).exists()
+            else:
+                has_access = bool(accesses)
+            if has_access:
+                return True
+        return self.link_reach == LinkReachChoices.PUBLIC or (
+            self.link_reach == LinkReachChoices.AUTHENTICATED
+            and user is not None
+            and user.is_authenticated
+        )
 
     def compute_ancestors_links_paths_mapping(self):
         """
@@ -1866,8 +1894,30 @@ class Item(TreeModel, BaseModel):
 
         self.send_email(subject, [email], context, language)
 
+    def _trash_subtree(self, user):
+        """Mark the descendants trashed, following restrictions to the folders the user owns."""
+        restrictions = list(
+            self.descendants()
+            .filter(type=ItemTypeChoices.RESTRICTION, ancestors_deleted_at__isnull=True)
+            .select_related("target")
+        )
+        self.descendants().filter(ancestors_deleted_at__isnull=True).update(
+            ancestors_deleted_at=self.ancestors_deleted_at,
+        )
+        # A restricted folder the user owns goes to the trash with the tree, like a
+        # child: it shares the timestamp so that restoring the tree brings it back.
+        # Otherwise the restriction is lifted and the folder stays with its owners.
+        for restriction in restrictions:
+            target = restriction.target
+            if user is None or target.get_role(user) != RoleChoices.OWNER:
+                restriction.detach()
+                continue
+            target.deleted_at = target.ancestors_deleted_at = self.deleted_at
+            target.save(update_fields=["deleted_at", "ancestors_deleted_at"])
+            target._trash_subtree(user)  # noqa: SLF001  # pylint: disable=protected-access
+
     @transaction.atomic
-    def soft_delete(self):
+    def soft_delete(self, user=None):
         """
         Soft delete the item, marking the deletion on descendants.
         We still keep the .delete() method untouched for programmatic purposes.
@@ -1897,9 +1947,7 @@ class Item(TreeModel, BaseModel):
 
         # Mark all descendants as soft deleted
         if self.type == ItemTypeChoices.FOLDER:
-            self.descendants().filter(ancestors_deleted_at__isnull=True).update(
-                ancestors_deleted_at=self.ancestors_deleted_at,
-            )
+            self._trash_subtree(user)
 
     def hard_delete(self):
         """
@@ -1939,6 +1987,19 @@ class Item(TreeModel, BaseModel):
         self.hard_deleted_at = timezone.now()
         self.save(update_fields=["hard_deleted_at"])
 
+        # The restricted folders trashed along the tree go with it
+        for restriction in (
+            self.descendants()
+            .filter(
+                type=ItemTypeChoices.RESTRICTION,
+                deleted_at__isnull=True,
+                target__deleted_at=self.deleted_at,
+                target__hard_deleted_at__isnull=True,
+            )
+            .select_related("target")
+        ):
+            restriction.target.hard_delete()
+
         # Mark all descendants as hard deleted
         self.descendants().update(hard_deleted_at=self.hard_deleted_at)
 
@@ -1946,6 +2007,26 @@ class Item(TreeModel, BaseModel):
         self._meta.model.objects.filter(target=self).update(hard_deleted_at=self.hard_deleted_at)
 
         transaction.on_commit(lambda: invalidate_storage_used_cache(creator_ids))
+
+    def _restore_subtree(self, deleted_at):
+        """Clear the descendants trashed at the given time, with the folders trashed along."""
+        self.descendants().exclude(
+            models.Q(deleted_at__isnull=False) | models.Q(ancestors_deleted_at__lt=deleted_at)
+        ).update(ancestors_deleted_at=None)
+
+        for restriction in (
+            self.descendants()
+            .filter(
+                type=ItemTypeChoices.RESTRICTION,
+                ancestors_deleted_at__isnull=True,
+                target__deleted_at=deleted_at,
+            )
+            .select_related("target")
+        ):
+            target = restriction.target
+            target.deleted_at = target.ancestors_deleted_at = None
+            target.save(update_fields=["deleted_at", "ancestors_deleted_at"])
+            target._restore_subtree(deleted_at)  # noqa: SLF001  # pylint: disable=protected-access
 
     @transaction.atomic
     def restore(self):
@@ -1995,20 +2076,24 @@ class Item(TreeModel, BaseModel):
 
         self.save(update_fields=["deleted_at", "ancestors_deleted_at"])
 
-        self.descendants().exclude(
-            models.Q(deleted_at__isnull=False)
-            | models.Q(ancestors_deleted_at__lt=current_deleted_at)
-        ).update(ancestors_deleted_at=None)
+        self._restore_subtree(current_deleted_at)
 
-        # Bring back the restriction trashed along the restricted folder, unless
-        # its own subtree went to the trash meanwhile
+        # Bring back the restriction trashed along the restricted folder. Restored
+        # out of a trashed tree, the folder becomes a plain root instead.
         restriction = self._meta.model.objects.filter(
-            target=self, deleted_at=current_deleted_at
+            target=self, ancestors_deleted_at__isnull=False
         ).first()
-        if restriction and not restriction.ancestors().filter(deleted_at__isnull=False).exists():
+        if restriction is None:
+            return
+        if (
+            restriction.deleted_at == current_deleted_at
+            and not restriction.ancestors().filter(deleted_at__isnull=False).exists()
+        ):
             self._meta.model.objects.filter(pk=restriction.pk).update(
                 deleted_at=None, ancestors_deleted_at=None
             )
+        else:
+            restriction.detach()
 
     @transaction.atomic
     def move(self, target):
@@ -2031,6 +2116,16 @@ class Item(TreeModel, BaseModel):
                     "target": ValidationError(
                         _("A restricted folder cannot be moved"),
                         code="item_move_restricted",
+                    )
+                }
+            )
+
+        if self.type == ItemTypeChoices.RESTRICTION and target is None:
+            raise ValidationError(
+                {
+                    "target": ValidationError(
+                        _("A restriction cannot be moved to the root"),
+                        code="item_move_restriction_to_root",
                     )
                 }
             )
@@ -2210,8 +2305,15 @@ class Item(TreeModel, BaseModel):
             )
             item.save(update_fields=["title", "updated_at"])
             item.move(parent)
-            item._normalize_explicit_accesses()  # noqa: SLF001  # pylint: disable=protected-access
-            item._normalize_explicit_link_reach()  # noqa: SLF001  # pylint: disable=protected-access
+            # Inheritance flows down again: the subtree gets normalized along, top
+            # down since a parent reset changes what its children inherit.
+            # ponytail: a few queries per item carrying explicit settings
+            explicit = item.descendants().filter(
+                models.Q(accesses__isnull=False) | models.Q(link_reach__isnull=False)
+            )
+            for node in [item, *explicit.distinct().order_by("path")]:
+                node._normalize_explicit_accesses()  # noqa: SLF001  # pylint: disable=protected-access
+                node._normalize_explicit_link_reach()  # noqa: SLF001  # pylint: disable=protected-access
 
         item.invalidate_nb_accesses_cache()
 

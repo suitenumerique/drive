@@ -180,6 +180,184 @@ def test_api_items_restrictions_delete_detaches_the_target():
     assert models.ItemAccess.objects.filter(item=folder, user=owner, role="owner").exists()
 
 
+def test_api_items_restrictions_delete_by_target_owner_trashes_the_target():
+    """Deleting a restriction as owner of the target sends the target to the trash."""
+    owner = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(owner, "owner")],
+    )
+    folder = _create_restricted_folder(parent, owner)
+    restriction = folder.restriction
+
+    client = APIClient()
+    client.force_login(owner)
+
+    response = client.delete(f"/api/v1.0/items/{restriction.id!s}/")
+
+    assert response.status_code == 204
+    folder.refresh_from_db()
+    assert folder.deleted_at is not None
+
+    response = client.get("/api/v1.0/items/trashbin/")
+    assert [item["id"] for item in response.json()["results"]] == [str(folder.id)]
+
+
+def test_api_items_restrictions_parent_delete_lifts_unowned_restrictions():
+    """Trashing a parent lifts the restrictions whose target the user does not own."""
+    parent_owner = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(parent_owner, "owner")],
+    )
+    folder = _create_restricted_folder(parent, factories.UserFactory())
+    restriction = folder.restriction
+
+    client = APIClient()
+    client.force_login(parent_owner)
+
+    response = client.delete(f"/api/v1.0/items/{parent.id!s}/")
+
+    assert response.status_code == 204
+    assert not models.Item.objects.filter(pk=restriction.pk).exists()
+    folder.refresh_from_db()
+    assert folder.is_restricted is False
+    assert folder.deleted_at is None
+    assert folder.ancestors_deleted_at is None
+
+    response = client.post(f"/api/v1.0/items/{parent.id!s}/restore/")
+
+    assert response.status_code == 200
+    folder.refresh_from_db()
+    assert folder.is_restricted is False
+    assert str(folder.path) == str(folder.id)
+
+
+def test_api_items_restrictions_parent_delete_trashes_owned_targets():
+    """Trashing a parent trashes along the restricted folders the user owns, as children."""
+    owner = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(owner, "owner")],
+    )
+    folder = _create_restricted_folder(parent, owner)
+
+    client = APIClient()
+    client.force_login(owner)
+
+    response = client.delete(f"/api/v1.0/items/{parent.id!s}/")
+
+    assert response.status_code == 204
+    parent.refresh_from_db()
+    folder.refresh_from_db()
+    assert folder.is_restricted is True
+    assert folder.deleted_at == parent.deleted_at
+    assert folder.ancestors_deleted_at == parent.deleted_at
+
+    response = client.get("/api/v1.0/items/trashbin/")
+    assert [item["id"] for item in response.json()["results"]] == [str(parent.id)]
+
+    response = client.post(f"/api/v1.0/items/{parent.id!s}/restore/")
+
+    assert response.status_code == 200
+    folder.refresh_from_db()
+    assert folder.is_restricted is True
+    assert folder.ancestors_deleted_at is None
+
+
+def test_api_items_restrictions_move_to_root_lifts_the_restriction():
+    """Moving a restriction to the root lifts it, the folder becomes a plain root."""
+    owner = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(owner, "owner")],
+    )
+    folder = _create_restricted_folder(parent, owner)
+    restriction = folder.restriction
+
+    client = APIClient()
+    client.force_login(owner)
+
+    response = client.post(f"/api/v1.0/items/{restriction.id!s}/move/", data={})
+
+    assert response.status_code == 200
+    assert not models.Item.objects.filter(pk=restriction.pk).exists()
+    folder.refresh_from_db()
+    assert folder.is_restricted is False
+    assert str(folder.path) == str(folder.id)
+
+    response = client.get("/api/v1.0/items/")
+    assert {item["id"] for item in response.json()["results"]} == {
+        str(parent.id),
+        str(folder.id),
+    }
+
+
+def test_api_items_restrictions_move_to_root_forbidden_without_target_ownership():
+    """Only an owner of the restricted folder can move its restriction to the root."""
+    parent_owner = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(parent_owner, "owner")],
+    )
+    folder = _create_restricted_folder(parent, factories.UserFactory())
+    factories.UserItemAccessFactory(item=folder, user=parent_owner, role="reader")
+    restriction = folder.restriction
+
+    client = APIClient()
+    client.force_login(parent_owner)
+
+    response = client.post(f"/api/v1.0/items/{restriction.id!s}/move/", data={})
+
+    assert response.status_code == 400
+    restriction.refresh_from_db()
+    assert str(restriction.path) == f"{parent.path!s}.{restriction.id!s}"
+    folder.refresh_from_db()
+    assert folder.is_restricted is True
+
+
+@pytest.mark.parametrize("ability", ["favorite", "move"])
+def test_api_items_restrictions_abilities_require_target_access(ability):
+    """Favorite and move on a restriction follow the user's access to its target."""
+    parent_owner = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(parent_owner, "owner")],
+    )
+    folder = _create_restricted_folder(parent, factories.UserFactory())
+
+    client = APIClient()
+    client.force_login(parent_owner)
+
+    response = client.get(f"/api/v1.0/items/{parent.id!s}/children/")
+
+    assert response.status_code == 200
+    assert response.json()["results"][0]["abilities"][ability] is False
+
+    factories.UserItemAccessFactory(item=folder, user=parent_owner, role="reader")
+    response = client.get(f"/api/v1.0/items/{parent.id!s}/children/")
+
+    assert response.json()["results"][0]["abilities"][ability] is True
+
+
+def test_api_items_restrictions_children_list_nb_accesses_from_target():
+    """A restriction entry reports the accesses of its target, not of its container."""
+    owner = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(owner, "owner"), (factories.UserFactory(), "reader")],
+    )
+    _create_restricted_folder(parent, owner)
+
+    client = APIClient()
+    client.force_login(owner)
+
+    response = client.get(f"/api/v1.0/items/{parent.id!s}/children/")
+
+    assert response.status_code == 200
+    assert response.json()["results"][0]["nb_accesses"] == 1
+
+
 def test_api_items_restrictions_delete_forbidden_for_reader():
     """A reader of the containing folder cannot detach a restriction."""
     reader = factories.UserFactory()
