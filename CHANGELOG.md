@@ -16,6 +16,7 @@ and this project adheres to
 - 🔊(backend) log rejected WOPI requests
 - ✨(backend) browse the item tree and its accesses from the admin
 - ✨(backend) list the root items of a user in the admin
+- ✨(frontend) allow to configure the waffle from the theme customization file #944
 
 ### Changed
 

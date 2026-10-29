@@ -5,6 +5,7 @@ import {
 } from "../../cunningham/useCunninghamTheme";
 import { useConfig } from "@/features/config/ConfigProvider";
 import { useAppContext } from "@/pages/_app";
+import { resolveGaufreProps } from "./resolveGaufreProps";
 
 export const Gaufre = () => {
   const { config } = useConfig();
@@ -20,9 +21,11 @@ export const Gaufre = () => {
 
   return (
     <LaGaufreV2
-      widgetPath={widgetPath}
-      apiUrl={apiUrl}
-      showMoreLimit={themeName.includes("anct") ? 100 : 6}
+      {...resolveGaufreProps(config?.theme_customization?.waffle, {
+        widgetPath,
+        apiUrl,
+        showMoreLimit: themeName.includes("anct") ? 100 : 6,
+      })}
     />
   );
 };
