@@ -1122,6 +1122,19 @@ class ItemViewSet(
 
         return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
+    def _check_restriction_moved_to_root(self, restriction, user):
+        """Refuse to lift a restriction unless the user owns the restricted folder."""
+        # Nobody takes a folder they do not own out of the tree
+        if restriction.target.get_role(user) != models.RoleChoices.OWNER:
+            raise drf.exceptions.ValidationError(
+                {
+                    "target_item_id": (
+                        "Only an owner of the restricted folder can move it to the root."
+                    )
+                },
+                code="item_move_restriction_to_root_forbidden",
+            )
+
     @drf.decorators.action(detail=True, methods=["post"])
     @transaction.atomic
     def move(self, request, *args, **kwargs):
@@ -1161,6 +1174,15 @@ class ItemViewSet(
             posthog_capture("item_move_missing_permission", user, {}, item=item)
             raise drf.exceptions.ValidationError(
                 {"target_item_id": message}, code="item_move_missing_permission"
+            )
+
+        if item.type == models.ItemTypeChoices.RESTRICTION and not target_item:
+            # Lifting the restriction is the whole move, no entry is left to update
+            self._check_restriction_moved_to_root(item, user)
+            item.move(None)
+            posthog_capture("item_moved", user, {}, item=item.target)
+            return drf.response.Response(
+                {"message": "item moved successfully."}, status=status.HTTP_200_OK
             )
 
         # Moving a file to the root without a direct access reassigns its creator

@@ -2114,6 +2114,11 @@ class Item(TreeModel, BaseModel):
                 }
             )
 
+        if self.type == ItemTypeChoices.RESTRICTION and target is None:
+            # The folder already lives at the root: dropping the restriction is the whole move
+            self.detach()
+            return
+
         if (
             self.type == ItemTypeChoices.RESTRICTION
             and target

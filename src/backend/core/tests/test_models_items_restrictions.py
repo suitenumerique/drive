@@ -63,6 +63,22 @@ def test_models_items_restrictions_move_rejects_own_target_subtree():
         restriction.move(folder)
 
 
+def test_models_items_restrictions_move_to_root_lifts_the_restriction():
+    """Moving a restriction to the root lifts it, the target stays a root folder."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    restriction = folder.restriction
+
+    restriction.move(None)
+
+    assert not models.Item.objects.filter(pk=restriction.pk).exists()
+    folder.refresh_from_db()
+    assert folder.is_restricted is False
+    assert str(folder.path) == str(folder.id)
+
+
 def test_models_items_restrictions_detach_deletes_the_row():
     """Detaching a restriction deletes its row, the target becomes a plain root folder."""
     user = factories.UserFactory()
