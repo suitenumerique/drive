@@ -78,7 +78,8 @@ def test_deletion_info_query_count():
     """Selection size adds neither permission nor descendant queries."""
     client, parent, child, target, entry, file = setup_selection()
     counts = []
-    for items in [[child], [parent, child, target, entry, file]]:
+    # A restriction entry in each selection: its target is prefetched in one query
+    for items in [[entry], [parent, child, target, entry, file]]:
         with CaptureQueriesContext(connection) as queries:
             response = client.post(URL, {"ids": [str(item.pk) for item in items]}, format="json")
         assert response.status_code == 200

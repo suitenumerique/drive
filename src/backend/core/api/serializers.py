@@ -10,7 +10,6 @@ from datetime import timedelta
 from urllib.parse import quote
 
 from django.conf import settings
-from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -240,16 +239,7 @@ class RestrictionTargetSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if not request:
             return {}
-        # Targets are roots, so the prefetched direct accesses contain all their roles.
-        accesses = getattr(target, "viewer_accesses", None)
-        if accesses is not None:
-            target.user_roles = [access.role for access in accesses]
-            target.user_has_direct_access = bool(accesses)
-        link_traces = getattr(target, "viewer_link_traces", None)
-        if link_traces is not None:
-            target.user_has_link_trace = bool(link_traces)
-        target.has_restriction = True
-        return target.get_abilities(request.user)
+        return target.as_restriction_target().get_abilities(request.user)
 
     def get_deleted(self, target) -> bool:
         """Return whether the target is in the trash."""
@@ -261,24 +251,7 @@ class RestrictionTargetSerializer(serializers.ModelSerializer):
 
     def get_can_access(self, target) -> bool:
         """Return whether the request user can open the target."""
-        request = self.context.get("request")
-        user = request.user if request else None
-        if user is not None and user.is_authenticated:
-            accesses = getattr(target, "viewer_accesses", None)
-            if accesses is None:
-                has_access = models.ItemAccess.objects.filter(
-                    Q(user=user) | Q(team__in=user.teams),
-                    item=target,
-                ).exists()
-            else:
-                has_access = bool(accesses)
-            if has_access:
-                return True
-        return target.link_reach == LinkReachChoices.PUBLIC or (
-            target.link_reach == LinkReachChoices.AUTHENTICATED
-            and user is not None
-            and user.is_authenticated
-        )
+        return self.get_abilities(target).get("retrieve", False)
 
 
 class ItemListSerializer(serializers.ListSerializer):

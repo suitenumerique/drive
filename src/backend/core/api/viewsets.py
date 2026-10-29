@@ -1484,6 +1484,7 @@ class ItemViewSet(
             .annotate_user_roles(request.user)
             .annotate_user_has_direct_access(request.user)
             .annotate_user_has_link_trace(request.user)
+            .with_restriction_target(request.user)
             .annotate_has_restriction()
             .annotate(has_restricted_descendent=db.Exists(restrictions))
         )

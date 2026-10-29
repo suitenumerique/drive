@@ -301,6 +301,7 @@ def test_api_items_restrictions_move_to_root_forbidden_without_target_ownership(
         users=[(parent_owner, "owner")],
     )
     folder = _create_restricted_folder(parent, factories.UserFactory())
+    factories.UserItemAccessFactory(item=folder, user=parent_owner, role="reader")
     restriction = folder.restriction
 
     client = APIClient()
@@ -313,6 +314,30 @@ def test_api_items_restrictions_move_to_root_forbidden_without_target_ownership(
     assert str(restriction.path) == f"{parent.path!s}.{restriction.id!s}"
     folder.refresh_from_db()
     assert folder.is_restricted is True
+
+
+@pytest.mark.parametrize("ability", ["favorite", "move"])
+def test_api_items_restrictions_abilities_require_target_access(ability):
+    """Favorite and move on a restriction follow the user's access to its target."""
+    parent_owner = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(parent_owner, "owner")],
+    )
+    folder = _create_restricted_folder(parent, factories.UserFactory())
+
+    client = APIClient()
+    client.force_login(parent_owner)
+
+    response = client.get(f"/api/v1.0/items/{parent.id!s}/children/")
+
+    assert response.status_code == 200
+    assert response.json()["results"][0]["abilities"][ability] is False
+
+    factories.UserItemAccessFactory(item=folder, user=parent_owner, role="reader")
+    response = client.get(f"/api/v1.0/items/{parent.id!s}/children/")
+
+    assert response.json()["results"][0]["abilities"][ability] is True
 
 
 def test_api_items_restrictions_delete_forbidden_for_reader():

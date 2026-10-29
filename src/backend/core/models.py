@@ -1655,6 +1655,20 @@ class Item(TreeModel, BaseModel):
 
         return RoleChoices.max(*roles)
 
+    def as_restriction_target(self):
+        """Annotate this restriction target from what with_restriction_target prefetched."""
+        # pylint: disable=attribute-defined-outside-init
+        # Targets are roots, so the prefetched direct accesses contain all their roles
+        accesses = getattr(self, "viewer_accesses", None)
+        if accesses is not None:
+            self.user_roles = [access.role for access in accesses]
+            self.user_has_direct_access = bool(accesses)
+        link_traces = getattr(self, "viewer_link_traces", None)
+        if link_traces is not None:
+            self.user_has_link_trace = bool(link_traces)
+        self.has_restriction = True
+        return self
+
     def compute_ancestors_links_paths_mapping(self):
         """
         Compute the ancestors links for the current item up to the highest readable ancestor.
