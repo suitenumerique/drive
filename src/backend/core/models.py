@@ -2092,6 +2092,16 @@ class Item(TreeModel, BaseModel):
                 }
             )
 
+        if self.type == ItemTypeChoices.RESTRICTION and target is None:
+            raise ValidationError(
+                {
+                    "target": ValidationError(
+                        _("A restriction cannot be moved to the root"),
+                        code="item_move_restriction_to_root",
+                    )
+                }
+            )
+
         if (
             self.type == ItemTypeChoices.RESTRICTION
             and target
