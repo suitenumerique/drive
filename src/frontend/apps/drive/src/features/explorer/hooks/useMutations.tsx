@@ -114,14 +114,14 @@ export const useMutationRenameItem = () => {
         return;
       }
 
-      refreshItemCache(variables.id);
+      void refreshItemCache(variables.id);
     },
 
     onSuccess: (_, itemUpdated) => {
       if (!itemUpdated?.id) {
         return;
       }
-      refreshItemCache(itemUpdated.id, itemUpdated);
+      void refreshItemCache(itemUpdated.id, itemUpdated);
     },
   });
 };
@@ -349,7 +349,7 @@ export const useMutationCreateFavoriteItem = () => {
     },
     onSuccess: (_, itemId: string) => {
       refreshFavoriteCache(itemId, true);
-      refreshItemCache(itemId, { is_favorite: true });
+      void refreshItemCache(itemId, { is_favorite: true });
     },
   });
 };
@@ -374,7 +374,7 @@ export const useMutationDeleteFavoriteItem = () => {
       );
       treeContext?.treeData.deleteNode(rootFavoriteTreeId);
       removeItems(["items", "infinite"], [itemId]);
-      refreshItemCache(itemId, { is_favorite: false });
+      void refreshItemCache(itemId, { is_favorite: false });
       refreshFavoriteCache(itemId, false);
     },
   });
