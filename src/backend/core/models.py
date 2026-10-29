@@ -1211,6 +1211,10 @@ class ItemManager(TreeManager.from_queryset(ItemQuerySet)):
         """
         return self.get_queryset().readable_per_se(user)
 
+    def create(self, **kwargs):
+        """Create an item with the given path, TreeManager.create would replace it."""
+        return self.get_queryset().create(**kwargs)
+
     def create_child(self, parent=None, **kwargs):
         """
         Check if the item can have children before adding one and if the title is
@@ -1301,6 +1305,9 @@ class Item(TreeModel, BaseModel):
         default=dict,
         help_text=_("Malware detection info when the analysis status is unsafe."),
     )
+
+    # Keep the path required, TreeModel declares it nullable
+    path = PathField(unique=True)
 
     label_size = 7
 
@@ -1409,19 +1416,20 @@ class Item(TreeModel, BaseModel):
             return
         transaction.on_commit(lambda: invalidate_storage_used_cache([self.creator_id]))
 
-    def delete(self, using=None, keep_parents=False):
+    def delete(self, using=None, keep_parents=False):  # pylint: disable=arguments-differ,arguments-renamed
         if self.deleted_at is None and self.ancestors_deleted_at is None:
             raise RuntimeError("The item must be soft deleted before being deleted.")
 
-        return super().delete(using, keep_parents)
+        # Skip TreeModel.delete, it moves the children under the parent
+        return models.Model.delete(self, using, keep_parents)
 
     def ancestors(self):
         """Return the ancestors of the item excluding the item itself."""
-        return super().ancestors().exclude(id=self.id)
+        return Item.objects.filter(path__ancestors=self.path).exclude(id=self.id)
 
     def descendants(self):
         """Return the descendants of the item excluding the item itself."""
-        return super().descendants().exclude(id=self.id)
+        return Item.objects.filter(path__descendants=self.path).exclude(id=self.id)
 
     def children(self):
         """
@@ -1429,6 +1437,17 @@ class Item(TreeModel, BaseModel):
         rather than among all its descendants, see ParentPath.
         """
         return Item.objects.alias(parent_path=ParentPath("path")).filter(parent_path=self.path)
+
+    def siblings(self):
+        """
+        Return the other children of the parent of the item, looked up on the parent
+        path index like children.
+        """
+        return (
+            Item.objects.alias(parent_path=ParentPath("path"))
+            .filter(parent_path=str(self.path[:-1]))
+            .exclude(id=self.id)
+        )
 
     def set_quota_excluded(self, value):
         """Set quota_excluded on the item and its descendants, return the updated count."""
