@@ -2277,8 +2277,15 @@ class Item(TreeModel, BaseModel):
             )
             item.save(update_fields=["title", "updated_at"])
             item.move(parent)
-            item._normalize_explicit_accesses()  # noqa: SLF001  # pylint: disable=protected-access
-            item._normalize_explicit_link_reach()  # noqa: SLF001  # pylint: disable=protected-access
+            # Inheritance flows down again: the subtree gets normalized along, top
+            # down since a parent reset changes what its children inherit.
+            # ponytail: a few queries per item carrying explicit settings
+            explicit = item.descendants().filter(
+                models.Q(accesses__isnull=False) | models.Q(link_reach__isnull=False)
+            )
+            for node in [item, *explicit.distinct().order_by("path")]:
+                node._normalize_explicit_accesses()  # noqa: SLF001  # pylint: disable=protected-access
+                node._normalize_explicit_link_reach()  # noqa: SLF001  # pylint: disable=protected-access
 
         item.invalidate_nb_accesses_cache()
 

@@ -427,6 +427,26 @@ def test_models_items_restricted_unrestrict_removes_redundant_access():
     assert folder.get_role(parent_owner) == models.RoleChoices.OWNER
 
 
+def test_models_items_restricted_unrestrict_removes_redundant_access_in_subtree():
+    """Deactivating restriction removes redundant explicit accesses in the whole subtree."""
+    reader = factories.UserFactory()
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(reader, models.RoleChoices.READER), (user, models.RoleChoices.OWNER)],
+    )
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    child = factories.ItemFactory(parent=folder, type=models.ItemTypeChoices.FOLDER)
+    factories.UserItemAccessFactory(item=child, user=reader, role="reader")
+
+    folder.unrestrict()
+
+    child.refresh_from_db()
+    assert not models.ItemAccess.objects.filter(item=child, user=reader).exists()
+    assert child.get_role(reader) == models.RoleChoices.READER
+
+
 def test_models_items_restricted_unrestrict_keeps_superior_access():
     """Deactivating restriction keeps explicit accesses superior to inherited."""
     reader = factories.UserFactory()
@@ -507,6 +527,30 @@ def test_models_items_restricted_unrestrict_resets_redundant_link_reach():
     folder = folder.unrestrict()
 
     assert folder.link_reach is None
+
+
+def test_models_items_restricted_unrestrict_resets_redundant_link_reach_in_subtree():
+    """Deactivating restriction resets redundant link reaches in the whole subtree."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=LinkReachChoices.PUBLIC,
+        link_role="reader",
+        users=[(user, "owner")],
+    )
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    child = factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=LinkReachChoices.PUBLIC,
+        link_role="reader",
+    )
+
+    folder.unrestrict()
+
+    child.refresh_from_db()
+    assert child.link_reach is None
 
 
 def test_models_items_restricted_unrestrict_keeps_superior_link_reach():
