@@ -180,6 +180,29 @@ def test_api_items_restrictions_delete_detaches_the_target():
     assert models.ItemAccess.objects.filter(item=folder, user=owner, role="owner").exists()
 
 
+def test_api_items_restrictions_delete_by_target_owner_trashes_the_target():
+    """Deleting a restriction as owner of the target sends the target to the trash."""
+    owner = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(owner, "owner")],
+    )
+    folder = _create_restricted_folder(parent, owner)
+    restriction = folder.restriction
+
+    client = APIClient()
+    client.force_login(owner)
+
+    response = client.delete(f"/api/v1.0/items/{restriction.id!s}/")
+
+    assert response.status_code == 204
+    folder.refresh_from_db()
+    assert folder.deleted_at is not None
+
+    response = client.get("/api/v1.0/items/trashbin/")
+    assert [item["id"] for item in response.json()["results"]] == [str(folder.id)]
+
+
 def test_api_items_restrictions_delete_forbidden_for_reader():
     """A reader of the containing folder cannot detach a restriction."""
     reader = factories.UserFactory()
