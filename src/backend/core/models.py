@@ -1633,6 +1633,25 @@ class Item(TreeModel, BaseModel):
 
         return RoleChoices.max(*roles)
 
+    def is_accessible_by(self, user):
+        """Return whether the user can open this root item, through an access or its link."""
+        if user is not None and user.is_authenticated:
+            # Prefetched by with_restriction_target, see viewer_accesses
+            accesses = getattr(self, "viewer_accesses", None)
+            if accesses is None:
+                has_access = ItemAccess.objects.filter(
+                    models.Q(user=user) | models.Q(team__in=user.teams), item=self
+                ).exists()
+            else:
+                has_access = bool(accesses)
+            if has_access:
+                return True
+        return self.link_reach == LinkReachChoices.PUBLIC or (
+            self.link_reach == LinkReachChoices.AUTHENTICATED
+            and user is not None
+            and user.is_authenticated
+        )
+
     def compute_ancestors_links_paths_mapping(self):
         """
         Compute the ancestors links for the current item up to the highest readable ancestor.
