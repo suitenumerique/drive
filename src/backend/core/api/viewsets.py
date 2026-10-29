@@ -741,10 +741,14 @@ class ItemViewSet(
     def perform_destroy(self, instance):
         """Override to implement a soft delete instead of dumping the record in database."""
         if instance.type == models.ItemTypeChoices.RESTRICTION:
-            instance.detach()
-        else:
-            instance.soft_delete()
-            posthog_capture("item_deleted", self.request.user, {}, item=instance)
+            # The owner of the restricted folder deletes the folder itself,
+            # anyone else only lifts the restriction out of their folder
+            if instance.target.get_role(self.request.user) != models.RoleChoices.OWNER:
+                instance.detach()
+                return
+            instance = instance.target
+        instance.soft_delete()
+        posthog_capture("item_deleted", self.request.user, {}, item=instance)
 
     def perform_update(self, serializer):
         """Override to check if a file is renamed in order to rename file on storage."""
@@ -1091,6 +1095,7 @@ class ItemViewSet(
             self.queryset.select_related("creator")
             .annotate_has_restriction()
             .filter(deleted_at__gte=models.get_trashbin_cutoff())
+            .exclude(type=models.ItemTypeChoices.RESTRICTION)
             .trashed_owned_by(user)
         )
 
