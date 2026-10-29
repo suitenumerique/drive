@@ -1301,9 +1301,27 @@ class ItemViewSet(
             .annotate(count=db.Count("id"))
             .values("count")
         )
+        # A restriction entry reports the accesses of its target, a root whose
+        # direct accesses are all its accesses
+        nb_target_accesses = (
+            models.ItemAccess.objects.filter(item_id=db.OuterRef("target_id"))
+            .order_by()
+            .values("item_id")
+            .annotate(count=db.Count("id"))
+            .values("count")
+        )
         queryset = queryset.annotate(
-            _nb_accesses=db.Value(item_nb_accesses)
-            + Coalesce(db.Subquery(nb_direct_accesses, output_field=db.IntegerField()), 0),
+            _nb_accesses=db.Case(
+                db.When(
+                    type=models.ItemTypeChoices.RESTRICTION,
+                    then=Coalesce(
+                        db.Subquery(nb_target_accesses, output_field=db.IntegerField()), 0
+                    ),
+                ),
+                default=db.Value(item_nb_accesses)
+                + Coalesce(db.Subquery(nb_direct_accesses, output_field=db.IntegerField()), 0),
+                output_field=db.IntegerField(),
+            ),
         )
 
         # Pass ancestors' links paths mapping to the serializer as a context variable

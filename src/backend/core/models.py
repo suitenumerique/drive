@@ -1556,6 +1556,13 @@ class Item(TreeModel, BaseModel):
         Read the cached number of accesses of many items in a single cache round trip,
         items missing from the cache compute it when their `nb_accesses` is read.
         """
+        # A restriction reports the accesses of its target
+        items = [
+            item.target
+            if item.type == ItemTypeChoices.RESTRICTION and not hasattr(item, "_nb_accesses")
+            else item
+            for item in items
+        ]
         items_by_cache_key = {
             item.get_nb_accesses_cache_key(): item
             for item in items
@@ -1572,6 +1579,8 @@ class Item(TreeModel, BaseModel):
         try:
             return self._nb_accesses
         except AttributeError:
+            if self.type == ItemTypeChoices.RESTRICTION:
+                return self.target.nb_accesses
             cache_key = self.get_nb_accesses_cache_key()
             nb_accesses = cache.get(cache_key)
 

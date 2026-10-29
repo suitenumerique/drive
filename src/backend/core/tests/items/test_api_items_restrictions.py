@@ -340,6 +340,24 @@ def test_api_items_restrictions_abilities_require_target_access(ability):
     assert response.json()["results"][0]["abilities"][ability] is True
 
 
+def test_api_items_restrictions_children_list_nb_accesses_from_target():
+    """A restriction entry reports the accesses of its target, not of its container."""
+    owner = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(owner, "owner"), (factories.UserFactory(), "reader")],
+    )
+    _create_restricted_folder(parent, owner)
+
+    client = APIClient()
+    client.force_login(owner)
+
+    response = client.get(f"/api/v1.0/items/{parent.id!s}/children/")
+
+    assert response.status_code == 200
+    assert response.json()["results"][0]["nb_accesses"] == 1
+
+
 def test_api_items_restrictions_delete_forbidden_for_reader():
     """A reader of the containing folder cannot detach a restriction."""
     reader = factories.UserFactory()
