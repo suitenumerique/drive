@@ -88,8 +88,8 @@ def test_models_items_restrictions_detach_rejects_other_types():
         folder.detach()
 
 
-def test_models_items_restrictions_ancestor_soft_delete_trashes_them():
-    """Trashing an ancestor trashes the live restrictions of its subtree."""
+def test_models_items_restrictions_ancestor_soft_delete_trashes_owned_targets():
+    """Trashing an ancestor trashes along the restricted folders the user owns."""
     user = factories.UserFactory()
     grandparent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
     parent = factories.ItemFactory(
@@ -99,19 +99,39 @@ def test_models_items_restrictions_ancestor_soft_delete_trashes_them():
     folder = folder.restrict(user)
     restriction = folder.restriction
 
-    grandparent.soft_delete()
+    grandparent.soft_delete(user)
 
     restriction.refresh_from_db()
     assert restriction.deleted_at is None
-    assert restriction.ancestors_deleted_at is not None
+    assert restriction.ancestors_deleted_at == grandparent.deleted_at
     folder.refresh_from_db()
     assert folder.is_restricted is True
+    assert folder.deleted_at == grandparent.deleted_at
+    assert folder.ancestors_deleted_at == grandparent.deleted_at
+
+
+def test_models_items_restrictions_ancestor_soft_delete_lifts_unowned_restrictions():
+    """Trashing an ancestor lifts the restrictions whose target the user does not own."""
+    user = factories.UserFactory()
+    grandparent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(
+        parent=grandparent, type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")]
+    )
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    restriction = folder.restriction
+
+    grandparent.soft_delete(factories.UserFactory())
+
+    assert not models.Item.objects.filter(pk=restriction.pk).exists()
+    folder.refresh_from_db()
+    assert folder.is_restricted is False
     assert folder.deleted_at is None
     assert folder.ancestors_deleted_at is None
 
 
-def test_models_items_restrictions_ancestor_restore_brings_them_back():
-    """Restoring a trashed ancestor restores the restrictions of its subtree."""
+def test_models_items_restrictions_ancestor_restore_brings_owned_targets_back():
+    """Restoring a trashed ancestor restores the restricted folders trashed along."""
     user = factories.UserFactory()
     grandparent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
     parent = factories.ItemFactory(
@@ -120,7 +140,7 @@ def test_models_items_restrictions_ancestor_restore_brings_them_back():
     folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
     folder = folder.restrict(user)
     restriction = folder.restriction
-    grandparent.soft_delete()
+    grandparent.soft_delete(user)
 
     grandparent.restore()
 
@@ -129,7 +149,23 @@ def test_models_items_restrictions_ancestor_restore_brings_them_back():
     assert restriction.ancestors_deleted_at is None
     folder.refresh_from_db()
     assert folder.is_restricted is True
+    assert folder.deleted_at is None
+    assert folder.ancestors_deleted_at is None
     assert str(folder.path) == str(folder.id)
+
+
+def test_models_items_restrictions_ancestor_hard_delete_marks_owned_targets():
+    """Hard deleting a trashed ancestor hard deletes the restricted folders trashed along."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    parent.soft_delete(user)
+
+    parent.hard_delete()
+
+    folder.refresh_from_db()
+    assert folder.hard_deleted_at is not None
 
 
 def test_models_items_restrictions_target_soft_delete_trashes_its_restriction():
@@ -171,8 +207,8 @@ def test_models_items_restrictions_target_restore_restores_its_restriction():
     assert restriction.ancestors_deleted_at is None
 
 
-def test_models_items_restrictions_target_restore_leaves_restriction_in_trashed_subtree():
-    """The restriction stays in the trash when its own subtree was trashed meanwhile."""
+def test_models_items_restrictions_target_restore_out_of_trashed_subtree_lifts_restriction():
+    """Restored while its restriction's subtree is trashed, the folder becomes a plain root."""
     user = factories.UserFactory()
     parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
     folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
@@ -184,29 +220,28 @@ def test_models_items_restrictions_target_restore_leaves_restriction_in_trashed_
     folder.restore()
 
     folder.refresh_from_db()
-    restriction.refresh_from_db()
     assert folder.deleted_at is None
     assert str(folder.path) == str(folder.id)
-    assert restriction.deleted_at is not None
+    assert folder.is_restricted is False
+    assert not models.Item.objects.filter(pk=restriction.pk).exists()
 
 
-def test_models_items_restrictions_target_restore_ignores_previous_cycle_restriction():
-    """A restriction trashed in a previous cycle is not revived by a later restore."""
+def test_models_items_restrictions_target_restore_alone_lifts_restriction():
+    """Restored alone after being trashed along its tree, the folder becomes a plain root."""
     user = factories.UserFactory()
     parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
     folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
     folder = folder.restrict(user)
     restriction = folder.restriction
-    folder.soft_delete()
-    parent.soft_delete()
-    folder.restore()  # the restriction stays trashed with the first timestamp
-    parent.restore()
+    parent.soft_delete(user)
+    folder.refresh_from_db()
 
-    folder.soft_delete()
     folder.restore()
 
-    restriction.refresh_from_db()
-    assert restriction.deleted_at is not None
+    folder.refresh_from_db()
+    assert folder.deleted_at is None
+    assert folder.is_restricted is False
+    assert not models.Item.objects.filter(pk=restriction.pk).exists()
 
 
 def test_models_items_restrictions_target_hard_delete_marks_the_restriction():
