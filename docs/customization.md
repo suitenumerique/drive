@@ -118,3 +118,43 @@ THEME_CUSTOMIZATION_FILE_PATH=<path>
 ### Example of a JSON customization file
 
 The json must follow some rules: https://github.com/suitenumerique/drive/blob/main/src/backend/drive/configuration/theme/default.json
+
+----
+
+## **Waffle Configuration** 🧇
+
+The waffle (La Gaufre) is the widget in the header that displays a grid of services. By default it loads its script and its list of services from the La Suite servers. Both can be replaced from the theme customization file, for example to list the services of your own instance.
+
+### Settings 🔧
+
+```shellscript
+THEME_CUSTOMIZATION_FILE_PATH=<path>
+```
+
+### Example of a JSON customization file
+
+The waffle is configured with the `waffle` key. It accepts either `apiUrl` (an endpoint returning `{"services": [...]}`) or `data` (the list itself), plus the optional `widgetPath` (URL of the `lagaufre.js` widget script) and `showMoreLimit`.
+
+```json
+{
+  "waffle": {
+    "data": {
+      "services": [
+        {
+          "name": "Docs",
+          "url": "https://docs.example.org",
+          "maturity": "stable",
+          "logo": "https://docs.example.org/logo.svg"
+        }
+      ]
+    },
+    "widgetPath": "https://drive.example.org/lagaufre.js",
+    "showMoreLimit": 9
+  }
+}
+```
+
+If the file has no `waffle` key, or neither `apiUrl` nor `data` is set, the default waffle of the theme is used.
+
+> [!NOTE]
+> Without `widgetPath`, the widget script is still loaded from the default La Suite server. Set `widgetPath` to a self-hosted copy of `lagaufre.js` if the browsers must not call it. To remove the waffle entirely, set `FRONTEND_HIDE_GAUFRE=True`.
