@@ -747,7 +747,7 @@ class ItemViewSet(
                 instance.detach()
                 return
             instance = instance.target
-        instance.soft_delete()
+        instance.soft_delete(self.request.user)
         posthog_capture("item_deleted", self.request.user, {}, item=instance)
 
     def perform_update(self, serializer):
@@ -1096,6 +1096,11 @@ class ItemViewSet(
             .annotate_has_restriction()
             .filter(deleted_at__gte=models.get_trashbin_cutoff())
             .exclude(type=models.ItemTypeChoices.RESTRICTION)
+            # Restricted folders trashed along their tree come back with it
+            .exclude(
+                restriction__deleted_at__isnull=True,
+                restriction__ancestors_deleted_at__isnull=False,
+            )
             .trashed_owned_by(user)
         )
 

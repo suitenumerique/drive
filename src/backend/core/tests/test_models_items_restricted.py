@@ -409,21 +409,6 @@ def test_models_items_restricted_unrestrict_follows_moved_restriction():
     assert str(folder.path) == f"{other.id!s}.{folder.id!s}"
 
 
-def test_models_items_restricted_unrestrict_without_live_restriction():
-    """Deactivating restriction leaves the folder at the root when its restriction is trashed."""
-    user = factories.UserFactory()
-    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
-    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
-    folder = folder.restrict(user)
-    parent.soft_delete()
-
-    folder = folder.unrestrict()
-
-    assert folder.is_restricted is False
-    assert str(folder.path) == str(folder.id)
-    assert not models.Item.objects.filter(target=folder).exists()
-
-
 def test_models_items_restricted_unrestrict_removes_redundant_access():
     """Deactivating restriction removes explicit accesses inferior or equal to inherited."""
     parent_owner = factories.UserFactory()

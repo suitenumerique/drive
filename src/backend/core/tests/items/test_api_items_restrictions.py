@@ -203,6 +203,68 @@ def test_api_items_restrictions_delete_by_target_owner_trashes_the_target():
     assert [item["id"] for item in response.json()["results"]] == [str(folder.id)]
 
 
+def test_api_items_restrictions_parent_delete_lifts_unowned_restrictions():
+    """Trashing a parent lifts the restrictions whose target the user does not own."""
+    parent_owner = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(parent_owner, "owner")],
+    )
+    folder = _create_restricted_folder(parent, factories.UserFactory())
+    restriction = folder.restriction
+
+    client = APIClient()
+    client.force_login(parent_owner)
+
+    response = client.delete(f"/api/v1.0/items/{parent.id!s}/")
+
+    assert response.status_code == 204
+    assert not models.Item.objects.filter(pk=restriction.pk).exists()
+    folder.refresh_from_db()
+    assert folder.is_restricted is False
+    assert folder.deleted_at is None
+    assert folder.ancestors_deleted_at is None
+
+    response = client.post(f"/api/v1.0/items/{parent.id!s}/restore/")
+
+    assert response.status_code == 200
+    folder.refresh_from_db()
+    assert folder.is_restricted is False
+    assert str(folder.path) == str(folder.id)
+
+
+def test_api_items_restrictions_parent_delete_trashes_owned_targets():
+    """Trashing a parent trashes along the restricted folders the user owns, as children."""
+    owner = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(owner, "owner")],
+    )
+    folder = _create_restricted_folder(parent, owner)
+
+    client = APIClient()
+    client.force_login(owner)
+
+    response = client.delete(f"/api/v1.0/items/{parent.id!s}/")
+
+    assert response.status_code == 204
+    parent.refresh_from_db()
+    folder.refresh_from_db()
+    assert folder.is_restricted is True
+    assert folder.deleted_at == parent.deleted_at
+    assert folder.ancestors_deleted_at == parent.deleted_at
+
+    response = client.get("/api/v1.0/items/trashbin/")
+    assert [item["id"] for item in response.json()["results"]] == [str(parent.id)]
+
+    response = client.post(f"/api/v1.0/items/{parent.id!s}/restore/")
+
+    assert response.status_code == 200
+    folder.refresh_from_db()
+    assert folder.is_restricted is True
+    assert folder.ancestors_deleted_at is None
+
+
 def test_api_items_restrictions_delete_forbidden_for_reader():
     """A reader of the containing folder cannot detach a restriction."""
     reader = factories.UserFactory()
