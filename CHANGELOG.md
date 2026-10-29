@@ -22,6 +22,7 @@ and this project adheres to
 
 ### Fixed
 
+- ♿️(frontend) identify the current page in the browser title
 - 🐛(frontend) show the full item title in a tooltip when truncated
 - 🐛(backend) fix the upload mimetype allowlist
 

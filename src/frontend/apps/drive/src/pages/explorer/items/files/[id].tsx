@@ -8,6 +8,8 @@ import { Icon, Button } from "@gouvfr-lasuite/ui-components";
 import { useRouter } from "next/router";
 import { useTranslation } from "react-i18next";
 import { useItem } from "@/features/explorer/hooks/useQueries";
+import { getItemTitle } from "@/features/explorer/utils/utils";
+import { DocumentTitle } from "@/features/layouts/components/DocumentTitle";
 import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout";
 
 export default function FilePage() {
@@ -40,6 +42,7 @@ export default function FilePage() {
 
   return (
     <div>
+      <DocumentTitle pageName={getItemTitle(item)} />
       <CustomFilesPreview
         currentItem={item}
         items={[item]}
