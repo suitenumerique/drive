@@ -254,6 +254,56 @@ msgid ""
 "gave you the role \"{role}\"."
 msgstr "{sender} hat das folgende Dokument mit Ihnen geteilt: <strong>{title}</strong>, und Ihnen die Rolle \"{role}\" zugewiesen."
 
+#: core/templates/mail/html/invitation.html
+msgid "Open the item"
+msgstr "Dokument öffnen"
+
+#: core/templates/mail/html/invitation.html
+#, python-format
+msgid ""
+"%(app_name)s, your essential tool to organize, share and collaborate as a "
+"team."
+msgstr "%(app_name)s, Ihr unverzichtbares Werkzeug, um im Team zu organisieren, zu teilen und zusammenzuarbeiten."
+
+#: core/templates/mail/html/invitation.html
+#, python-format
+msgid "Discover %(app_name)s by"
+msgstr "Entdecken Sie %(app_name)s, indem Sie"
+
+#: core/templates/mail/html/invitation.html
+msgid "clicking here"
+msgstr "hier klicken"
+
+#: core/templates/mail/html/invitation.html
+msgid "See you soon,"
+msgstr "Bis bald,"
+
+#: core/templates/mail/html/invitation.html
+#, python-format
+msgid "The %(app_name)s team"
+msgstr "Ihr %(app_name)s-Team"
+
+#: core/templates/mail/html/invitation.html
+msgid "Government"
+msgstr "Regierung"
+
+#: core/templates/mail/html/invitation.html
+#, python-format
+msgid "Subscribe to the %(brandname)s newsletter"
+msgstr "%(brandname)s-Newsletter abonnieren"
+
+#: core/templates/mail/html/invitation.html
+msgid "Subscribe to the newsletter"
+msgstr "Newsletter abonnieren"
+
+#: core/templates/mail/html/invitation.html
+msgid "Contact support"
+msgstr "Support kontaktieren"
+
+#: core/templates/mail/html/invitation.html
+msgid "Terms of use"
+msgstr "Nutzungsbedingungen"
+
 #: core/models.py:820
 #, fuzzy, python-brace-format
 #| msgid "{name} shared a item with you: {title}"
@@ -358,29 +408,6 @@ msgstr "Einladung zum Dokument"
 #| msgid "item invitations"
 msgid "Item invitations"
 msgstr "Dokumenteinladungen"
-
-#: core/templates/mail/html/invitation.html:162
-#: core/templates/mail/text/invitation.txt:3
-msgid "Logo email"
-msgstr ""
-
-#: core/templates/mail/html/invitation.html:209
-#: core/templates/mail/text/invitation.txt:10
-msgid "Open"
-msgstr ""
-
-#: core/templates/mail/html/invitation.html:226
-#: core/templates/mail/text/invitation.txt:14
-msgid ""
-" Drive, your new essential tool for organizing, sharing and collaborating as "
-"a team. "
-msgstr ""
-
-#: core/templates/mail/html/invitation.html:233
-#: core/templates/mail/text/invitation.txt:16
-#, python-format
-msgid " Brought to you by %(brandname)s "
-msgstr ""
 
 #: drive/settings.py:250
 msgid "English"

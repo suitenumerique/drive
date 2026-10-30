@@ -20,9 +20,15 @@ backend:
     DJANGO_SECRET_KEY: *djangoSecretKey
     DJANGO_SETTINGS_MODULE: drive.settings
     DJANGO_SUPERUSER_PASSWORD: admin
-    DJANGO_EMAIL_BRAND_NAME: "La Suite Numérique"
+    DJANGO_EMAIL_APP_NAME: "Fichiers"
+    DJANGO_EMAIL_BRAND_NAME: "LaSuite"
+    DJANGO_EMAIL_FONT_BOLD_URL: https://drive.127.0.0.1.nip.io/assets/fonts/Marianne-Bold.woff2
+    DJANGO_EMAIL_FONT_REGULAR_URL: https://drive.127.0.0.1.nip.io/assets/fonts/Marianne-Regular.woff2
+    DJANGO_EMAIL_GOVERNMENT_LOGO_IMG: https://drive.127.0.0.1.nip.io/assets/email/logo-gouvernement.png
     DJANGO_EMAIL_HOST: "mailcatcher"
-    DJANGO_EMAIL_LOGO_IMG: https://drive.127.0.0.1.nip.io/assets/logo-suite-numerique.png
+    DJANGO_EMAIL_LOGO_IMG: https://drive.127.0.0.1.nip.io/assets/email/logo-lasuite-fichiers.png
+    DJANGO_EMAIL_SUITE_LOGO_IMG: https://drive.127.0.0.1.nip.io/assets/email/logo-lasuite.png
+    DJANGO_EMAIL_SUITE_URL: https://lasuite.numerique.gouv.fr
     DJANGO_EMAIL_PORT: 1025
     DJANGO_EMAIL_URL_APP: https://drive.127.0.0.1.nip.io
     DJANGO_EMAIL_USE_SSL: False

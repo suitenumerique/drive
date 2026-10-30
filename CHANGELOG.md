@@ -28,6 +28,7 @@ and this project adheres to
 
 ### Changed
 
+- 💄(mail) adopt the new LaSuite email layout #926
 - ⬆️(ci) bump GitHub Actions to latest versions
 - ✨(backend) screen uploads with a denylist
 - ⬆️(backend) upgrade joserfc to 1.7.7
