@@ -243,17 +243,16 @@ msgstr ""
 msgid "Items"
 msgstr "Dokumente"
 
-#: core/models.py:815
-#, fuzzy, python-brace-format
-#| msgid "{name} shared a item with you!"
-msgid "{name} shared an item with you!"
-msgstr "{name} hat ein Dokument mit Ihnen geteilt!"
-
-#: core/models.py:817
-#, python-brace-format
-msgid "{name} invited you with the role \"{role}\" on the following item:"
+#: core/models.py
+msgid "A new item has been shared with you."
 msgstr ""
-"{name} hat Sie mit der Rolle \"{role}\" zu folgendem Dokument eingeladen:"
+
+#: core/models.py
+#, python-brace-format
+msgid ""
+"{sender} shared the following item with you: <strong>{title}</strong>, and "
+"gave you the role \"{role}\"."
+msgstr ""
 
 #: core/models.py:820
 #, fuzzy, python-brace-format

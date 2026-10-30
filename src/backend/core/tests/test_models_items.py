@@ -996,10 +996,15 @@ def test_models_items__email_invitation__success():
     assert email.to == ["guest@example.com"]
     email_content = " ".join(email.body.split())
 
+    assert "A new item has been shared with you." in email_content
     assert (
-        f'Test Sender (sender@example.com) invited you with the role "editor" '
-        f"on the following item: {item.title}" in email_content
+        "Test Sender (sender@example.com) shared the following item with you: "
+        f'{item.title}, and gave you the role "Editor".' in email_content
     )
+    # The sender and the item are highlighted in the html version
+    email_html = email.alternatives[0][0]
+    assert "<strong>Test Sender</strong> (sender@example.com)" in email_html
+    assert f"<strong>{item.title}</strong>" in email_html
     assert f"items/{item.id}/" in email_content
 
 
@@ -1029,9 +1034,10 @@ def test_models_items__email_invitation__success_fr():
     assert email.to == ["guest2@example.com"]
     email_content = " ".join(email.body.split())
 
+    assert "Un nouvel item a été partagé avec vous." in email_content
     assert (
-        f'Test Sender2 (sender2@example.com) vous a invité avec le rôle "propriétaire" '
-        f"sur le item suivant: {item.title}" in email_content
+        "Test Sender2 (sender2@example.com) a partagé avec vous l'item suivant : "
+        f'{item.title}, et vous a attribué le rôle "Propriétaire".' in email_content
     )
     assert f"items/{item.id}/" in email_content
 

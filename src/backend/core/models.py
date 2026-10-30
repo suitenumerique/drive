@@ -22,6 +22,7 @@ from django.db import models, transaction
 from django.db.models.expressions import RawSQL
 from django.utils import timezone
 from django.utils.functional import cached_property
+from django.utils.html import format_html
 from django.utils.translation import get_language, override
 from django.utils.translation import gettext_lazy as _
 
@@ -1757,16 +1758,24 @@ class Item(TreeModel, BaseModel):
         language = language or get_language()
         role = RoleChoices(role).label
         sender_name = sender.full_name or sender.email
-        sender_name_email = (
-            f"{sender.full_name:s} ({sender.email})" if sender.full_name else sender.email
+        sender_html = (
+            format_html("<strong>{}</strong> ({})", sender.full_name, sender.email)
+            if sender.full_name
+            else format_html("<strong>{}</strong>", sender.email)
         )
 
         with override(language):
             context = {
-                "title": _("{name} shared an item with you!").format(name=sender_name),
-                "message": _(
-                    '{name} invited you with the role "{role}" on the following item:'
-                ).format(name=sender_name_email, role=role.lower()),
+                "title": _("A new item has been shared with you."),
+                "message": format_html(
+                    _(
+                        "{sender} shared the following item with you: "
+                        '<strong>{title}</strong>, and gave you the role "{role}".'
+                    ),
+                    sender=sender_html,
+                    title=self.title,
+                    role=role,
+                ),
             }
             subject = _("{name} shared an item with you: {title}").format(
                 name=sender_name, title=self.title

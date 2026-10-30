@@ -1,5 +1,6 @@
 """Render and send the transactional emails of Drive."""
 
+import html
 import smtplib
 from logging import getLogger
 
@@ -7,6 +8,8 @@ from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.utils.safestring import SafeString
 from django.utils.text import capfirst
 from django.utils.translation import get_language, override
 
@@ -58,6 +61,19 @@ def get_branding_context():
     }
 
 
+def get_plain_text_context(context):
+    """
+    Return the context used to render the plain text version of an email.
+
+    Values marked safe hold HTML meant for the html version: their tags and entities
+    are removed so that they read well as plain text.
+    """
+    return {
+        key: html.unescape(strip_tags(value)) if isinstance(value, SafeString) else value
+        for key, value in context.items()
+    }
+
+
 def send_templated_email(subject, recipients, template_name, context=None, language=None):
     """
     Render the html and plain text versions of a mail template and send them.
@@ -74,7 +90,9 @@ def send_templated_email(subject, recipients, template_name, context=None, langu
 
     with override(language or get_language()):
         msg_html = render_to_string(f"mail/html/{template_name}.html", context)
-        msg_plain = render_to_string(f"mail/text/{template_name}.txt", context)
+        msg_plain = render_to_string(
+            f"mail/text/{template_name}.txt", get_plain_text_context(context)
+        )
         # Force translation. Only the first letter is uppercased: str.capitalize
         # would lowercase the rest, names and item titles included.
         subject = capfirst(str(subject))

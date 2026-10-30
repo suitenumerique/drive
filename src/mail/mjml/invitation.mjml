@@ -21,8 +21,7 @@
           </mj-text>
           <!-- Main Message -->
           <mj-text>
-            {{message|capfirst}}
-            <a href="{{link}}">{{item.title}}</a>
+            {{ message }}
           </mj-text>
           <mj-button
             href="{{link}}"

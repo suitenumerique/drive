@@ -4,10 +4,11 @@ import smtplib
 from unittest import mock
 
 from django.core import mail
+from django.utils.html import format_html
 
 import pytest
 
-from core.services.mail import get_branding_context, send_templated_email
+from core.services.mail import get_branding_context, get_plain_text_context, send_templated_email
 
 pytestmark = pytest.mark.django_db
 
@@ -118,6 +119,24 @@ def test_services_mail_branding_context_email_links_win(settings):
 
     assert context["support_url"] == "https://example.com/email-support"
     assert context["terms_of_service_url"] == "https://example.com/email-terms"
+
+
+def test_services_mail_plain_text_context():
+    """
+    HTML marked safe is turned into plain text, other values are left untouched.
+    Escaped user content, like an item title, is restored as typed.
+    """
+    context = {
+        "message": format_html("<strong>{}</strong> shared {}", "Alice", "R&D <notes>"),
+        "title": "R&D",
+        "count": 3,
+    }
+
+    assert get_plain_text_context(context) == {
+        "message": "Alice shared R&D <notes>",
+        "title": "R&D",
+        "count": 3,
+    }
 
 
 def test_services_mail_send_templated_email(settings):

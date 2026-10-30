@@ -235,15 +235,16 @@ msgstr "Item"
 msgid "Items"
 msgstr "Items"
 
-#: core/models.py:815
-#, python-brace-format
-msgid "{name} shared an item with you!"
-msgstr "{name} heeft een item met je gedeeld!"
+#: core/models.py
+msgid "A new item has been shared with you."
+msgstr ""
 
-#: core/models.py:817
+#: core/models.py
 #, python-brace-format
-msgid "{name} invited you with the role \"{role}\" on the following item:"
-msgstr "{name} heeft je uitgenodigd met de rol \"{role}\" voor het volgende item:"
+msgid ""
+"{sender} shared the following item with you: <strong>{title}</strong>, and "
+"gave you the role \"{role}\"."
+msgstr ""
 
 #: core/models.py:820
 #, python-brace-format
