@@ -23,7 +23,7 @@ jobs:
         id: mail-templates
         with:
           path: "src/backend/core/templates/mail"
-          key: mail-templates-${{ hashFiles('src/mail/mjml/**', 'src/mail/yarn.lock', 'src/mail/bin/**') }}
+          key: mail-templates-${{ hashFiles('src/mail/mjml/**', 'src/mail/yarn.lock', 'src/mail/bin/**', 'src/mail/html-to-text.config.json') }}
 
       - name: Install yarn
         if: steps.mail-templates.outputs.cache-hit != 'true'
@@ -42,4 +42,4 @@ jobs:
         uses: actions/cache@v6
         with:
           path: "src/backend/core/templates/mail"
-          key: mail-templates-${{ hashFiles('src/mail/mjml/**', 'src/mail/yarn.lock', 'src/mail/bin/**') }}
+          key: mail-templates-${{ hashFiles('src/mail/mjml/**', 'src/mail/yarn.lock', 'src/mail/bin/**', 'src/mail/html-to-text.config.json') }}
