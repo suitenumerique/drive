@@ -997,7 +997,7 @@ def test_models_items__email_invitation__success():
     email_content = " ".join(email.body.split())
 
     assert (
-        f"Test Sender (sender@example.com) invited you with the role &quot;editor&quot; "
+        f'Test Sender (sender@example.com) invited you with the role "editor" '
         f"on the following item: {item.title}" in email_content
     )
     assert f"items/{item.id}/" in email_content
@@ -1030,7 +1030,7 @@ def test_models_items__email_invitation__success_fr():
     email_content = " ".join(email.body.split())
 
     assert (
-        f"Test Sender2 (sender2@example.com) vous a invité avec le rôle &quot;propriétaire&quot; "
+        f'Test Sender2 (sender2@example.com) vous a invité avec le rôle "propriétaire" '
         f"sur le item suivant: {item.title}" in email_content
     )
     assert f"items/{item.id}/" in email_content

@@ -24,6 +24,7 @@ and this project adheres to
 
 ### Fixed
 
+- 🐛(mail) stop showing HTML entities in plain text emails
 - 🐛(backend) keep the case of names and titles in email subjects
 - 🐛(frontend) show the full item title in a tooltip when truncated
 - 🐛(backend) fix the upload mimetype allowlist

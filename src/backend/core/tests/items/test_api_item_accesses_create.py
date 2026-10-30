@@ -199,7 +199,7 @@ def test_api_item_accesses_create_authenticated_administrator(
     email_content = " ".join(email.body.split())
     assert f"{user.full_name} shared an item with you!" in email_content
     assert (
-        f"{user.full_name} ({user.email}) invited you with the role &quot;{role}&quot; "
+        f'{user.full_name} ({user.email}) invited you with the role "{role}" '
         f"on the following item: {item.title}"
     ) in email_content
     assert "items/" + str(item.id) + "/" in email_content
@@ -271,7 +271,7 @@ def test_api_item_accesses_create_authenticated_owner(via, depth, mock_user_team
     email_content = " ".join(email.body.split())
     assert f"{user.full_name} shared an item with you!" in email_content
     assert (
-        f"{user.full_name} ({user.email}) invited you with the role &quot;{role}&quot; "
+        f'{user.full_name} ({user.email}) invited you with the role "{role}" '
         f"on the following item: {item.title}"
     ) in email_content
     assert "items/" + str(item.id) + "/" in email_content
