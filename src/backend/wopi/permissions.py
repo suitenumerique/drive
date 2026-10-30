@@ -21,6 +21,12 @@ class AccessTokenPermission(BasePermission):
         if item.id != view.get_file_id():
             return False
 
+        # An editor opened before the file was encrypted still holds a token: its
+        # save on close would write the plaintext over the ciphertext. The item is
+        # read from the database on every request, so this sees the switch.
+        if item.is_encrypted:
+            return False
+
         abilities = item.get_abilities(request.user)
 
         return abilities["retrieve"]

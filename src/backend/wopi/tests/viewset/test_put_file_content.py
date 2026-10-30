@@ -2,6 +2,7 @@
 
 from unittest import mock
 
+from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 
 import pytest
@@ -439,3 +440,44 @@ def test_put_file_content_posthog_event(settings):
 
     assert response.status_code == 200
     mock_capture.assert_called_once_with("item_edited", user, {"wopi_client": "vendorA"}, item=item)
+
+
+def test_put_file_content_refused_once_the_item_is_encrypted():
+    """An editor opened before the file was encrypted cannot save over the ciphertext."""
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test.odt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        size=0,
+    )
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
+    access_token, _ = AccessUserItemService().insert_new_access(item, user)
+    LockService(item).lock("1234567890")
+
+    # Encrypted while the editor is still open.
+    default_storage.save(item.file_key, ContentFile(b"ciphertext"))
+    item.is_encrypted = True
+    item.save(update_fields=["is_encrypted"])
+
+    client = APIClient()
+    response = client.post(
+        f"/api/v1.0/wopi/files/{item.id}/contents/",
+        data=b"plaintext",
+        content_type="application/octet-stream",
+        HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        headers={"X-WOPI-Override": "PUT", "X-WOPI-Lock": "1234567890"},
+    )
+
+    assert response.status_code == 403
+    with default_storage.open(item.file_key) as stored:
+        assert stored.read() == b"ciphertext"
+
+    # Nor read, nor described: WOPI no longer serves the file at all.
+    assert (
+        client.get(
+            f"/api/v1.0/wopi/files/{item.id}/", HTTP_AUTHORIZATION=f"Bearer {access_token}"
+        ).status_code
+        == 403
+    )
