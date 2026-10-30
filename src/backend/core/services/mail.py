@@ -7,6 +7,7 @@ from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
+from django.utils.text import capfirst
 from django.utils.translation import get_language, override
 
 logger = getLogger(__name__)
@@ -43,11 +44,13 @@ def send_templated_email(subject, recipients, template_name, context=None, langu
     with override(language or get_language()):
         msg_html = render_to_string(f"mail/html/{template_name}.html", context)
         msg_plain = render_to_string(f"mail/text/{template_name}.txt", context)
-        subject = str(subject)  # Force translation
+        # Force translation. Only the first letter is uppercased: str.capitalize
+        # would lowercase the rest, names and item titles included.
+        subject = capfirst(str(subject))
 
         try:
             send_mail(
-                subject.capitalize(),
+                subject,
                 msg_plain,
                 settings.EMAIL_FROM,
                 recipients,
