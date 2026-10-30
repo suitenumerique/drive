@@ -68,10 +68,14 @@ type Action =
   | { type: "SET_PENDING_USER_COUNT"; count: number }
   | { type: "PROMOTE_STAGED_TO_DONE" }
   | { type: "RESET_FAILED_TO_PENDING" }
-  | { type: "FAIL_RUNNING"; error: string }
+  | {
+      type: "FAIL";
+      error: string;
+      rowErrors?: Record<string, string>;
+    }
   | { type: "RESET" };
 
-function reducer(state: State, action: Action): State {
+export function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "SET_PHASE":
       return { ...state, phase: action.phase };
@@ -117,15 +121,24 @@ function reducer(state: State, action: Action): State {
       );
       return { ...state, rows: next };
     }
-    // The operation failed outside a file's own step (the commit, a missing
-    // item): rows still marked running would otherwise spin forever. Failing
-    // them also lets a retry pick them up again.
-    case "FAIL_RUNNING": {
-      const next = state.rows.map((r) =>
-        r.state === "running"
-          ? { ...r, state: "failed" as FileJobState, error: action.error }
-          : r,
-      );
+    // The operation failed (a file's step, the commit refused by the server):
+    // nothing was saved, so a staged row must not keep its check mark, nor a
+    // running one spin forever. The rows it names fail with their own
+    // cause; the others go back to pending, done again by a retry.
+    case "FAIL": {
+      const next = state.rows.map((r) => {
+        const rowError = action.rowErrors?.[r.id];
+        if (rowError !== undefined) {
+          return { ...r, state: "failed" as FileJobState, error: rowError };
+        }
+        if (r.state === "running") {
+          return { ...r, state: "failed" as FileJobState, error: action.error };
+        }
+        if (r.state === "staged") {
+          return { ...r, state: "pending" as FileJobState };
+        }
+        return r;
+      });
       return { ...state, rows: next };
     }
     case "RESET":
@@ -737,6 +750,7 @@ export function useRecursiveEncryptionJob({
         return;
       }
       let message: string;
+      let rowErrors: Record<string, string> | undefined;
       if (err instanceof FileStagingError) {
         // The job stopped at this file: name it, the row shows where it is.
         const title =
@@ -747,6 +761,21 @@ export function useRecursiveEncryptionJob({
           '"{{title}}" could not be processed ({{error}}). Nothing was changed.',
           { title, error: errorToString(err.cause) },
         );
+      } else if (
+        err instanceof APIError &&
+        err.data?.code === "item_being_edited"
+      ) {
+        const held = (err.data.items as string[] | undefined) ?? [];
+        message = t(
+          "encryption.errors.item_being_edited",
+          "A document is still being saved by its editor. Retry in a few seconds.",
+          { count: Math.max(held.length, 1) },
+        );
+        const rowError = t(
+          "encryption.row.being_edited",
+          "still being saved by its editor",
+        );
+        rowErrors = Object.fromEntries(held.map((id) => [id, rowError]));
       } else if (
         err instanceof APIError &&
         err.data?.code === "subtree_mutated"
@@ -765,7 +794,7 @@ export function useRecursiveEncryptionJob({
         // the response body or falls back to the i18n generic string.
         message = errorToString(err);
       }
-      dispatch({ type: "FAIL_RUNNING", error: message });
+      dispatch({ type: "FAIL", error: message, rowErrors });
       dispatch({ type: "SET_TOP_ERROR", error: message });
       dispatch({ type: "SET_PHASE", phase: "failed" });
     }

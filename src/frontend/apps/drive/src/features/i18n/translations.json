@@ -810,6 +810,8 @@
           "no_accesses": "No users with access found on the root item.",
           "nothing_to_encrypt_file": "This file is already encrypted.",
           "nothing_to_decrypt_file": "This file is already plaintext.",
+          "item_being_edited_one": "A document is still being saved by its editor. Retry in a few seconds.",
+          "item_being_edited_other": "{{count}} documents are still being saved by their editor. Retry in a few seconds.",
           "subtree_mutated": "The folder contents changed during the operation ({{added}} added, {{removed}} removed).",
           "file_failed": "\"{{title}}\" could not be processed ({{error}}). Nothing was changed.",
           "intochain_missing_parent": "Destination parent missing for encrypt-on-move.",
@@ -850,6 +852,7 @@
           "not_encrypted": "Not encrypted",
           "encrypting": "{{title}}: encrypting",
           "decrypting": "{{title}}: decrypting",
+          "being_edited": "still being saved by its editor",
           "failed": "Could not be processed ({{error}})"
         },
         "progress": {
@@ -1688,6 +1691,8 @@
           "no_accesses": "Aucun utilisateur n'a accès à l'élément racine.",
           "nothing_to_encrypt_file": "Ce fichier est déjà chiffré.",
           "nothing_to_decrypt_file": "Ce fichier est déjà en clair.",
+          "item_being_edited_one": "Un document est encore en cours d'enregistrement par son éditeur. Réessayez dans quelques secondes.",
+          "item_being_edited_other": "{{count}} documents sont encore en cours d'enregistrement par leur éditeur. Réessayez dans quelques secondes.",
           "subtree_mutated": "Le contenu du dossier a changé pendant l'opération ({{added}} ajoutés, {{removed}} supprimés).",
           "file_failed": "« {{title}} » n'a pas pu être traité ({{error}}). Rien n'a été modifié.",
           "intochain_missing_parent": "Le dossier de destination est introuvable pour le chiffrement lors du déplacement.",
@@ -1728,6 +1733,7 @@
           "not_encrypted": "Non chiffré",
           "encrypting": "{{title}} : chiffrement",
           "decrypting": "{{title}} : déchiffrement",
+          "being_edited": "encore en cours d'enregistrement par son éditeur",
           "failed": "Traitement impossible ({{error}})"
         },
         "progress": {
@@ -2566,6 +2572,8 @@
           "no_accesses": "Geen gebruikers met toegang gevonden op het hoofditem.",
           "nothing_to_encrypt_file": "Dit bestand is al versleuteld.",
           "nothing_to_decrypt_file": "Dit bestand is al onversleuteld.",
+          "item_being_edited_one": "Een document wordt nog door de editor opgeslagen. Probeer het over enkele seconden opnieuw.",
+          "item_being_edited_other": "{{count}} documenten worden nog door hun editor opgeslagen. Probeer het over enkele seconden opnieuw.",
           "subtree_mutated": "De inhoud van de map is tijdens de bewerking gewijzigd ({{added}} toegevoegd, {{removed}} verwijderd).",
           "file_failed": "\"{{title}}\" kon niet worden verwerkt ({{error}}). Er is niets gewijzigd.",
           "intochain_missing_parent": "Doelmap ontbreekt voor versleutelen bij verplaatsen.",
@@ -2606,6 +2614,7 @@
           "not_encrypted": "Niet versleuteld",
           "encrypting": "{{title}}: versleutelen",
           "decrypting": "{{title}}: ontsleutelen",
+          "being_edited": "wordt nog door de editor opgeslagen",
           "failed": "Kon niet worden verwerkt ({{error}})"
         },
         "progress": {

@@ -70,6 +70,7 @@ from core.utils.analytics import posthog_capture
 from wopi.conversion import exceptions as conversion_exceptions
 from wopi.conversion.services import prepare_conversion
 from wopi.services import access as access_service
+from wopi.services.lock import LockService
 from wopi.tasks.conversion import convert_file
 from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
 
@@ -685,6 +686,27 @@ def encryptable_item_refusal(item):
     if item.ancestors().filter(is_encrypted=True).exists():
         return _("Item is inside an already encrypted subtree.")
     return None
+
+
+def being_edited_refusal(items):
+    """The error body refusing to encrypt files an editor still holds, or None.
+
+    An office editor saves only once its last user has left, and keeps the WOPI lock
+    until then: encrypted meanwhile, a file would lose that save, read stale by the
+    client, and the save would be written to a file that is no longer plaintext.
+    """
+    held = sorted(
+        str(item.pk)
+        for item in items
+        if item.type == models.ItemTypeChoices.FILE and LockService(item).is_locked()
+    )
+    if not held:
+        return None
+    return {
+        "detail": _("A document is still being saved by its editor. Retry in a few seconds."),
+        "code": "item_being_edited",
+        "items": held,
+    }
 
 
 def encryption_wraps_refusal(item, caller, encrypted_key_per_user, version_per_user):
@@ -1748,6 +1770,9 @@ class ItemViewSet(
         # raw SQL, re-evaluating the queryset returns nothing
         # (filter still references the old path value).
         effective_descendants = list(compute_effective_descendants_for_encryption(item))
+        refusal = being_edited_refusal([item, *effective_descendants])
+        if refusal:
+            return drf.response.Response(refusal, status=drf.status.HTTP_409_CONFLICT)
         live_descendant_ids = {str(d.pk) for d in effective_descendants}
         provided_descendant_ids = set(encrypted_keys_for_descendants.keys())
         if live_descendant_ids != provided_descendant_ids:
@@ -2526,6 +2551,10 @@ class ItemViewSet(
         # in the encrypt-on-move flow; here just defensive) don't
         # re-query against a possibly-stale path predicate.
         effective_descendants = list(compute_effective_descendants_for_encryption(item))
+
+        refusal = being_edited_refusal([item, *effective_descendants])
+        if refusal:
+            return drf.response.Response(refusal, status=drf.status.HTTP_409_CONFLICT)
 
         # Validate descendant set: every effective descendant must be
         # covered by a wrapped key entry. Doubles as a mutation check —

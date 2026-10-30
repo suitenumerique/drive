@@ -15,6 +15,7 @@ from rest_framework.test import APIClient
 
 from core import factories, models
 from core.api import serializers
+from wopi.services.lock import LockService
 
 pytestmark = pytest.mark.django_db
 
@@ -234,6 +235,49 @@ def test_api_items_encrypt_folder_with_children():
     assert subfolder.encrypted_symmetric_key == "subfolder_wrapped_key"
     assert file_item.is_encrypted is True
     assert file_item.encrypted_symmetric_key == "file_wrapped_key"
+
+
+def test_api_items_encrypt_refused_while_an_editor_holds_the_file():
+    """An office editor saves only after its last user left, under its WOPI lock:
+    encrypting meanwhile would lose that save, or let it land on the ciphertext."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    LockService(item).lock("onlyoffice-session")
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.patch(
+        f"/api/v1.0/items/{item.id!s}/encrypt/",
+        {
+            "encrypted_symmetric_key_per_user": {user.sub: "encrypted_key_for_user"},
+            "encryption_public_key_version_per_user": {user.sub: 1},
+            "encrypted_keys_for_descendants": {},
+        },
+        format="json",
+    )
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "item_being_edited"
+    assert response.json()["items"] == [str(item.id)]
+    item.refresh_from_db()
+    assert item.is_encrypted is False
+
+    # Saved and released: encryption goes through.
+    LockService(item).unlock()
+    response = client.patch(
+        f"/api/v1.0/items/{item.id!s}/encrypt/",
+        {
+            "encrypted_symmetric_key_per_user": {user.sub: "encrypted_key_for_user"},
+            "encryption_public_key_version_per_user": {user.sub: 1},
+            "encrypted_keys_for_descendants": {},
+        },
+        format="json",
+    )
+    assert response.status_code == 200
 
 
 def test_api_items_encrypt_not_restricted():
