@@ -1218,6 +1218,20 @@ def maintenance_key_id(value):
         return "unreadable"
 
 
+def source_etags_field():
+    """The ETags of the files a client read, sent back with the change made from them."""
+    return serializers.DictField(
+        child=serializers.CharField(),
+        required=False,
+        default=dict,
+        help_text=(
+            "Mapping of file item UUID to the ETag of the content the client read and "
+            "processed. A file whose stored content has changed since is refused, "
+            "named in the error, to be read and processed again."
+        ),
+    )
+
+
 class MoveItemSerializer(serializers.Serializer):
     """
     Serializer for validating input data to move an item within the tree structure.
@@ -1292,6 +1306,7 @@ class MoveItemSerializer(serializers.Serializer):
         child=serializers.CharField(),
         required=False,
     )
+    source_etags = source_etags_field()
     # Re-anchor only: the maintenance escrow copy of `K_item`, now a root key.
     maintenance_key = serializers.CharField(
         required=False, allow_null=True, validators=[validate_maintenance_key]
@@ -1446,6 +1461,7 @@ class EncryptItemSerializer(serializers.Serializer):
             "the filename; old S3 objects are cleaned up after commit."
         ),
     )
+    source_etags = source_etags_field()
     maintenance_key = serializers.CharField(
         required=False,
         allow_null=True,
@@ -1470,3 +1486,4 @@ class RemoveEncryptionSerializer(serializers.Serializer):
             "Mapping of file item UUID to the new S3 key where the decrypted content was uploaded."
         ),
     )
+    source_etags = source_etags_field()

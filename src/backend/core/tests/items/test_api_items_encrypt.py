@@ -280,6 +280,62 @@ def test_api_items_encrypt_refused_while_an_editor_holds_the_file():
     assert response.status_code == 200
 
 
+def _etag(key):
+    return default_storage.connection.meta.client.head_object(
+        Bucket=default_storage.bucket_name, Key=key
+    )["ETag"]
+
+
+def test_api_items_encrypt_refused_for_a_file_changed_since_it_was_read():
+    """A file saved again after the client read it would be switched to ciphertext
+    made from its older content: refused, named, so the client reads it again."""
+    user = factories.UserFactory()
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    unchanged, edited = (
+        factories.ItemFactory(
+            parent=folder, type=models.ItemTypeChoices.FILE, filename=f"{name}.odt"
+        )
+        for name in ("unchanged", "edited")
+    )
+    for file in (unchanged, edited):
+        default_storage.save(file.file_key, ContentFile(b"as read"))
+    read = {str(file.pk): _etag(file.file_key) for file in (unchanged, edited)}
+    # Saved by its editor while the others were being processed.
+    default_storage.save(edited.file_key, ContentFile(b"edited since"))
+
+    payload = {
+        "encrypted_symmetric_key_per_user": {user.sub: "encrypted_key_for_user"},
+        "encryption_public_key_version_per_user": {user.sub: 1},
+        "encrypted_keys_for_descendants": {
+            str(unchanged.pk): "unchanged_wrapped_key",
+            str(edited.pk): "edited_wrapped_key",
+        },
+        "file_key_mapping": {
+            str(unchanged.pk): f"{uuid4()}/unchanged.odt",
+            str(edited.pk): f"{uuid4()}/edited.odt",
+        },
+        "source_etags": read,
+    }
+    client = APIClient()
+    client.force_login(user)
+    response = client.patch(f"/api/v1.0/items/{folder.id!s}/encrypt/", payload, format="json")
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "item_changed"
+    assert response.json()["items"] == [str(edited.pk)]
+    folder.refresh_from_db()
+    assert folder.is_encrypted is False
+
+    # Read again: it goes through.
+    payload["source_etags"][str(edited.pk)] = _etag(edited.file_key)
+    response = client.patch(f"/api/v1.0/items/{folder.id!s}/encrypt/", payload, format="json")
+    assert response.status_code == 200
+
+
 def test_api_items_encrypt_not_restricted():
     """Cannot encrypt an item that is not restricted."""
     user = factories.UserFactory()
@@ -452,6 +508,42 @@ def test_api_items_remove_encryption_deletes_every_version_of_the_ciphertext(
     assert response.status_code == 200
 
     assert _versions(ciphertext_key) == []
+
+
+def test_api_items_remove_encryption_refused_for_a_file_changed_since_it_was_read():
+    """Saved again in the editor of encrypted documents after the client read it: the
+    plaintext made from the older ciphertext is refused."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="report.odt",
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        users=[(user, models.RoleChoices.OWNER)],
+        is_encrypted=True,
+    )
+    default_storage.save(item.file_key, ContentFile(b"ciphertext"))
+    read = _etag(item.file_key)
+    default_storage.save(item.file_key, ContentFile(b"ciphertext, edited since"))
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.patch(
+        f"/api/v1.0/items/{item.id!s}/remove-encryption/",
+        {
+            "file_key_mapping": {str(item.pk): f"{uuid4()}/report.odt"},
+            "source_etags": {str(item.pk): read},
+        },
+        format="json",
+    )
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": "Files changed while they were being processed. Retry.",
+        "code": "item_changed",
+        "items": [str(item.pk)],
+    }
+    item.refresh_from_db()
+    assert item.is_encrypted is True
 
 
 def test_api_items_remove_encryption_not_root():

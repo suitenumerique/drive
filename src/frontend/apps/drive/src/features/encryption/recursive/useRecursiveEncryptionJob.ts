@@ -17,13 +17,18 @@ import {
   isInsideInnerRoot,
 } from "./flattenSubtree";
 import { fromBase64, stagedFilename, toBase64 } from "./binary";
-import { getEncryptionUploadUrl, putToS3 } from "./presignedUpload";
+import {
+  downloadForStaging,
+  getEncryptionUploadUrl,
+  putToS3,
+} from "./presignedUpload";
 import {
   FileJobRow,
   FileJobState,
   FlatNode,
   JobPhase,
   SkipReason,
+  StagedDecryptFile,
   StagedEncryptFile,
 } from "./types";
 
@@ -48,6 +53,8 @@ type State = {
   rows: FileJobRow[];
   rowIndexById: Record<string, number>;
   topError: string | null;
+  /** Why files are being processed again after a refused commit, while it lasts. */
+  retryNotice: string | null;
   validationErrors: string[];
   totalProcessable: number;
   pendingUserCount: number;
@@ -64,6 +71,8 @@ type Action =
       skipReason?: SkipReason;
     }
   | { type: "SET_TOP_ERROR"; error: string | null }
+  | { type: "RETRY_REFUSED"; ids: string[]; notice: string }
+  | { type: "CLEAR_RETRY_NOTICE" }
   | { type: "SET_VALIDATION"; errors: string[] }
   | { type: "SET_PENDING_USER_COUNT"; count: number }
   | { type: "PROMOTE_STAGED_TO_DONE" }
@@ -74,6 +83,41 @@ type Action =
       rowErrors?: Record<string, string>;
     }
   | { type: "RESET" };
+
+// How many times a commit refused for files saved meanwhile is tried again, the
+// files read anew each time, and how long an editor gets to finish its save.
+const COMMIT_ATTEMPTS = 4;
+const EDITOR_SAVE_WAIT_MS = 5000;
+
+/** The files a commit was refused for and can be retried with, read again. */
+export function refusedFiles(
+  err: unknown,
+): { code: "item_changed" | "item_being_edited"; ids: string[] } | null {
+  if (!(err instanceof APIError)) return null;
+  const code = err.data?.code;
+  const ids = err.data?.items as string[] | undefined;
+  if ((code !== "item_changed" && code !== "item_being_edited") || !ids?.length)
+    return null;
+  return { code, ids };
+}
+
+function pause(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(abortError());
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(abortError());
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
 
 export function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -103,6 +147,22 @@ export function reducer(state: State, action: Action): State {
     }
     case "SET_TOP_ERROR":
       return { ...state, topError: action.error };
+    // A commit refused for these files: they are read and processed again, so
+    // they lose their check mark until then.
+    case "RETRY_REFUSED": {
+      const ids = new Set(action.ids);
+      const next = state.rows.map((r) =>
+        ids.has(r.id) ? { ...r, state: "pending" as FileJobState } : r,
+      );
+      return {
+        ...state,
+        phase: "staging",
+        rows: next,
+        retryNotice: action.notice,
+      };
+    }
+    case "CLEAR_RETRY_NOTICE":
+      return { ...state, retryNotice: null };
     case "SET_VALIDATION":
       return { ...state, validationErrors: action.errors };
     case "SET_PENDING_USER_COUNT":
@@ -139,7 +199,7 @@ export function reducer(state: State, action: Action): State {
         }
         return r;
       });
-      return { ...state, rows: next };
+      return { ...state, rows: next, retryNotice: null };
     }
     case "RESET":
       return INITIAL;
@@ -153,6 +213,7 @@ const INITIAL: State = {
   rows: [],
   rowIndexById: {},
   topError: null,
+  retryNotice: null,
   validationErrors: [],
   totalProcessable: 0,
   pendingUserCount: 0,
@@ -179,6 +240,7 @@ export type UseRecursiveEncryptionJob = {
   doneCount: number;
   validationErrors: string[];
   topError: string | null;
+  retryNotice: string | null;
   canConfirm: boolean;
   pendingUserCount: number;
   confirm: () => void;
@@ -576,19 +638,21 @@ export function useRecursiveEncryptionJob({
 
     const stagedResults = new Map<
       string,
-      StagedEncryptFile | { newFilename: string }
+      StagedEncryptFile | StagedDecryptFile
     >();
 
-    try {
+    const stage = async (onlyIds?: string[]) => {
       if (mode === "encrypt") {
-        // Reset folder key map on each attempt (retry recomputes them).
-        folderWrappedKeysRef.current = new Map();
+        // Reset folder key map on each attempt (retry recomputes them); a
+        // second pass over changed files reuses it.
+        if (!onlyIds) folderWrappedKeysRef.current = new Map();
         await encryptPipeline({
           vaultClient,
           currentUserId: user.sub!,
           rootItem: item,
           flat: flatRef.current,
           processableIds: processableIdsRef.current,
+          onlyIds,
           publicKeys: publicKeysRef.current,
           recipientLabels: recipientLabelsRef.current,
           rootEncryptedKeysRef,
@@ -601,8 +665,10 @@ export function useRecursiveEncryptionJob({
           onFileStaged: (id, staged) => stagedResults.set(id, staged),
         });
       } else if (mode === "encrypt-into-chain") {
-        folderWrappedKeysRef.current = new Map();
-        intoChainRootWrapRef.current = null;
+        if (!onlyIds) {
+          folderWrappedKeysRef.current = new Map();
+          intoChainRootWrapRef.current = null;
+        }
         const parentEntryKey = parentEntryKeyRef.current;
         if (!parentEntryKey) {
           throw new Error(
@@ -614,6 +680,7 @@ export function useRecursiveEncryptionJob({
           rootItem: item,
           flat: flatRef.current,
           processableIds: processableIdsRef.current,
+          onlyIds,
           parentEntryKey,
           parentChainToParent: parentChainToParentRef.current,
           intoChainRootWrapRef,
@@ -629,16 +696,21 @@ export function useRecursiveEncryptionJob({
           rootItem: item,
           flat: flatRef.current,
           processableIds: processableIdsRef.current,
+          onlyIds,
           signal: controller.signal,
           uploadAcl,
           dispatch,
           onFileStaged: (id, staged) => stagedResults.set(id, staged),
         });
       }
+    };
 
-      dispatch({ type: "SET_PHASE", phase: "committing" });
-
+    const commit = async () => {
       const driver = getDriver();
+      const sourceEtags: Record<string, string> = {};
+      stagedResults.forEach((v, id) => {
+        if (v.sourceEtag) sourceEtags[id] = v.sourceEtag;
+      });
       if (mode === "encrypt") {
         const fileKeyMapping: Record<string, string> = {};
         const encryptedKeysForDescendants: Record<string, string> = {};
@@ -693,6 +765,7 @@ export function useRecursiveEncryptionJob({
           encryptionPublicKeyVersionPerUser,
           encryptedKeysForDescendants,
           fileKeyMapping,
+          sourceEtags,
           maintenanceKey: rootMaintenanceKeyRef.current
             ? toBase64(rootMaintenanceKeyRef.current)
             : null,
@@ -731,14 +804,57 @@ export function useRecursiveEncryptionJob({
           encryptedSymmetricKey: toBase64(rootChainWrap),
           encryptedKeysForDescendants,
           fileKeyMapping,
+          sourceEtags,
         });
       } else {
         const fileKeyMapping: Record<string, string> = {};
         stagedResults.forEach((v, id) => {
           fileKeyMapping[id] = v.newFilename;
         });
-        await driver.removeEncryption(item.id, { fileKeyMapping });
+        await driver.removeEncryption(item.id, { fileKeyMapping, sourceEtags });
       }
+    };
+
+    try {
+      await stage();
+      // Refused for files saved meanwhile (or still held by their editor): only
+      // those are read and processed again, the others' uploads stay valid.
+      for (let attempt = 1; ; attempt++) {
+        dispatch({ type: "SET_PHASE", phase: "committing" });
+        try {
+          await commit();
+          break;
+        } catch (err) {
+          const refused = refusedFiles(err);
+          if (!refused || attempt >= COMMIT_ATTEMPTS) throw err;
+          const count = refused.ids.length;
+          dispatch({
+            type: "RETRY_REFUSED",
+            ids: refused.ids,
+            notice:
+              refused.code === "item_being_edited"
+                ? t("encryption.progress.waiting_for_editor", {
+                    count,
+                    defaultValue_one:
+                      "A document is still being saved by its editor: it will be processed again in a few seconds, with its latest changes.",
+                    defaultValue_other:
+                      "{{count}} documents are still being saved by their editor: they will be processed again in a few seconds, with their latest changes.",
+                  })
+                : t("encryption.progress.changed_meanwhile", {
+                    count,
+                    defaultValue_one:
+                      "A file was saved again while it was processed: it is processed again, with its latest changes.",
+                    defaultValue_other:
+                      "{{count}} files were saved again while they were processed: they are processed again, with their latest changes.",
+                  }),
+          });
+          if (refused.code === "item_being_edited") {
+            await pause(EDITOR_SAVE_WAIT_MS, controller.signal);
+          }
+          await stage(refused.ids);
+        }
+      }
+      dispatch({ type: "CLEAR_RETRY_NOTICE" });
 
       dispatch({ type: "PROMOTE_STAGED_TO_DONE" });
       await queryClient.invalidateQueries({ queryKey: ["items"] });
@@ -776,6 +892,15 @@ export function useRecursiveEncryptionJob({
           "still being saved by its editor",
         );
         rowErrors = Object.fromEntries(held.map((id) => [id, rowError]));
+      } else if (err instanceof APIError && err.data?.code === "item_changed") {
+        const changed = (err.data.items as string[] | undefined) ?? [];
+        message = t(
+          "encryption.errors.item_changed",
+          "A file keeps changing while it is processed. Retry later.",
+          { count: Math.max(changed.length, 1) },
+        );
+        const rowError = t("encryption.row.changed", "changed while processed");
+        rowErrors = Object.fromEntries(changed.map((id) => [id, rowError]));
       } else if (
         err instanceof APIError &&
         err.data?.code === "subtree_mutated"
@@ -846,6 +971,7 @@ export function useRecursiveEncryptionJob({
     doneCount,
     validationErrors: state.validationErrors,
     topError: state.topError,
+    retryNotice: state.retryNotice,
     canConfirm,
     pendingUserCount: state.pendingUserCount,
     confirm,
@@ -864,6 +990,11 @@ type EncryptPipelineArgs = {
   rootItem: Item;
   flat: FlatNode[];
   processableIds: string[];
+  /**
+   * Stage these files again, and only them, with the keys minted the first time
+   * (the root's, the folders'): their content changed since it was read.
+   */
+  onlyIds?: string[];
   publicKeys: Record<string, ArrayBuffer>;
   recipientLabels: Record<string, RecipientLabel>;
   rootEncryptedKeysRef: React.MutableRefObject<Record<string, ArrayBuffer>>;
@@ -882,6 +1013,7 @@ async function encryptPipeline({
   rootItem,
   flat,
   processableIds,
+  onlyIds,
   publicKeys,
   recipientLabels,
   rootEncryptedKeysRef,
@@ -896,7 +1028,7 @@ async function encryptPipeline({
   // Root-key minting happens before per-file staging only when the root
   // is a FOLDER. When the root is a FILE, the root IS the per-file case
   // and encryptWithoutKey is called with the actual file content below.
-  if (rootItem.type === ItemType.FOLDER) {
+  if (rootItem.type === ItemType.FOLDER && !onlyIds) {
     dispatch({ type: "UPDATE_ROW", id: rootItem.id, state: "running" });
     // Pass a labeled recipient map; the vault resolves + trust-checks each key
     // itself (binding + TOFU) and uses only the subs. `publicKeys` is keyed by
@@ -948,7 +1080,7 @@ async function encryptPipeline({
     }
   }
 
-  await runStagingPool(processableIds, signal, (id, poolSignal) =>
+  await runStagingPool(onlyIds ?? processableIds, signal, (id, poolSignal) =>
     stageOneEncryption({
       vaultClient,
       rootItem,
@@ -1010,14 +1142,10 @@ async function stageOneEncryption({
   try {
     if (signal.aborted) throw abortError();
 
-    const resp = await fetch(node.item.url!, {
-      credentials: "include",
+    const { body: plaintext, etag: sourceEtag } = await downloadForStaging(
+      node.item.url!,
       signal,
-    });
-    if (!resp.ok) {
-      throw new Error(`Download failed: ${resp.status}`);
-    }
-    const plaintext = await resp.arrayBuffer();
+    );
 
     let encryptedContent: ArrayBuffer;
     let wrappedKey: ArrayBuffer;
@@ -1075,7 +1203,12 @@ async function stageOneEncryption({
     );
     await putToS3(uploadUrl, encryptedContent, signal, uploadAcl);
 
-    onFileStaged(targetId, { itemId: targetId, newFilename, wrappedKey });
+    onFileStaged(targetId, {
+      itemId: targetId,
+      newFilename,
+      wrappedKey,
+      sourceEtag,
+    });
     dispatch({ type: "UPDATE_ROW", id: targetId, state: "staged" });
   } catch (err) {
     if ((err as Error).name === "AbortError") {
@@ -1098,6 +1231,11 @@ type EncryptIntoChainPipelineArgs = {
   rootItem: Item;
   flat: FlatNode[];
   processableIds: string[];
+  /**
+   * Stage these files again, and only them, with the keys minted the first time
+   * (the root's, the folders'): their content changed since it was read.
+   */
+  onlyIds?: string[];
   parentEntryKey: ArrayBuffer;
   parentChainToParent: ArrayBuffer[];
   intoChainRootWrapRef: React.MutableRefObject<ArrayBuffer | null>;
@@ -1131,6 +1269,7 @@ async function encryptIntoChainPipeline({
   rootItem,
   flat,
   processableIds,
+  onlyIds,
   parentEntryKey,
   parentChainToParent,
   intoChainRootWrapRef,
@@ -1144,7 +1283,7 @@ async function encryptIntoChainPipeline({
   // ahead of any per-file work; for a file root we defer to the
   // per-file stage where the file's plaintext goes through the same
   // encryptNestedWithoutKey call.
-  if (rootItem.type === ItemType.FOLDER) {
+  if (rootItem.type === ItemType.FOLDER && !onlyIds) {
     dispatch({ type: "UPDATE_ROW", id: rootItem.id, state: "running" });
     const { wrappedKey } = await vaultClient.encryptNestedWithoutKey(
       new ArrayBuffer(0),
@@ -1196,7 +1335,7 @@ async function encryptIntoChainPipeline({
     }
   }
 
-  await runStagingPool(processableIds, signal, (id, poolSignal) =>
+  await runStagingPool(onlyIds ?? processableIds, signal, (id, poolSignal) =>
     stageOneEncryptionIntoChain({
       vaultClient,
       rootItem,
@@ -1251,14 +1390,10 @@ async function stageOneEncryptionIntoChain({
   try {
     if (signal.aborted) throw abortError();
 
-    const resp = await fetch(node.item.url!, {
-      credentials: "include",
+    const { body: plaintext, etag: sourceEtag } = await downloadForStaging(
+      node.item.url!,
       signal,
-    });
-    if (!resp.ok) {
-      throw new Error(`Download failed: ${resp.status}`);
-    }
-    const plaintext = await resp.arrayBuffer();
+    );
 
     let encryptedContent: ArrayBuffer;
     let wrappedKey: ArrayBuffer;
@@ -1316,7 +1451,12 @@ async function stageOneEncryptionIntoChain({
     );
     await putToS3(uploadUrl, encryptedContent, signal, uploadAcl);
 
-    onFileStaged(targetId, { itemId: targetId, newFilename, wrappedKey });
+    onFileStaged(targetId, {
+      itemId: targetId,
+      newFilename,
+      wrappedKey,
+      sourceEtag,
+    });
     dispatch({ type: "UPDATE_ROW", id: targetId, state: "staged" });
   } catch (err) {
     if ((err as Error).name === "AbortError") {
@@ -1339,10 +1479,12 @@ type DecryptPipelineArgs = {
   rootItem: Item;
   flat: FlatNode[];
   processableIds: string[];
+  /** Stage these files again, and only them: their content changed since it was read. */
+  onlyIds?: string[];
   signal: AbortSignal;
   uploadAcl: string | undefined;
   dispatch: DispatchFn;
-  onFileStaged: (id: string, staged: { newFilename: string }) => void;
+  onFileStaged: (id: string, staged: StagedDecryptFile) => void;
 };
 
 async function decryptPipeline({
@@ -1350,6 +1492,7 @@ async function decryptPipeline({
   rootItem,
   flat,
   processableIds,
+  onlyIds,
   signal,
   uploadAcl,
   dispatch,
@@ -1374,65 +1517,65 @@ async function decryptPipeline({
     dispatch({ type: "UPDATE_ROW", id: node.item.id, state: "staged" });
   }
 
-  await runStagingPool(processableIds, signal, async (id, poolSignal) => {
-    const node = flat.find((n) => n.item.id === id);
-    if (!node) return;
+  await runStagingPool(
+    onlyIds ?? processableIds,
+    signal,
+    async (id, poolSignal) => {
+      const node = flat.find((n) => n.item.id === id);
+      if (!node) return;
 
-    dispatch({ type: "UPDATE_ROW", id, state: "running" });
+      dispatch({ type: "UPDATE_ROW", id, state: "running" });
 
-    try {
-      const driver = getDriver();
-      const keyChain = await driver.getKeyChain(id);
-      const entryKey = fromBase64(keyChain.encrypted_key_for_user);
-      const chain = keyChain.chain.map((e) =>
-        fromBase64(e.encrypted_symmetric_key),
-      );
+      try {
+        const driver = getDriver();
+        const keyChain = await driver.getKeyChain(id);
+        const entryKey = fromBase64(keyChain.encrypted_key_for_user);
+        const chain = keyChain.chain.map((e) =>
+          fromBase64(e.encrypted_symmetric_key),
+        );
 
-      const resp = await fetch(node.item.url!, {
-        credentials: "include",
-        signal: poolSignal,
-      });
-      if (!resp.ok) {
-        throw new Error(`Download failed: ${resp.status}`);
+        const { body: ciphertext, etag: sourceEtag } = await downloadForStaging(
+          node.item.url!,
+          poolSignal,
+        );
+
+        const keyVersion = keyChain.encryption_public_key_version ?? 1;
+
+        // optimizeMemory: hot path — file body, ciphertext discarded
+        // after this call and plaintext goes straight to S3.
+        const { data: plaintext } = await vaultClient.decryptWithKey(
+          ciphertext,
+          entryKey,
+          keyVersion,
+          chain.length > 0 ? chain : undefined,
+          { optimizeMemory: true },
+        );
+
+        const newFilename = stagedFilename(node.item.title, node.item.filename);
+        const uploadUrl = await getEncryptionUploadUrl(
+          id,
+          newFilename,
+          plaintext.byteLength,
+          poolSignal,
+        );
+        await putToS3(uploadUrl, plaintext, poolSignal, uploadAcl);
+
+        onFileStaged(id, { itemId: id, newFilename, sourceEtag });
+        dispatch({ type: "UPDATE_ROW", id, state: "staged" });
+      } catch (err) {
+        if ((err as Error).name === "AbortError") {
+          // Interrupted (cancelled, or another file failed): not this file's fault.
+          dispatch({ type: "UPDATE_ROW", id, state: "pending" });
+          throw err;
+        }
+        dispatch({
+          type: "UPDATE_ROW",
+          id,
+          state: "failed",
+          error: (err as Error).message,
+        });
+        throw new FileStagingError(id, err);
       }
-      const ciphertext = await resp.arrayBuffer();
-
-      const keyVersion = keyChain.encryption_public_key_version ?? 1;
-
-      // optimizeMemory: hot path — file body, ciphertext discarded
-      // after this call and plaintext goes straight to S3.
-      const { data: plaintext } = await vaultClient.decryptWithKey(
-        ciphertext,
-        entryKey,
-        keyVersion,
-        chain.length > 0 ? chain : undefined,
-        { optimizeMemory: true },
-      );
-
-      const newFilename = stagedFilename(node.item.title, node.item.filename);
-      const uploadUrl = await getEncryptionUploadUrl(
-        id,
-        newFilename,
-        plaintext.byteLength,
-        poolSignal,
-      );
-      await putToS3(uploadUrl, plaintext, poolSignal, uploadAcl);
-
-      onFileStaged(id, { newFilename });
-      dispatch({ type: "UPDATE_ROW", id, state: "staged" });
-    } catch (err) {
-      if ((err as Error).name === "AbortError") {
-        // Interrupted (cancelled, or another file failed): not this file's fault.
-        dispatch({ type: "UPDATE_ROW", id, state: "pending" });
-        throw err;
-      }
-      dispatch({
-        type: "UPDATE_ROW",
-        id,
-        state: "failed",
-        error: (err as Error).message,
-      });
-      throw new FileStagingError(id, err);
-    }
-  });
+    },
+  );
 }

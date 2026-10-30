@@ -286,12 +286,16 @@ export abstract class Driver {
       encryptionPublicKeyVersionPerUser: Record<string, number | null>;
       encryptedKeysForDescendants: Record<string, string>;
       fileKeyMapping?: Record<string, string>;
+      sourceEtags?: Record<string, string>;
       maintenanceKey?: string | null;
     },
   ): Promise<Item>;
   abstract removeEncryption(
     itemId: string,
-    data?: { fileKeyMapping?: Record<string, string> },
+    data?: {
+      fileKeyMapping?: Record<string, string>;
+      sourceEtags?: Record<string, string>;
+    },
   ): Promise<Item>;
   /**
    * Encrypt-on-move: ship a plaintext subtree into an encrypted destination
@@ -311,6 +315,7 @@ export abstract class Driver {
       encryptedSymmetricKey: string;
       encryptedKeysForDescendants: Record<string, string>;
       fileKeyMapping?: Record<string, string>;
+      sourceEtags?: Record<string, string>;
     },
   ): Promise<void>;
   abstract getKeyChain(itemId: string): Promise<KeyChain>;

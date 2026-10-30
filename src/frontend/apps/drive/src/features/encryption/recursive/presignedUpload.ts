@@ -1,5 +1,25 @@
 import { fetchAPI } from "@/features/api/fetchApi";
 
+/**
+ * A file's stored content, with the ETag it was served under: the commit sends
+ * it back, and the server refuses a file whose content changed since. Never from
+ * the browser's cache, whose copy may predate the latest save.
+ */
+export async function downloadForStaging(
+  url: string,
+  signal?: AbortSignal,
+): Promise<{ body: ArrayBuffer; etag: string | null }> {
+  const resp = await fetch(url, {
+    credentials: "include",
+    cache: "no-store",
+    signal,
+  });
+  if (!resp.ok) {
+    throw new Error(`Download failed: ${resp.status}`);
+  }
+  return { body: await resp.arrayBuffer(), etag: resp.headers.get("ETag") };
+}
+
 // The URL signs `size`: the body uploaded to it must be exactly that long.
 export async function getEncryptionUploadUrl(
   itemId: string,

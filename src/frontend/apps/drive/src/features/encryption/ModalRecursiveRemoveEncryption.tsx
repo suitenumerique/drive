@@ -146,6 +146,10 @@ export const ModalRecursiveRemoveEncryption = ({
 
         {job.topError && <Alert type={VariantType.ERROR}>{job.topError}</Alert>}
 
+        {job.retryNotice && (
+          <Alert type={VariantType.INFO}>{job.retryNotice}</Alert>
+        )}
+
         {job.phase !== "blocked" && job.rows.length > 0 && (
           <>
             <JobProgressBar

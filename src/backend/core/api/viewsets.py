@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 from urllib.parse import quote, unquote, urlparse
 
@@ -706,6 +707,54 @@ def being_edited_refusal(items):
         "detail": _("A document is still being saved by its editor. Retry in a few seconds."),
         "code": "item_being_edited",
         "items": held,
+    }
+
+
+# Concurrent HEAD requests when checking a large tree's files before a commit.
+ETAG_CHECK_CONCURRENCY = 16
+
+
+def _etag(value):
+    """An ETag as compared: without its quotes and weak marker."""
+    return value.removeprefix("W/").strip('"') if value else None
+
+
+def changed_since_read_refusal(items, source_etags):
+    """The error body refusing files whose stored content changed since the client
+    read it, or None.
+
+    The client reads every file, processes it and uploads the result before this
+    single commit, minutes later for a large tree: an edit saved meanwhile would
+    be lost, the commit switching the file to content made from the older one.
+    """
+    s3_client = default_storage.connection.meta.client
+
+    def has_changed(item):
+        try:
+            current = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)[
+                "ETag"
+            ]
+        except ClientError:
+            current = None
+        return _etag(current) != _etag(source_etags[str(item.pk)])
+
+    checked = [
+        item
+        for item in items
+        if item.type == models.ItemTypeChoices.FILE and str(item.pk) in source_etags
+    ]
+    with ThreadPoolExecutor(max_workers=ETAG_CHECK_CONCURRENCY) as executor:
+        changed = [
+            str(item.pk)
+            for item, is_changed in zip(checked, executor.map(has_changed, checked), strict=True)
+            if is_changed
+        ]
+    if not changed:
+        return None
+    return {
+        "detail": _("Files changed while they were being processed. Retry."),
+        "code": "item_changed",
+        "items": sorted(changed),
     }
 
 
@@ -1770,7 +1819,9 @@ class ItemViewSet(
         # raw SQL, re-evaluating the queryset returns nothing
         # (filter still references the old path value).
         effective_descendants = list(compute_effective_descendants_for_encryption(item))
-        refusal = being_edited_refusal([item, *effective_descendants])
+        refusal = being_edited_refusal([item, *effective_descendants]) or (
+            changed_since_read_refusal([item, *effective_descendants], data.get("source_etags", {}))
+        )
         if refusal:
             return drf.response.Response(refusal, status=drf.status.HTTP_409_CONFLICT)
         live_descendant_ids = {str(d.pk) for d in effective_descendants}
@@ -2552,7 +2603,11 @@ class ItemViewSet(
         # re-query against a possibly-stale path predicate.
         effective_descendants = list(compute_effective_descendants_for_encryption(item))
 
-        refusal = being_edited_refusal([item, *effective_descendants])
+        refusal = being_edited_refusal([item, *effective_descendants]) or (
+            changed_since_read_refusal(
+                [item, *effective_descendants], serializer.validated_data["source_etags"]
+            )
+        )
         if refusal:
             return drf.response.Response(refusal, status=drf.status.HTTP_409_CONFLICT)
 
@@ -2698,6 +2753,14 @@ class ItemViewSet(
                 },
                 status=drf.status.HTTP_409_CONFLICT,
             )
+
+        # An encrypted document can be edited meanwhile, in the editor of
+        # encrypted documents: its new ciphertext would be lost the same way.
+        refusal = changed_since_read_refusal(
+            [item, *effective_descendants_qs], serializer.validated_data["source_etags"]
+        )
+        if refusal:
+            return drf.response.Response(refusal, status=drf.status.HTTP_409_CONFLICT)
 
         old_s3_keys, file_items_to_scan = clear_subtree_encryption(
             item=item,

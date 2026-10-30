@@ -41,9 +41,11 @@ export type StagedEncryptFile = {
   itemId: string;
   newFilename: string;
   wrappedKey: ArrayBuffer;
+  sourceEtag: string | null;
 };
 
 export type StagedDecryptFile = {
   itemId: string;
   newFilename: string;
+  sourceEtag: string | null;
 };

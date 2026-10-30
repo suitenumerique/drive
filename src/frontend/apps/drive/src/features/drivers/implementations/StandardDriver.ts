@@ -892,6 +892,7 @@ export class StandardDriver extends Driver {
       encryptionPublicKeyVersionPerUser: Record<string, number | null>;
       encryptedKeysForDescendants: Record<string, string>;
       fileKeyMapping?: Record<string, string>;
+      sourceEtags?: Record<string, string>;
       maintenanceKey?: string | null;
     },
   ): Promise<Item> {
@@ -905,6 +906,7 @@ export class StandardDriver extends Driver {
           data.encryptionPublicKeyVersionPerUser,
         encrypted_keys_for_descendants: data.encryptedKeysForDescendants,
         file_key_mapping: data.fileKeyMapping ?? {},
+        source_etags: data.sourceEtags ?? {},
         ...(data.maintenanceKey
           ? { maintenance_key: data.maintenanceKey }
           : {}),
@@ -921,6 +923,7 @@ export class StandardDriver extends Driver {
       encryptedSymmetricKey: string;
       encryptedKeysForDescendants: Record<string, string>;
       fileKeyMapping?: Record<string, string>;
+      sourceEtags?: Record<string, string>;
     },
   ): Promise<void> {
     await fetchAPI(`items/${itemId}/move/`, {
@@ -930,18 +933,23 @@ export class StandardDriver extends Driver {
         encrypted_symmetric_key: data.encryptedSymmetricKey,
         encrypted_keys_for_descendants: data.encryptedKeysForDescendants,
         file_key_mapping: data.fileKeyMapping ?? {},
+        source_etags: data.sourceEtags ?? {},
       }),
     });
   }
 
   async removeEncryption(
     itemId: string,
-    data?: { fileKeyMapping?: Record<string, string> },
+    data?: {
+      fileKeyMapping?: Record<string, string>;
+      sourceEtags?: Record<string, string>;
+    },
   ): Promise<Item> {
     const response = await fetchAPI(`items/${itemId}/remove-encryption/`, {
       method: "PATCH",
       body: JSON.stringify({
         file_key_mapping: data?.fileKeyMapping ?? {},
+        source_etags: data?.sourceEtags ?? {},
       }),
     });
     const json = await response.json();

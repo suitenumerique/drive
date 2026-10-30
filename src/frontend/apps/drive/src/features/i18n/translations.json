@@ -810,6 +810,8 @@
           "no_accesses": "No users with access found on the root item.",
           "nothing_to_encrypt_file": "This file is already encrypted.",
           "nothing_to_decrypt_file": "This file is already plaintext.",
+          "item_changed_one": "A file keeps changing while it is processed. Retry later.",
+          "item_changed_other": "{{count}} files keep changing while they are processed. Retry later.",
           "item_being_edited_one": "A document is still being saved by its editor. Retry in a few seconds.",
           "item_being_edited_other": "{{count}} documents are still being saved by their editor. Retry in a few seconds.",
           "subtree_mutated": "The folder contents changed during the operation ({{added}} added, {{removed}} removed).",
@@ -852,6 +854,7 @@
           "not_encrypted": "Not encrypted",
           "encrypting": "{{title}}: encrypting",
           "decrypting": "{{title}}: decrypting",
+          "changed": "changed while processed",
           "being_edited": "still being saved by its editor",
           "failed": "Could not be processed ({{error}})"
         },
@@ -868,7 +871,13 @@
           "decrypted_one": "{{done}} of {{count}} item decrypted",
           "decrypted_many": "{{done}} of {{count}} items decrypted",
           "decrypted_other": "{{done}} of {{count}} items decrypted",
-          "committing": "Finalizing…"
+          "committing": "Finalizing…",
+          "waiting_for_editor_one": "A document is still being saved by its editor: it will be processed again in a few seconds, with its latest changes.",
+          "waiting_for_editor_many": "{{count}} documents are still being saved by their editor: they will be processed again in a few seconds, with their latest changes.",
+          "waiting_for_editor_other": "{{count}} documents are still being saved by their editor: they will be processed again in a few seconds, with their latest changes.",
+          "changed_meanwhile_one": "A file was saved again while it was processed: it is processed again, with its latest changes.",
+          "changed_meanwhile_many": "{{count}} files were saved again while they were processed: they are processed again, with their latest changes.",
+          "changed_meanwhile_other": "{{count}} files were saved again while they were processed: they are processed again, with their latest changes."
         },
         "host_modal": {
           "label": "Encryption"
@@ -1691,6 +1700,8 @@
           "no_accesses": "Aucun utilisateur n'a accès à l'élément racine.",
           "nothing_to_encrypt_file": "Ce fichier est déjà chiffré.",
           "nothing_to_decrypt_file": "Ce fichier est déjà en clair.",
+          "item_changed_one": "Un fichier change sans cesse pendant son traitement. Réessayez plus tard.",
+          "item_changed_other": "{{count}} fichiers changent sans cesse pendant leur traitement. Réessayez plus tard.",
           "item_being_edited_one": "Un document est encore en cours d'enregistrement par son éditeur. Réessayez dans quelques secondes.",
           "item_being_edited_other": "{{count}} documents sont encore en cours d'enregistrement par leur éditeur. Réessayez dans quelques secondes.",
           "subtree_mutated": "Le contenu du dossier a changé pendant l'opération ({{added}} ajoutés, {{removed}} supprimés).",
@@ -1733,6 +1744,7 @@
           "not_encrypted": "Non chiffré",
           "encrypting": "{{title}} : chiffrement",
           "decrypting": "{{title}} : déchiffrement",
+          "changed": "modifié pendant le traitement",
           "being_edited": "encore en cours d'enregistrement par son éditeur",
           "failed": "Traitement impossible ({{error}})"
         },
@@ -1749,7 +1761,13 @@
           "decrypted_one": "{{done}} sur {{count}} élément déchiffré",
           "decrypted_many": "{{done}} sur {{count}} éléments déchiffrés",
           "decrypted_other": "{{done}} sur {{count}} éléments déchiffrés",
-          "committing": "Finalisation…"
+          "committing": "Finalisation…",
+          "waiting_for_editor_one": "Un document est encore en cours d'enregistrement par son éditeur : il sera traité à nouveau dans quelques secondes, avec ses dernières modifications.",
+          "waiting_for_editor_many": "{{count}} documents sont encore en cours d'enregistrement par leur éditeur : ils seront traités à nouveau dans quelques secondes, avec leurs dernières modifications.",
+          "waiting_for_editor_other": "{{count}} documents sont encore en cours d'enregistrement par leur éditeur : ils seront traités à nouveau dans quelques secondes, avec leurs dernières modifications.",
+          "changed_meanwhile_one": "Un fichier a été enregistré à nouveau pendant son traitement : il est traité à nouveau, avec ses dernières modifications.",
+          "changed_meanwhile_many": "{{count}} fichiers ont été enregistrés à nouveau pendant leur traitement : ils sont traités à nouveau, avec leurs dernières modifications.",
+          "changed_meanwhile_other": "{{count}} fichiers ont été enregistrés à nouveau pendant leur traitement : ils sont traités à nouveau, avec leurs dernières modifications."
         },
         "host_modal": {
           "label": "Chiffrement"
@@ -2572,6 +2590,8 @@
           "no_accesses": "Geen gebruikers met toegang gevonden op het hoofditem.",
           "nothing_to_encrypt_file": "Dit bestand is al versleuteld.",
           "nothing_to_decrypt_file": "Dit bestand is al onversleuteld.",
+          "item_changed_one": "Een bestand blijft veranderen tijdens de verwerking. Probeer het later opnieuw.",
+          "item_changed_other": "{{count}} bestanden blijven veranderen tijdens de verwerking. Probeer het later opnieuw.",
           "item_being_edited_one": "Een document wordt nog door de editor opgeslagen. Probeer het over enkele seconden opnieuw.",
           "item_being_edited_other": "{{count}} documenten worden nog door hun editor opgeslagen. Probeer het over enkele seconden opnieuw.",
           "subtree_mutated": "De inhoud van de map is tijdens de bewerking gewijzigd ({{added}} toegevoegd, {{removed}} verwijderd).",
@@ -2614,6 +2634,7 @@
           "not_encrypted": "Niet versleuteld",
           "encrypting": "{{title}}: versleutelen",
           "decrypting": "{{title}}: ontsleutelen",
+          "changed": "gewijzigd tijdens de verwerking",
           "being_edited": "wordt nog door de editor opgeslagen",
           "failed": "Kon niet worden verwerkt ({{error}})"
         },
@@ -2630,7 +2651,13 @@
           "decrypted_one": "{{done}} van {{count}} item ontsleuteld",
           "decrypted_many": "{{done}} van {{count}} items ontsleuteld",
           "decrypted_other": "{{done}} van {{count}} items ontsleuteld",
-          "committing": "Bezig met afronden…"
+          "committing": "Bezig met afronden…",
+          "waiting_for_editor_one": "Een document wordt nog door de editor opgeslagen: het wordt over enkele seconden opnieuw verwerkt, met de laatste wijzigingen.",
+          "waiting_for_editor_many": "{{count}} documenten worden nog door hun editor opgeslagen: ze worden over enkele seconden opnieuw verwerkt, met de laatste wijzigingen.",
+          "waiting_for_editor_other": "{{count}} documenten worden nog door hun editor opgeslagen: ze worden over enkele seconden opnieuw verwerkt, met de laatste wijzigingen.",
+          "changed_meanwhile_one": "Een bestand is tijdens de verwerking opnieuw opgeslagen: het wordt opnieuw verwerkt, met de laatste wijzigingen.",
+          "changed_meanwhile_many": "{{count}} bestanden zijn tijdens de verwerking opnieuw opgeslagen: ze worden opnieuw verwerkt, met de laatste wijzigingen.",
+          "changed_meanwhile_other": "{{count}} bestanden zijn tijdens de verwerking opnieuw opgeslagen: ze worden opnieuw verwerkt, met de laatste wijzigingen."
         },
         "host_modal": {
           "label": "Versleuteling"

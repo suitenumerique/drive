@@ -8,6 +8,8 @@ import random
 from unittest import mock
 from uuid import uuid4
 
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.test import override_settings
 
 import pytest
@@ -1470,6 +1472,44 @@ def test_api_items_move_encrypt_on_move_file():
     # have any access to the file (it moved out of source's subtree).
     # That's exactly the cleanup we wanted.
     assert not models.ItemEncryptionKeyWrap.objects.filter(item=file_item).exists()
+
+
+def test_api_items_move_encrypt_on_move_refused_for_a_file_changed_since_it_was_read():
+    """Saved again after the client read it: the ciphertext made from the older
+    content is refused, the file named, and nothing moves."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    source_folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")]
+    )
+    file_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE, parent=source_folder, filename="report.odt"
+    )
+    s3_client = default_storage.connection.meta.client
+    default_storage.save(file_item.file_key, ContentFile(b"as read"))
+    read = s3_client.head_object(Bucket=default_storage.bucket_name, Key=file_item.file_key)["ETag"]
+    default_storage.save(file_item.file_key, ContentFile(b"edited since"))
+    dest_root = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(dest_root.id),
+            "encrypted_symmetric_key": "CHAIN-WRAP-FILE-UNDER-DEST",
+            "encrypted_keys_for_descendants": {},
+            "file_key_mapping": {str(file_item.pk): f"{uuid4()}/report.odt"},
+            "source_etags": {str(file_item.pk): read},
+        },
+        format="json",
+    )
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "item_changed"
+    assert response.json()["items"] == [str(file_item.pk)]
+    file_item.refresh_from_db()
+    assert file_item.is_encrypted is False
+    assert file_item.parent() == source_folder
 
 
 def test_api_items_move_encrypt_on_move_folder_with_descendants():
