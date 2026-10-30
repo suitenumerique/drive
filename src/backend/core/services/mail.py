@@ -107,4 +107,4 @@ def send_templated_email(subject, recipients, template_name, context=None, langu
                 fail_silently=False,
             )
         except smtplib.SMTPException as exception:
-            logger.error("email to %s was not sent: %s", recipients, exception)
+            logger.exception("email to %s was not sent: %s", recipients, exception)
