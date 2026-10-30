@@ -46,6 +46,7 @@ from core import models
 from core.api.serializers import validate_maintenance_key
 from core.api.utils import detect_mimetype
 from core.api.viewsets import clear_subtree_encryption, compute_removal_scope
+from core.storage.objects import delete_every_version
 
 logger = logging.getLogger(__name__)
 
@@ -460,9 +461,10 @@ def _upload(export_dir, lines):
 
 
 def _delete(keys):
+    # Plaintext that never got switched to: no version of it may stay behind.
     for key in keys:
         try:
-            default_storage.delete(key)
+            delete_every_version(key)
         except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.warning("Failed to delete object %s", key)
 

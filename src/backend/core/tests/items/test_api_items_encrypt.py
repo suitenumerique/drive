@@ -4,6 +4,7 @@ from unittest import mock
 from uuid import uuid4
 
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.db import connection
 from django.test import RequestFactory
@@ -103,6 +104,58 @@ def test_api_items_encrypt_standalone_file():
     # Check the user holds the per-user key
     wrap = models.ItemEncryptionKeyWrap.objects.get(item=item, user=user)
     assert wrap.wrapped_key == "encrypted_key_for_user"
+
+
+def _versions(key):
+    """Every version and delete marker the bucket keeps under exactly `key`."""
+    listing = default_storage.connection.meta.client.list_object_versions(
+        Bucket=default_storage.bucket_name, Prefix=key
+    )
+    return [
+        entry
+        for entry in [*listing.get("Versions", []), *listing.get("DeleteMarkers", [])]
+        if entry["Key"] == key
+    ]
+
+
+def test_api_items_encrypt_deletes_every_version_of_the_plaintext(
+    django_capture_on_commit_callbacks,
+):
+    """In a versioned bucket a plain delete only hides a key: the plaintext of a file
+    just encrypted must leave the bucket's history too."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="report.odt",
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    plaintext_key = item.file_key
+    # Two versions, as after an edit.
+    default_storage.save(plaintext_key, ContentFile(b"first draft"))
+    default_storage.save(plaintext_key, ContentFile(b"second draft"))
+    staged = f"{uuid4()}/report.odt"
+    default_storage.save(f"{item.key_base}/{staged}", ContentFile(b"ciphertext"))
+
+    client = APIClient()
+    client.force_login(user)
+    with django_capture_on_commit_callbacks(execute=True):
+        response = client.patch(
+            f"/api/v1.0/items/{item.id!s}/encrypt/",
+            {
+                "encrypted_symmetric_key_per_user": {user.sub: "encrypted_key_for_user"},
+                "encryption_public_key_version_per_user": {user.sub: 1},
+                "encrypted_keys_for_descendants": {},
+                "file_key_mapping": {str(item.id): staged},
+            },
+            format="json",
+        )
+    assert response.status_code == 200
+
+    assert _versions(plaintext_key) == []
+    item.refresh_from_db()
+    with default_storage.open(item.file_key) as stored:
+        assert stored.read() == b"ciphertext"
 
 
 def test_api_items_encrypt_versions_not_matching_the_keys_change_nothing():
@@ -322,6 +375,39 @@ def test_api_items_remove_encryption_gives_the_plaintext_type_and_size(
     item.refresh_from_db()
     assert item.mimetype == "application/pdf"
     assert item.size == len(plaintext)
+
+
+def test_api_items_remove_encryption_deletes_every_version_of_the_ciphertext(
+    django_capture_on_commit_callbacks,
+):
+    """Switched back to plaintext, a file leaves no version of its ciphertext behind."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="report.odt",
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        users=[(user, models.RoleChoices.OWNER)],
+        is_encrypted=True,
+    )
+    ciphertext_key = item.file_key
+    default_storage.save(ciphertext_key, ContentFile(b"ciphertext"))
+    staged = f"{uuid4()}/report.odt"
+    default_storage.save(f"{item.key_base}/{staged}", ContentFile(b"plaintext"))
+
+    client = APIClient()
+    client.force_login(user)
+    with (
+        mock.patch("core.api.viewsets.malware_detection.analyse_file"),
+        django_capture_on_commit_callbacks(execute=True),
+    ):
+        response = client.patch(
+            f"/api/v1.0/items/{item.id!s}/remove-encryption/",
+            {"file_key_mapping": {str(item.id): staged}},
+            format="json",
+        )
+    assert response.status_code == 200
+
+    assert _versions(ciphertext_key) == []
 
 
 def test_api_items_remove_encryption_not_root():

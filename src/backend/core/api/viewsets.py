@@ -64,6 +64,7 @@ from core.services.search_indexers import (
 )
 from core.services.uploads import reserve_upload
 from core.storage.cache import invalidate_storage_used_cache
+from core.storage.objects import delete_every_version
 from core.tasks.item import duplicate_file, process_item_purge, rename_file
 from core.utils.analytics import posthog_capture
 from wopi.conversion import exceptions as conversion_exceptions
@@ -947,7 +948,8 @@ def refresh_file_metadata(files, file_key_mapping):
 
 
 def schedule_s3_cleanup(old_s3_keys):
-    """Best-effort post-commit deletion of S3 objects.
+    """Best-effort post-commit deletion of S3 objects, every version of them: the
+    plaintext of a file just encrypted must not stay in the bucket's history.
 
     Failures are logged, never raised — by the time we get here the
     DB transaction has committed and we can't undo it.
@@ -956,11 +958,9 @@ def schedule_s3_cleanup(old_s3_keys):
         return
 
     def _cleanup():
-        s3_client = default_storage.connection.meta.client
-        bucket = default_storage.bucket_name
         for old_key in old_s3_keys:
             try:
-                s3_client.delete_object(Bucket=bucket, Key=old_key)
+                delete_every_version(old_key)
             except ClientError:
                 logger.warning("Failed to delete old S3 key: %s", old_key)
 
@@ -2679,11 +2679,9 @@ class ItemViewSet(
         # After DB commit: clean up old S3 objects and trigger malware scan
         # on newly decrypted files (the server can now inspect them)
         def _post_commit():
-            s3_client = default_storage.connection.meta.client
-            bucket = default_storage.bucket_name
             for old_key in old_s3_keys:
                 try:
-                    s3_client.delete_object(Bucket=bucket, Key=old_key)
+                    delete_every_version(old_key)
                 except ClientError:
                     logger.warning("Failed to delete old S3 key: %s", old_key)
 
