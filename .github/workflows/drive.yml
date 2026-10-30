@@ -139,7 +139,8 @@ jobs:
         id: mail-templates
         with:
           path: "src/backend/core/templates/mail"
-          key: mail-templates-${{ hashFiles('src/mail/mjml') }}
+          key: ${{ needs.build-mails.outputs.key }}
+          fail-on-cache-miss: true
 
       - name: Start and configure RustFS
         working-directory: .
