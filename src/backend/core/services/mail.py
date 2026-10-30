@@ -12,18 +12,49 @@ from django.utils.translation import get_language, override
 
 logger = getLogger(__name__)
 
+# Used when the configured font is not loaded. Outlook on Windows needs a font it
+# knows, or it falls back to Times New Roman.
+FALLBACK_FONTS = ["Arial", "Helvetica", "sans-serif"]
+
 
 def get_email_base_url():
     """Return the base url of the links put in emails."""
     return settings.EMAIL_URL_APP or Site.objects.get_current().domain
 
 
+def get_help_menu_links():
+    """
+    Return the support and terms of use links of the frontend help menu, so that
+    emails show the same links without configuring them twice.
+    """
+    help_menu = settings.FRONTEND_HELP_MENU_CONFIG or {}
+    support_url = help_menu.get("supportEmail")
+    if support_url and ":" not in support_url:
+        support_url = f"mailto:{support_url}"
+    terms_of_service_url = (help_menu.get("legal") or {}).get("termsOfUseUrl")
+    return support_url, terms_of_service_url
+
+
 def get_branding_context():
     """Return the instance branding shared by all the email templates."""
+    font_family = settings.EMAIL_FONT_FAMILY
+    help_support_url, help_terms_of_service_url = get_help_menu_links()
     return {
+        "app_name": settings.EMAIL_APP_NAME,
         "brandname": settings.EMAIL_BRAND_NAME,
         "domain": get_email_base_url(),
+        "font_family": font_family,
+        "font_stack": ", ".join(filter(None, [font_family, *FALLBACK_FONTS])),
+        "font_regular_url": settings.EMAIL_FONT_REGULAR_URL,
+        "font_bold_url": settings.EMAIL_FONT_BOLD_URL,
+        "government_logo_img": settings.EMAIL_GOVERNMENT_LOGO_IMG,
         "logo_img": settings.EMAIL_LOGO_IMG,
+        "newsletter_url": settings.EMAIL_NEWSLETTER_URL,
+        "product_icons": settings.EMAIL_PRODUCT_ICONS,
+        "suite_logo_img": settings.EMAIL_SUITE_LOGO_IMG,
+        "suite_url": settings.EMAIL_SUITE_URL,
+        "support_url": settings.EMAIL_SUPPORT_URL or help_support_url,
+        "terms_of_service_url": (settings.EMAIL_TERMS_OF_SERVICE_URL or help_terms_of_service_url),
     }
 
 

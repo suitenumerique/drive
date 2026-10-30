@@ -10,6 +10,7 @@ and this project adheres to
 
 ### Added
 
+- ✨(backend) configure the branding of emails with settings
 - ✨(backend) allow to leave an item #826
 - ✨(frontend) allow to leave an item #826
 - ✨(frontend) restrict and reopen folder access from the share modal

@@ -7,7 +7,7 @@ from django.core import mail
 
 import pytest
 
-from core.services.mail import send_templated_email
+from core.services.mail import get_branding_context, send_templated_email
 
 pytestmark = pytest.mark.django_db
 
@@ -19,6 +19,105 @@ CONTEXT = {
     "link_label": "Click here",
     "button_label": "Confirm",
 }
+
+
+@pytest.fixture(name="full_branding")
+def fixture_full_branding(settings):
+    """Configure every branding setting of the email templates."""
+    settings.EMAIL_URL_APP = "https://files.example.com"
+    settings.EMAIL_APP_NAME = "Files"
+    settings.EMAIL_BRAND_NAME = "My brand"
+    settings.EMAIL_FONT_FAMILY = "Inter"
+    settings.EMAIL_FONT_REGULAR_URL = "https://cdn.example.com/inter-400.woff2"
+    settings.EMAIL_FONT_BOLD_URL = "https://cdn.example.com/inter-700.woff2"
+    settings.EMAIL_GOVERNMENT_LOGO_IMG = "https://cdn.example.com/gov.png"
+    settings.EMAIL_LOGO_IMG = "https://cdn.example.com/logo.png"
+    settings.EMAIL_NEWSLETTER_URL = "https://example.com/newsletter"
+    settings.EMAIL_PRODUCT_ICONS = {
+        "Docs": {"img": "https://cdn.example.com/docs.png", "href": "https://docs.example.com"}
+    }
+    settings.EMAIL_SUITE_LOGO_IMG = "https://cdn.example.com/suite.png"
+    settings.EMAIL_SUITE_URL = "https://suite.example.com"
+    settings.EMAIL_SUPPORT_URL = "https://example.com/support"
+    settings.EMAIL_TERMS_OF_SERVICE_URL = "https://example.com/terms"
+    return settings
+
+
+@pytest.mark.usefixtures("full_branding")
+def test_services_mail_branding_context():
+    """Every branding value of the email templates comes from settings."""
+    assert get_branding_context() == {
+        "app_name": "Files",
+        "brandname": "My brand",
+        "domain": "https://files.example.com",
+        "font_family": "Inter",
+        "font_stack": "Inter, Arial, Helvetica, sans-serif",
+        "font_regular_url": "https://cdn.example.com/inter-400.woff2",
+        "font_bold_url": "https://cdn.example.com/inter-700.woff2",
+        "government_logo_img": "https://cdn.example.com/gov.png",
+        "logo_img": "https://cdn.example.com/logo.png",
+        "newsletter_url": "https://example.com/newsletter",
+        "product_icons": {
+            "Docs": {"img": "https://cdn.example.com/docs.png", "href": "https://docs.example.com"}
+        },
+        "suite_logo_img": "https://cdn.example.com/suite.png",
+        "suite_url": "https://suite.example.com",
+        "support_url": "https://example.com/support",
+        "terms_of_service_url": "https://example.com/terms",
+    }
+
+
+@pytest.mark.parametrize(
+    "font_family,font_stack",
+    [
+        ("Marianne", "Marianne, Arial, Helvetica, sans-serif"),
+        ("", "Arial, Helvetica, sans-serif"),
+        (None, "Arial, Helvetica, sans-serif"),
+    ],
+)
+def test_services_mail_branding_context_font_stack(font_family, font_stack, settings):
+    """The configured font always comes with fonts every email client knows."""
+    settings.EMAIL_FONT_FAMILY = font_family
+
+    assert get_branding_context()["font_stack"] == font_stack
+
+
+@pytest.mark.parametrize(
+    "support_email,support_url",
+    [
+        ("mailto:support@example.com", "mailto:support@example.com"),
+        ("support@example.com", "mailto:support@example.com"),
+        ("https://example.com/support", "https://example.com/support"),
+    ],
+)
+def test_services_mail_branding_context_help_menu_links(support_email, support_url, settings):
+    """Without email specific links, the links of the frontend help menu are used."""
+    settings.EMAIL_SUPPORT_URL = None
+    settings.EMAIL_TERMS_OF_SERVICE_URL = None
+    settings.FRONTEND_HELP_MENU_CONFIG = {
+        "supportEmail": support_email,
+        "legal": {"termsOfUseUrl": "https://example.com/help-terms"},
+    }
+
+    context = get_branding_context()
+
+    assert context["support_url"] == support_url
+    assert context["terms_of_service_url"] == "https://example.com/help-terms"
+
+
+def test_services_mail_branding_context_email_links_win(settings):
+    """Email specific links take precedence over the frontend help menu ones."""
+    settings.EMAIL_SUPPORT_URL = "https://example.com/email-support"
+    settings.EMAIL_TERMS_OF_SERVICE_URL = "https://example.com/email-terms"
+    settings.FRONTEND_HELP_MENU_CONFIG = {
+        "supportEmail": "mailto:support@example.com",
+        "legal": {"termsOfUseUrl": "https://example.com/help-terms"},
+    }
+
+    context = get_branding_context()
+
+    assert context["support_url"] == "https://example.com/email-support"
+    assert context["terms_of_service_url"] == "https://example.com/email-terms"
 
 
 def test_services_mail_send_templated_email(settings):
