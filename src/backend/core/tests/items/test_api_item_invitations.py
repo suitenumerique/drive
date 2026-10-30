@@ -388,7 +388,7 @@ def test_api_item_invitations_create_privileged_members(  # noqa: PLR0913, PLR09
         email_content = " ".join(email.body.split())
         assert f"{user.full_name} shared an item with you!" in email_content
         assert (
-            f"{user.full_name} ({user.email}) invited you with the role &quot;{invited}&quot; "
+            f'{user.full_name} ({user.email}) invited you with the role "{invited}" '
             f"on the following item: {item.title}"
         ) in email_content
         assert "My brand name" in email_content
@@ -446,7 +446,7 @@ def test_api_item_invitations_create_email_full_name_empty(settings):
     email_content = " ".join(email.body.split())
     assert f"{user.email} shared an item with you!" in email_content
     assert (
-        f"{user.email.capitalize()} invited you with the role &quot;reader&quot; on the "
+        f'{user.email.capitalize()} invited you with the role "reader" on the '
         f"following item: {item.title}" in email_content
     )
 
