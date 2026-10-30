@@ -1097,7 +1097,7 @@ def test_models_items__email_invitation__url_app_param(email_url_app, settings):
 
 
 @mock.patch(
-    "core.models.send_mail",
+    "core.services.mail.send_mail",
     side_effect=smtplib.SMTPException("Error SMTPException"),
 )
 @mock.patch.object(Logger, "error")
@@ -1133,7 +1133,7 @@ def test_models_items__email_invitation__failed(mock_logger, _mock_send_mail):
     assert isinstance(exception, smtplib.SMTPException)
 
 
-@mock.patch("core.models.send_mail")
+@mock.patch("core.services.mail.send_mail")
 def test_models_items__email_invitation__skipped_when_email_host_missing(
     mock_send_mail, caplog, settings
 ):
@@ -1147,7 +1147,7 @@ def test_models_items__email_invitation__skipped_when_email_host_missing(
     assert len(mail.outbox) == 0
 
     sender = factories.UserFactory()
-    with caplog.at_level("DEBUG", logger="core.models"):
+    with caplog.at_level("DEBUG", logger="core.services.mail"):
         item.send_invitation_email(
             "guest4@example.com",
             models.RoleChoices.EDITOR,
