@@ -34,6 +34,7 @@ and this project adheres to
 
 ### Fixed
 
+- 🐛(backend) keep the case of names and titles in email subjects
 - ♿️(frontend) identify the current page in the browser title
 - 🐛(frontend) show the full item title in a tooltip when truncated
 - 🐛(backend) fix the upload mimetype allowlist

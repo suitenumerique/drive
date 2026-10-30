@@ -41,6 +41,19 @@ def test_services_mail_send_templated_email(settings):
     assert "https://example.com/some-link/" in html
 
 
+def test_services_mail_send_templated_email_subject_case():
+    """Only the first letter of the subject is uppercased, names keep their case."""
+    send_templated_email(
+        "alice Martin shared an item with you: Q3 Report",
+        ["a@example.com"],
+        "reconciliation",
+        CONTEXT,
+    )
+
+    # pylint: disable-next=no-member
+    assert mail.outbox[0].subject == "Alice Martin shared an item with you: Q3 Report"
+
+
 def test_services_mail_send_templated_email_branding_wins(settings):
     """A caller cannot override the instance branding through its context."""
     settings.EMAIL_BRAND_NAME = "My brand"
