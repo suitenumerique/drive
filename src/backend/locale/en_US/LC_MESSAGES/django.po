@@ -233,14 +233,61 @@ msgstr ""
 msgid "Items"
 msgstr ""
 
-#: core/models.py:815
-#, python-brace-format
-msgid "{name} shared an item with you!"
+#: core/models.py
+msgid "A new item has been shared with you."
 msgstr ""
 
-#: core/models.py:817
+#: core/models.py
 #, python-brace-format
-msgid "{name} invited you with the role \"{role}\" on the following item:"
+msgid ""
+"{sender} shared the following item with you: <strong>{title}</strong>, and "
+"gave you the role \"{role}\"."
+msgstr ""
+
+#: core/templates/mail/html/invitation.html
+msgid "Open the item"
+msgstr ""
+
+#: core/templates/mail/html/invitation.html
+#, python-format
+msgid ""
+"%(app_name)s, your essential tool to organize, share and collaborate as a "
+"team."
+msgstr ""
+
+#: core/templates/mail/html/invitation.html
+#, python-format
+msgid "Discover %(app_name)s by"
+msgstr ""
+
+#: core/templates/mail/html/invitation.html
+msgid "clicking here"
+msgstr ""
+
+#: core/templates/mail/html/invitation.html
+msgid "See you soon,"
+msgstr ""
+
+#: core/templates/mail/html/invitation.html
+#, python-format
+msgid "The %(app_name)s team"
+msgstr ""
+
+#: core/templates/mail/html/invitation.html
+msgid "Government"
+msgstr ""
+
+#: core/templates/mail/html/invitation.html
+#, python-format
+msgid "Subscribe to the %(brandname)s newsletter"
+msgstr ""
+
+#: core/templates/mail/html/invitation.html
+msgid "Contact support"
+msgstr ""
+
+#: core/templates/mail/html/invitation.html
+msgid "Terms of use"
 msgstr ""
 
 #: core/models.py:820
@@ -324,29 +371,6 @@ msgstr ""
 
 #: core/models.py:1146
 msgid "Item invitations"
-msgstr ""
-
-#: core/templates/mail/html/invitation.html:162
-#: core/templates/mail/text/invitation.txt:3
-msgid "Logo email"
-msgstr ""
-
-#: core/templates/mail/html/invitation.html:209
-#: core/templates/mail/text/invitation.txt:10
-msgid "Open"
-msgstr ""
-
-#: core/templates/mail/html/invitation.html:226
-#: core/templates/mail/text/invitation.txt:14
-msgid ""
-" Drive, your new essential tool for organizing, sharing and collaborating as "
-"a team. "
-msgstr ""
-
-#: core/templates/mail/html/invitation.html:233
-#: core/templates/mail/text/invitation.txt:16
-#, python-format
-msgid " Brought to you by %(brandname)s "
 msgstr ""
 
 #: drive/settings.py:250

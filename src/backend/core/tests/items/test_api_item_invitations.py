@@ -324,7 +324,11 @@ def test_api_item_invitations_create_authenticated_outsider():
     assert response.status_code == 403
 
 
-@override_settings(EMAIL_BRAND_NAME="My brand name", EMAIL_LOGO_IMG="my-img.jpg")
+@override_settings(
+    EMAIL_BRAND_NAME="My brand name",
+    EMAIL_LOGO_IMG="my-img.jpg",
+    EMAIL_SUITE_LOGO_IMG="my-suite-img.jpg",
+)
 @pytest.mark.parametrize(
     "inviting,invited,response_code",
     (
@@ -386,13 +390,14 @@ def test_api_item_invitations_create_privileged_members(  # noqa: PLR0913, PLR09
         email = mail.outbox[0]
         assert email.to == ["guest@example.com"]
         email_content = " ".join(email.body.split())
-        assert f"{user.full_name} shared an item with you!" in email_content
+        assert "A new item has been shared with you." in email_content
         assert (
-            f"{user.full_name} ({user.email}) invited you with the role &quot;{invited}&quot; "
-            f"on the following item: {item.title}"
+            f"{user.full_name} ({user.email}) shared the following item with you: "
+            f'{item.title}, and gave you the role "{models.RoleChoices(invited).label}".'
         ) in email_content
-        assert "My brand name" in email_content
-        assert "my-img.jpg" in email_content
+        email_html = email.alternatives[0][0]
+        assert 'alt="My brand name"' in email_html
+        assert 'src="my-img.jpg"' in email_html
     else:
         assert models.Invitation.objects.exists() is False
 
@@ -444,10 +449,10 @@ def test_api_item_invitations_create_email_full_name_empty(settings):
     assert email.to == ["guest@example.com"]
 
     email_content = " ".join(email.body.split())
-    assert f"{user.email} shared an item with you!" in email_content
+    assert "A new item has been shared with you." in email_content
     assert (
-        f"{user.email.capitalize()} invited you with the role &quot;reader&quot; on the "
-        f"following item: {item.title}" in email_content
+        f"{user.email} shared the following item with you: {item.title}, "
+        'and gave you the role "Reader".' in email_content
     )
 
 

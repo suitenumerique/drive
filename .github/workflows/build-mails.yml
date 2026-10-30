@@ -2,10 +2,16 @@ name: Build mail templates reusable workflow
 
 on:
   workflow_call:
+    outputs:
+      key:
+        description: Cache key of the built mail templates, to restore them
+        value: ${{ jobs.build-mails.outputs.key }}
 
 jobs:
   build-mails:
     runs-on: ubuntu-latest
+    outputs:
+      key: ${{ steps.key.outputs.key }}
     defaults:
       run:
         working-directory: src/mail
@@ -18,12 +24,16 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Compute the mail templates cache key
+        id: key
+        run: echo "key=mail-templates-${{ hashFiles('src/mail/mjml/**', 'src/mail/yarn.lock', 'src/mail/bin/**', 'src/mail/html-to-text.config.json') }}" >> "$GITHUB_OUTPUT"
+
       - name: Restore the mail templates
         uses: actions/cache@v6
         id: mail-templates
         with:
           path: "src/backend/core/templates/mail"
-          key: mail-templates-${{ hashFiles('src/mail/mjml/**', 'src/mail/yarn.lock', 'src/mail/bin/**') }}
+          key: ${{ steps.key.outputs.key }}
 
       - name: Install yarn
         if: steps.mail-templates.outputs.cache-hit != 'true'
@@ -42,4 +52,4 @@ jobs:
         uses: actions/cache@v6
         with:
           path: "src/backend/core/templates/mail"
-          key: mail-templates-${{ hashFiles('src/mail/mjml/**', 'src/mail/yarn.lock', 'src/mail/bin/**') }}
+          key: ${{ steps.key.outputs.key }}

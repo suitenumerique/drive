@@ -197,10 +197,10 @@ def test_api_item_accesses_create_authenticated_administrator(
     email = mail.outbox[0]
     assert email.to == [other_user["email"]]
     email_content = " ".join(email.body.split())
-    assert f"{user.full_name} shared an item with you!" in email_content
+    assert "A new item has been shared with you." in email_content
     assert (
-        f"{user.full_name} ({user.email}) invited you with the role &quot;{role}&quot; "
-        f"on the following item: {item.title}"
+        f"{user.full_name} ({user.email}) shared the following item with you: "
+        f'{item.title}, and gave you the role "{models.RoleChoices(role).label}".'
     ) in email_content
     assert "items/" + str(item.id) + "/" in email_content
 
@@ -269,10 +269,10 @@ def test_api_item_accesses_create_authenticated_owner(via, depth, mock_user_team
     email = mail.outbox[0]
     assert email.to == [other_user["email"]]
     email_content = " ".join(email.body.split())
-    assert f"{user.full_name} shared an item with you!" in email_content
+    assert "A new item has been shared with you." in email_content
     assert (
-        f"{user.full_name} ({user.email}) invited you with the role &quot;{role}&quot; "
-        f"on the following item: {item.title}"
+        f"{user.full_name} ({user.email}) shared the following item with you: "
+        f'{item.title}, and gave you the role "{models.RoleChoices(role).label}".'
     ) in email_content
     assert "items/" + str(item.id) + "/" in email_content
 

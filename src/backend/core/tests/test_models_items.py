@@ -996,10 +996,15 @@ def test_models_items__email_invitation__success():
     assert email.to == ["guest@example.com"]
     email_content = " ".join(email.body.split())
 
+    assert "A new item has been shared with you." in email_content
     assert (
-        f"Test Sender (sender@example.com) invited you with the role &quot;editor&quot; "
-        f"on the following item: {item.title}" in email_content
+        "Test Sender (sender@example.com) shared the following item with you: "
+        f'{item.title}, and gave you the role "Editor".' in email_content
     )
+    # The sender and the item are highlighted in the html version
+    email_html = email.alternatives[0][0]
+    assert "<strong>Test Sender</strong> (sender@example.com)" in email_html
+    assert f"<strong>{item.title}</strong>" in email_html
     assert f"items/{item.id}/" in email_content
 
 
@@ -1029,9 +1034,10 @@ def test_models_items__email_invitation__success_fr():
     assert email.to == ["guest2@example.com"]
     email_content = " ".join(email.body.split())
 
+    assert "Un nouvel item a été partagé avec vous." in email_content
     assert (
-        f"Test Sender2 (sender2@example.com) vous a invité avec le rôle &quot;propriétaire&quot; "
-        f"sur le item suivant: {item.title}" in email_content
+        "Test Sender2 (sender2@example.com) a partagé avec vous l'item suivant : "
+        f'{item.title}, et vous a attribué le rôle "Propriétaire".' in email_content
     )
     assert f"items/{item.id}/" in email_content
 
@@ -1097,7 +1103,7 @@ def test_models_items__email_invitation__url_app_param(email_url_app, settings):
 
 
 @mock.patch(
-    "core.models.send_mail",
+    "core.services.mail.send_mail",
     side_effect=smtplib.SMTPException("Error SMTPException"),
 )
 @mock.patch.object(Logger, "error")
@@ -1133,7 +1139,7 @@ def test_models_items__email_invitation__failed(mock_logger, _mock_send_mail):
     assert isinstance(exception, smtplib.SMTPException)
 
 
-@mock.patch("core.models.send_mail")
+@mock.patch("core.services.mail.send_mail")
 def test_models_items__email_invitation__skipped_when_email_host_missing(
     mock_send_mail, caplog, settings
 ):
@@ -1147,7 +1153,7 @@ def test_models_items__email_invitation__skipped_when_email_host_missing(
     assert len(mail.outbox) == 0
 
     sender = factories.UserFactory()
-    with caplog.at_level("DEBUG", logger="core.models"):
+    with caplog.at_level("DEBUG", logger="core.services.mail"):
         item.send_invitation_email(
             "guest4@example.com",
             models.RoleChoices.EDITOR,

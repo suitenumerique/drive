@@ -1184,6 +1184,21 @@ class Base(Configuration):
     EMAIL_USE_TLS = values.BooleanValue(False)
     EMAIL_USE_SSL = values.BooleanValue(False)
     EMAIL_FROM = values.Value("from@example.com")
+    # Branding of the email templates. Optional blocks (government logo, footer
+    # links) are hidden when their setting is not configured.
+    EMAIL_APP_NAME = values.Value("Drive")
+    EMAIL_FONT_FAMILY = values.Value("Marianne")
+    EMAIL_FONT_REGULAR_URL = values.Value(None)
+    EMAIL_FONT_BOLD_URL = values.Value(None)
+    EMAIL_GOVERNMENT_LOGO_IMG = values.Value(None)
+    EMAIL_NEWSLETTER_URL = values.Value(None)
+    EMAIL_SUPPORT_URL = values.Value(None)
+    EMAIL_TERMS_OF_SERVICE_URL = values.Value(None)
+    EMAIL_SUITE_LOGO_IMG = values.Value(None)
+    EMAIL_SUITE_URL = values.Value(None)
+    # Icons linking to the other products of the suite, keyed by product name, e.g.
+    # {"Docs": {"img": "https://.../docs.png", "href": "https://docs.example.com"}}
+    EMAIL_PRODUCT_ICONS = values.DictValue({})
 
     # User accounts reconciliation
     USER_RECONCILIATION_FORM_URL = values.Value(

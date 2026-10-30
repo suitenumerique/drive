@@ -3,7 +3,6 @@ Declare and configure the models for the drive core application
 """
 # pylint: disable=too-many-lines
 
-import smtplib
 import uuid
 from datetime import timedelta
 from enum import StrEnum
@@ -16,16 +15,14 @@ from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.hashers import check_password, identify_hasher, make_password
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.indexes import GistIndex
-from django.contrib.sites.models import Site
 from django.core import mail, validators
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.core.mail import send_mail
 from django.db import models, transaction
 from django.db.models.expressions import RawSQL
-from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.functional import cached_property
+from django.utils.html import format_html
 from django.utils.translation import get_language, override
 from django.utils.translation import gettext_lazy as _
 
@@ -45,6 +42,7 @@ from pydantic import BaseModel as PydanticBaseModel
 from timezone_field import TimeZoneField
 
 from core.permissions import get_permissions_backend
+from core.services.mail import get_email_base_url, send_templated_email
 from core.storage.cache import invalidate_storage_used_cache
 from core.utils.item_title import manage_unique_title as manage_unique_title_utils
 
@@ -352,40 +350,9 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
             raise ValueError("User has no email address.")
         mail.send_mail(subject, message, from_email, [self.email], **kwargs)
 
-    def send_email(self, subject, context=None, language=None):
-        """Generate and send email to the user from a template."""
-
-        if not settings.EMAIL_HOST:
-            logger.info("EMAIL_HOST host is not set, skipping email sending")
-            return
-
-        context = context or {}
-        domain = settings.EMAIL_URL_APP or Site.objects.get_current().domain
-        language = language or get_language()
-        context.update(
-            {
-                "brandname": settings.EMAIL_BRAND_NAME,
-                "domain": domain,
-                "logo_img": settings.EMAIL_LOGO_IMG,
-            }
-        )
-
-        with override(language):
-            msg_html = render_to_string("mail/html/reconciliation.html", context)
-            msg_plain = render_to_string("mail/text/reconciliation.txt", context)
-            subject = str(subject)  # Force translation
-
-            try:
-                send_mail(
-                    subject.capitalize(),
-                    msg_plain,
-                    settings.EMAIL_FROM,
-                    [self.email],
-                    html_message=msg_html,
-                    fail_silently=False,
-                )
-            except smtplib.SMTPException as exception:
-                logger.error("email to %s was not sent: %s", self.email, exception)
+    def send_reconciliation_email(self, subject, context=None, language=None):
+        """Send an email about the reconciliation of user accounts to the user."""
+        send_templated_email(subject, [self.email], "reconciliation", context, language)
 
     @cached_property
     def teams(self):
@@ -660,7 +627,7 @@ class UserReconciliation(BaseModel):
     def send_reconciliation_confirm_email(self, user, user_type, confirmation_id, language=None):
         """Method allowing to send confirmation email for reconciliation requests."""
         language = language or get_language()
-        domain = settings.EMAIL_URL_APP or Site.objects.get_current().domain
+        domain = get_email_base_url()
 
         message = _(
             """You have requested a reconciliation of your user accounts on Drive.
@@ -678,12 +645,12 @@ class UserReconciliation(BaseModel):
                 "button_label": str(_("Confirm")),
             }
 
-        user.send_email(subject, context, language)
+        user.send_reconciliation_email(subject, context, language)
 
     def send_reconciliation_done_email(self, language=None):
         """Method allowing to send done email for reconciliation requests."""
         language = language or get_language()
-        domain = settings.EMAIL_URL_APP or Site.objects.get_current().domain
+        domain = get_email_base_url()
 
         message = _(
             """Your reconciliation request has been processed.
@@ -700,7 +667,7 @@ class UserReconciliation(BaseModel):
                 "button_label": str(_("See my documents")),
             }
 
-        self.active_user.send_email(subject, context, language)
+        self.active_user.send_reconciliation_email(subject, context, language)
 
 
 class UserReconciliationCsvImport(BaseModel):
@@ -727,40 +694,9 @@ class UserReconciliationCsvImport(BaseModel):
     def __str__(self):
         return f"User reconciliation CSV import {self.id}"
 
-    def send_email(self, subject, emails, context=None, language=None):
-        """Generate and send email to the user from a template."""
-
-        if not settings.EMAIL_HOST:
-            logger.debug("EMAIL_HOST host is not set, skipping email sending")
-            return
-
-        context = context or {}
-        domain = settings.EMAIL_URL_APP or Site.objects.get_current().domain
-        language = language or get_language()
-        context.update(
-            {
-                "brandname": settings.EMAIL_BRAND_NAME,
-                "domain": domain,
-                "logo_img": settings.EMAIL_LOGO_IMG,
-            }
-        )
-
-        with override(language):
-            msg_html = render_to_string("mail/html/reconciliation.html", context)
-            msg_plain = render_to_string("mail/text/reconciliation.txt", context)
-            subject = str(subject)  # Force translation
-
-            try:
-                send_mail(
-                    subject.capitalize(),
-                    msg_plain,
-                    settings.EMAIL_FROM,
-                    emails,
-                    html_message=msg_html,
-                    fail_silently=False,
-                )
-            except smtplib.SMTPException as exception:
-                logger.error("email to %s was not sent: %s", emails, exception)
+    def send_reconciliation_email(self, subject, emails, context=None, language=None):
+        """Send an email about the reconciliation of user accounts."""
+        send_templated_email(subject, emails, "reconciliation", context, language)
 
     def send_reconciliation_error_email(self, recipient_email, other_email, language=None):
         """Method allowing to send email for reconciliation requests with errors."""
@@ -786,7 +722,7 @@ class UserReconciliationCsvImport(BaseModel):
                 "button_label": str(_("Make a new request")),
             }
 
-        self.send_email(subject, emails, context, language)
+        self.send_reconciliation_email(subject, emails, context, language)
 
 
 class IdInPath(models.Func):  # pylint: disable=abstract-method
@@ -1805,60 +1741,41 @@ class Item(TreeModel, BaseModel):
 
     def send_email(self, subject, emails, context=None, language=None):
         """Generate and send email from a template."""
-
-        if not settings.EMAIL_HOST:
-            logger.debug("EMAIL_HOST host is not set, skipping email sending")
-            return
-
-        context = context or {}
-        base_url = settings.EMAIL_URL_APP or Site.objects.get_current().domain
-        language = language or get_language()
-        context.update(
-            {
-                "brandname": settings.EMAIL_BRAND_NAME,
-                "item": self,
-                "domain": base_url,
-                "link": (
-                    f"{base_url}/explorer/items/files/{self.id}/"
-                    if self.type == ItemTypeChoices.FILE
-                    else f"{base_url}/explorer/items/{self.id}/"
-                ),
-                "logo_img": settings.EMAIL_LOGO_IMG,
-            }
-        )
-
-        with override(language):
-            msg_html = render_to_string("mail/html/invitation.html", context)
-            msg_plain = render_to_string("mail/text/invitation.txt", context)
-            subject = str(subject)  # Force translation
-
-            try:
-                send_mail(
-                    subject.capitalize(),
-                    msg_plain,
-                    settings.EMAIL_FROM,
-                    emails,
-                    html_message=msg_html,
-                    fail_silently=False,
-                )
-            except smtplib.SMTPException as exception:
-                logger.error("invitation to %s was not sent: %s", emails, exception)
+        base_url = get_email_base_url()
+        context = {
+            **(context or {}),
+            "item": self,
+            "link": (
+                f"{base_url}/explorer/items/files/{self.id}/"
+                if self.type == ItemTypeChoices.FILE
+                else f"{base_url}/explorer/items/{self.id}/"
+            ),
+        }
+        send_templated_email(subject, emails, "invitation", context, language)
 
     def send_invitation_email(self, email, role, sender, language=None):
         """Method allowing a user to send an email invitation to another user for a item."""
         language = language or get_language()
         role = RoleChoices(role).label
         sender_name = sender.full_name or sender.email
-        sender_name_email = (
-            f"{sender.full_name:s} ({sender.email})" if sender.full_name else sender.email
+        sender_html = (
+            format_html("<strong>{}</strong> ({})", sender.full_name, sender.email)
+            if sender.full_name
+            else format_html("<strong>{}</strong>", sender.email)
         )
 
         with override(language):
             context = {
-                "title": _("{name} shared an item with you!").format(name=sender_name),
-                "message": _(
-                    '{name} invited you with the role "{role}" on the following item:'
-                ).format(name=sender_name_email, role=role.lower()),
+                "title": _("A new item has been shared with you."),
+                "message": format_html(
+                    _(
+                        "{sender} shared the following item with you: "
+                        '<strong>{title}</strong>, and gave you the role "{role}".'
+                    ),
+                    sender=sender_html,
+                    title=self.title,
+                    role=role,
+                ),
             }
             subject = _("{name} shared an item with you: {title}").format(
                 name=sender_name, title=self.title
