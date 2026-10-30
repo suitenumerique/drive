@@ -285,10 +285,20 @@ export function useRecursiveEncryptionJob({
         dispatch({ type: "SET_PHASE", phase: "discovering" });
 
         const driver = getDriver();
+        // A file is read again: the item the list holds can predate a rename,
+        // which moves the stored object in the background, and its url would
+        // then answer 404. A folder's subtree is fetched fresh anyway.
         const flat =
           item.type === ItemType.FOLDER
             ? await fetchSubtree(driver, item)
-            : [{ item, parentId: null, depth: 0, pathCrumb: "" }];
+            : [
+                {
+                  item: await driver.getItem(item.id),
+                  parentId: null,
+                  depth: 0,
+                  pathCrumb: "",
+                },
+              ];
         if (cancelled) return;
         flatRef.current = flat;
 
@@ -1027,7 +1037,7 @@ async function stageOneEncryption({
       wrappedKey = wk;
     }
 
-    const newFilename = stagedFilename(node.item.title);
+    const newFilename = stagedFilename(node.item.title, node.item.filename);
     const uploadUrl = await getEncryptionUploadUrl(
       targetId,
       newFilename,
@@ -1268,7 +1278,7 @@ async function stageOneEncryptionIntoChain({
       wrappedKey = wk;
     }
 
-    const newFilename = stagedFilename(node.item.title);
+    const newFilename = stagedFilename(node.item.title, node.item.filename);
     const uploadUrl = await getEncryptionUploadUrl(
       targetId,
       newFilename,
@@ -1370,7 +1380,7 @@ async function decryptPipeline({
         { optimizeMemory: true },
       );
 
-      const newFilename = stagedFilename(node.item.title);
+      const newFilename = stagedFilename(node.item.title, node.item.filename);
       const uploadUrl = await getEncryptionUploadUrl(
         id,
         newFilename,
