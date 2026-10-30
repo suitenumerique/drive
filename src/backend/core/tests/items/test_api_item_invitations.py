@@ -324,7 +324,11 @@ def test_api_item_invitations_create_authenticated_outsider():
     assert response.status_code == 403
 
 
-@override_settings(EMAIL_BRAND_NAME="My brand name", EMAIL_LOGO_IMG="my-img.jpg")
+@override_settings(
+    EMAIL_BRAND_NAME="My brand name",
+    EMAIL_LOGO_IMG="my-img.jpg",
+    EMAIL_SUITE_LOGO_IMG="my-suite-img.jpg",
+)
 @pytest.mark.parametrize(
     "inviting,invited,response_code",
     (
@@ -391,8 +395,9 @@ def test_api_item_invitations_create_privileged_members(  # noqa: PLR0913, PLR09
             f"{user.full_name} ({user.email}) shared the following item with you: "
             f'{item.title}, and gave you the role "{models.RoleChoices(invited).label}".'
         ) in email_content
-        assert "My brand name" in email_content
-        assert "my-img.jpg" in email_content
+        email_html = email.alternatives[0][0]
+        assert 'alt="My brand name"' in email_html
+        assert 'src="my-img.jpg"' in email_html
     else:
         assert models.Invitation.objects.exists() is False
 

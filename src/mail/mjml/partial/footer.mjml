@@ -1,0 +1,109 @@
+<!-- Pitch and signature -->
+<mj-section padding="40px 15px 0 15px">
+    <mj-column>
+        <mj-text>
+            <p>
+                {% blocktrans trimmed %}
+                    {{ app_name }}, your essential tool to organize, share and collaborate as a team.
+                {% endblocktrans %}
+                {% blocktrans trimmed %}
+                    Discover {{ app_name }} by
+                {% endblocktrans %}
+                <a href="{{ domain }}">{% trans "clicking here" %}</a>.
+            </p>
+        </mj-text>
+        <mj-text padding="40px 0 0 0">
+            <p>{% trans "See you soon," %}</p>
+            <p style="padding-top: 12px">
+                {% blocktrans trimmed %}
+                    The {{ app_name }} team
+                {% endblocktrans %}
+            </p>
+        </mj-text>
+    </mj-column>
+</mj-section>
+<!-- Other products of the suite -->
+<mj-raw>{% if product_icons %}</mj-raw>
+<mj-section padding="40px 15px 0 15px">
+    <mj-column>
+        <mj-text align="center">
+            <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                    {% for name, icon in product_icons.items %}
+                    <td style="padding: 0 6px">
+                        <a href="{{ icon.href }}">
+                            <img
+                                src="{{ icon.img }}"
+                                width="32"
+                                height="32"
+                                alt="{{ name }}"
+                                style="display: block"
+                            />
+                        </a>
+                    </td>
+                    {% endfor %}
+                </tr>
+            </table>
+        </mj-text>
+    </mj-column>
+</mj-section>
+<mj-raw>{% endif %}</mj-raw>
+<mj-section padding="32px 15px 0 15px">
+    <mj-column>
+        <mj-divider border-width="1px" border-color="#EEEEEE" padding="0" />
+    </mj-column>
+</mj-section>
+<!-- Footer: logos on the left, links on the right, stacked on mobile -->
+<mj-section padding="32px 15px 40px 15px">
+    <mj-column width="50%" vertical-align="middle">
+        <mj-text>
+            {% if government_logo_img or suite_logo_img %}
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                    {% if government_logo_img %}
+                    <td valign="middle" style="padding-right: 24px">
+                        <img
+                            src="{{ government_logo_img }}"
+                            width="102"
+                            alt="{% trans 'Government' %}"
+                            style="display: block"
+                        />
+                    </td>
+                    {% endif %}
+                    {% if suite_logo_img %}
+                    <td valign="middle">
+                        {% if suite_url %}<a href="{{ suite_url }}">{% endif %}
+                        <img
+                            src="{{ suite_logo_img }}"
+                            width="87"
+                            alt="{{ brandname }}"
+                            style="display: block"
+                        />
+                        {% if suite_url %}</a>{% endif %}
+                    </td>
+                    {% endif %}
+                </tr>
+            </table>
+            {% endif %}
+        </mj-text>
+    </mj-column>
+    <mj-column width="50%" vertical-align="middle">
+        <mj-text align="right" font-size="12px" line-height="18px" css-class="footer-links">
+            {% if newsletter_url %}
+            <p>
+                <a href="{{ newsletter_url }}">
+                    {% blocktrans trimmed %}
+                        Subscribe to the {{ brandname }} newsletter
+                    {% endblocktrans %}
+                </a>
+            </p>
+            {% endif %}
+            {% if support_url %}
+            <p><a href="{{ support_url }}">{% trans "Contact support" %}</a></p>
+            {% endif %}
+            {% if terms_of_service_url %}
+            <p><a href="{{ terms_of_service_url }}">{% trans "Terms of use" %}</a></p>
+            {% endif %}
+        </mj-text>
+    </mj-column>
+</mj-section>

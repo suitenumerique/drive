@@ -8,10 +8,13 @@ from django.utils.html import format_html
 
 import pytest
 
-from core.services.mail import get_branding_context, get_plain_text_context, send_templated_email
+from core.services.mail import (
+    get_branding_context,
+    get_plain_text_context,
+    send_templated_email,
+)
 
 pytestmark = pytest.mark.django_db
-
 
 CONTEXT = {
     "title": "My title",
@@ -20,6 +23,18 @@ CONTEXT = {
     "link_label": "Click here",
     "button_label": "Confirm",
 }
+
+OPTIONAL_BRANDING_SETTINGS = [
+    "EMAIL_FONT_REGULAR_URL",
+    "EMAIL_FONT_BOLD_URL",
+    "EMAIL_GOVERNMENT_LOGO_IMG",
+    "EMAIL_LOGO_IMG",
+    "EMAIL_NEWSLETTER_URL",
+    "EMAIL_SUITE_LOGO_IMG",
+    "EMAIL_SUITE_URL",
+    "EMAIL_SUPPORT_URL",
+    "EMAIL_TERMS_OF_SERVICE_URL",
+]
 
 
 @pytest.fixture(name="full_branding")
@@ -41,6 +56,17 @@ def fixture_full_branding(settings):
     settings.EMAIL_SUITE_URL = "https://suite.example.com"
     settings.EMAIL_SUPPORT_URL = "https://example.com/support"
     settings.EMAIL_TERMS_OF_SERVICE_URL = "https://example.com/terms"
+    return settings
+
+
+@pytest.fixture(name="no_branding")
+def fixture_no_branding(settings):
+    """Leave every optional branding setting of the email templates unset."""
+    for name in OPTIONAL_BRANDING_SETTINGS:
+        setattr(settings, name, None)
+    settings.EMAIL_PRODUCT_ICONS = {}
+    settings.EMAIL_BRAND_NAME = "My brand"
+    settings.FRONTEND_HELP_MENU_CONFIG = {}
     return settings
 
 
@@ -172,18 +198,59 @@ def test_services_mail_send_templated_email_subject_case():
     assert mail.outbox[0].subject == "Alice Martin shared an item with you: Q3 Report"
 
 
-def test_services_mail_send_templated_email_branding_wins(settings):
+@pytest.mark.usefixtures("full_branding")
+def test_services_mail_send_templated_email_branding_wins():
     """A caller cannot override the instance branding through its context."""
-    settings.EMAIL_BRAND_NAME = "My brand"
-
     send_templated_email(
         "my subject", ["a@example.com"], "reconciliation", {**CONTEXT, "brandname": "Fake"}
     )
 
     # pylint: disable-next=no-member
-    email_content = mail.outbox[0].body
-    assert "My brand" in email_content
-    assert "Fake" not in email_content
+    html = mail.outbox[0].alternatives[0][0]
+    assert 'alt="My brand"' in html
+    assert "Fake" not in html
+
+
+@pytest.mark.usefixtures("full_branding")
+def test_services_mail_send_templated_email_full_branding():
+    """Every configured branding block is shown in the email."""
+    send_templated_email("my subject", ["a@example.com"], "reconciliation", CONTEXT, "en")
+
+    # pylint: disable-next=no-member
+    email = mail.outbox[0]
+    html = email.alternatives[0][0]
+    assert 'src="https://cdn.example.com/logo.png"' in html
+    assert 'src="https://cdn.example.com/gov.png"' in html
+    assert 'src="https://cdn.example.com/suite.png"' in html
+    assert 'href="https://suite.example.com"' in html
+    assert 'src="https://cdn.example.com/docs.png"' in html
+    assert 'href="https://docs.example.com"' in html
+    assert 'url("https://cdn.example.com/inter-400.woff2")' in html
+    assert 'url("https://cdn.example.com/inter-700.woff2")' in html
+    assert "font-family:Inter, Arial, Helvetica, sans-serif" in html
+    assert "The Files team" in email.body
+    assert "Subscribe to the My brand newsletter [https://example.com/newsletter]" in email.body
+    assert "Contact support [https://example.com/support]" in email.body
+    assert "Terms of use [https://example.com/terms]" in email.body
+
+
+@pytest.mark.usefixtures("no_branding")
+def test_services_mail_send_templated_email_no_branding():
+    """Branding blocks without a configured value are not shown."""
+    send_templated_email("my subject", ["a@example.com"], "reconciliation", CONTEXT, "en")
+
+    # pylint: disable-next=no-member
+    email = mail.outbox[0]
+    html = email.alternatives[0][0]
+    assert "@font-face" not in html
+    # Only the banner icon is left, it is part of the template
+    assert html.count("<img") == 1
+    assert "/assets/email/icon-users.png" in html
+    assert "newsletter" not in email.body
+    assert "Contact support" not in email.body
+    assert "Terms of use" not in email.body
+    # The message itself is still there
+    assert "My message" in email.body
 
 
 @mock.patch("core.services.mail.send_mail")

@@ -1,0 +1,35 @@
+<mj-raw>{% if logo_img %}</mj-raw>
+<mj-section padding="40px 15px 32px 15px">
+    <mj-column>
+        <mj-image src="{{ logo_img }}" alt="{{ app_name }}" width="250px" align="center" />
+    </mj-column>
+</mj-section>
+<mj-raw>{% endif %}</mj-raw>
+<!-- Banner: summary of the email -->
+<mj-section padding="0 15px">
+    <mj-column
+        border="1px solid #3E5DE7"
+        border-radius="10px"
+        background-color="#EDF0FF"
+        padding="10px 12px"
+    >
+        <mj-text color="#3E5DE7">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                    <td width="25" valign="middle" style="padding-right: 15px">
+                        <img
+                            src="{{ domain }}/assets/email/icon-users.png"
+                            width="25"
+                            height="25"
+                            alt=""
+                            style="display: block"
+                        />
+                    </td>
+                    <td valign="middle" style="color: #3E5DE7">
+                        <strong>{{ title|capfirst }}</strong>
+                    </td>
+                </tr>
+            </table>
+        </mj-text>
+    </mj-column>
+</mj-section>

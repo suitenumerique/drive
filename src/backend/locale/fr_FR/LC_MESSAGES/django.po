@@ -246,6 +246,54 @@ msgstr ""
 "{sender} a partagé avec vous l'item suivant : <strong>{title}</strong>, et "
 "vous a attribué le rôle \"{role}\"."
 
+#: core/templates/mail/html/invitation.html
+msgid "Open the item"
+msgstr "Voir l'item"
+
+#: core/templates/mail/html/invitation.html
+#, python-format
+msgid ""
+"%(app_name)s, your essential tool to organize, share and collaborate as a "
+"team."
+msgstr ""
+"%(app_name)s, votre outil essentiel pour organiser, partager et collaborer "
+"en équipe."
+
+#: core/templates/mail/html/invitation.html
+#, python-format
+msgid "Discover %(app_name)s by"
+msgstr "Découvrez %(app_name)s en"
+
+#: core/templates/mail/html/invitation.html
+msgid "clicking here"
+msgstr "cliquant ici"
+
+#: core/templates/mail/html/invitation.html
+msgid "See you soon,"
+msgstr "À bientôt,"
+
+#: core/templates/mail/html/invitation.html
+#, python-format
+msgid "The %(app_name)s team"
+msgstr "L'équipe %(app_name)s"
+
+#: core/templates/mail/html/invitation.html
+msgid "Government"
+msgstr "Gouvernement"
+
+#: core/templates/mail/html/invitation.html
+#, python-format
+msgid "Subscribe to the %(brandname)s newsletter"
+msgstr "S'inscrire à la newsletter %(brandname)s"
+
+#: core/templates/mail/html/invitation.html
+msgid "Contact support"
+msgstr "Contacter le service support"
+
+#: core/templates/mail/html/invitation.html
+msgid "Terms of use"
+msgstr "Conditions générales d'utilisation"
+
 #: core/models.py:820
 #, python-brace-format
 #| msgid "{name} shared an item with you: {title}"
@@ -334,32 +382,6 @@ msgstr ""
 #, python-brace-format
 msgid "copy of {title}"
 msgstr "copie de {title}"
-
-
-#: core/templates/mail/html/invitation.html:162
-#: core/templates/mail/text/invitation.txt:3
-msgid "Logo email"
-msgstr ""
-
-#: core/templates/mail/html/invitation.html:209
-#: core/templates/mail/text/invitation.txt:10
-msgid "Open"
-msgstr "Ouvrir"
-
-#: core/templates/mail/html/invitation.html:226
-#: core/templates/mail/text/invitation.txt:14
-msgid ""
-" Drive, your new essential tool for organizing, sharing and collaborating as "
-"a team. "
-msgstr ""
-"Fichiers, votre outil essentiel pour organiser, partager et collaborer en "
-"équipe."
-
-#: core/templates/mail/html/invitation.html:233
-#: core/templates/mail/text/invitation.txt:16
-#, python-format
-msgid " Brought to you by %(brandname)s "
-msgstr " Proposé par %(brandname)s "
 
 #: drive/settings.py:250
 msgid "English"
