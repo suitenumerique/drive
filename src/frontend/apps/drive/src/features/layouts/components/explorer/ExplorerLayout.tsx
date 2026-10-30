@@ -42,6 +42,7 @@ import { useMemo } from "react";
 import { UserProfile } from "@/features/ui/components/user/UserProfile";
 import { Gaufre } from "@/features/ui/components/gaufre/Gaufre";
 import { useMessagesWidget } from "@/features/feedback/useMessagesWidget";
+import { ExplorerDocumentTitle } from "../DocumentTitle";
 
 export const getGlobalExplorerLayout = (page: React.ReactElement) => {
   return <GlobalExplorerLayout>{page}</GlobalExplorerLayout>;
@@ -123,23 +124,26 @@ export const ExplorerPanelsLayout = ({
   const { user } = useAuth();
 
   return (
-    <MainLayout
-      enableResize
-      rightPanelContent={<ExplorerRightPanelContent item={rightPanelItem} />}
-      rightPanelIsOpen={rightPanelOpen}
-      onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
-      leftPanelContent={user ? <ExplorerTree /> : undefined}
-      leftPanelFooter={<LeftPanelFooter />}
-      isLeftPanelOpen={isLeftPanelOpen}
-      hideLeftPanelOnDesktop={!user || isMinimalLayout}
-      setIsLeftPanelOpen={() => setIsLeftPanelOpen(!isLeftPanelOpen)}
-      icon={<HeaderIcon />}
-      rightHeaderContent={
-        <HeaderRight displaySearch={isMinimalLayout} currentItem={item} />
-      }
-    >
-      {children}
-    </MainLayout>
+    <>
+      <ExplorerDocumentTitle />
+      <MainLayout
+        enableResize
+        rightPanelContent={<ExplorerRightPanelContent item={rightPanelItem} />}
+        rightPanelIsOpen={rightPanelOpen}
+        onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
+        leftPanelContent={user ? <ExplorerTree /> : undefined}
+        leftPanelFooter={<LeftPanelFooter />}
+        isLeftPanelOpen={isLeftPanelOpen}
+        hideLeftPanelOnDesktop={!user || isMinimalLayout}
+        setIsLeftPanelOpen={() => setIsLeftPanelOpen(!isLeftPanelOpen)}
+        icon={<HeaderIcon />}
+        rightHeaderContent={
+          <HeaderRight displaySearch={isMinimalLayout} currentItem={item} />
+        }
+      >
+        {children}
+      </MainLayout>
+    </>
   );
 };
 
