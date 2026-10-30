@@ -72,14 +72,14 @@ def test_models_users_convert_valid_invitations():
     assert models.Invitation.objects.filter(id=other_email_invitation.id).exists()
 
 
-def test_models_users_send_email():
-    """The "send_email" method should send a templated email to the user."""
+def test_models_users_send_reconciliation_email():
+    """The "send_reconciliation_email" method should send a templated email to the user."""
     user = factories.UserFactory(email="recipient@example.com")
 
     # pylint: disable-next=no-member
     assert len(mail.outbox) == 0
 
-    user.send_email(
+    user.send_reconciliation_email(
         "my subject",
         {
             "title": "My title",

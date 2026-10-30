@@ -350,8 +350,8 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
             raise ValueError("User has no email address.")
         mail.send_mail(subject, message, from_email, [self.email], **kwargs)
 
-    def send_email(self, subject, context=None, language=None):
-        """Generate and send email to the user from a template."""
+    def send_reconciliation_email(self, subject, context=None, language=None):
+        """Send an email about the reconciliation of user accounts to the user."""
         send_templated_email(subject, [self.email], "reconciliation", context, language)
 
     @cached_property
@@ -645,7 +645,7 @@ class UserReconciliation(BaseModel):
                 "button_label": str(_("Confirm")),
             }
 
-        user.send_email(subject, context, language)
+        user.send_reconciliation_email(subject, context, language)
 
     def send_reconciliation_done_email(self, language=None):
         """Method allowing to send done email for reconciliation requests."""
@@ -667,7 +667,7 @@ class UserReconciliation(BaseModel):
                 "button_label": str(_("See my documents")),
             }
 
-        self.active_user.send_email(subject, context, language)
+        self.active_user.send_reconciliation_email(subject, context, language)
 
 
 class UserReconciliationCsvImport(BaseModel):
@@ -694,8 +694,8 @@ class UserReconciliationCsvImport(BaseModel):
     def __str__(self):
         return f"User reconciliation CSV import {self.id}"
 
-    def send_email(self, subject, emails, context=None, language=None):
-        """Generate and send email to the user from a template."""
+    def send_reconciliation_email(self, subject, emails, context=None, language=None):
+        """Send an email about the reconciliation of user accounts."""
         send_templated_email(subject, emails, "reconciliation", context, language)
 
     def send_reconciliation_error_email(self, recipient_email, other_email, language=None):
@@ -722,7 +722,7 @@ class UserReconciliationCsvImport(BaseModel):
                 "button_label": str(_("Make a new request")),
             }
 
-        self.send_email(subject, emails, context, language)
+        self.send_reconciliation_email(subject, emails, context, language)
 
 
 class IdInPath(models.Func):  # pylint: disable=abstract-method
