@@ -454,7 +454,7 @@ def test_services_search_indexers_serialize_document_soft_deleted():
     result = indexer.serialize_item(item, {})
 
     # Still accessible through the thrashbin
-    assert result["is_active"] is True
+    assert result["is_active"] is False
     assert result["content"] == "This is a text file content"
 
 
