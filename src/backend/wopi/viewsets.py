@@ -3,7 +3,7 @@
 import logging
 import uuid
 from datetime import timedelta
-from os.path import splitext
+from os.path import basename, splitext
 
 from django.conf import settings
 from django.core.exceptions import RequestDataTooBig
@@ -134,7 +134,9 @@ class WopiViewSet(viewsets.ViewSet):
             client_options = client_config.get("options", {})
 
         properties = {
-            "BaseFileName": item.filename,
+            # A file encrypted or decrypted once is stored under a folder of its own
+            # ("<uuid>/name.odt"): the client takes the name, and the type from it.
+            "BaseFileName": basename(item.filename),
             "OwnerId": str(item.creator.id),
             "IsAnonymousUser": request.user.is_anonymous,
             "UserFriendlyName": request.user.full_name if not request.user.is_anonymous else None,

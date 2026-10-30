@@ -81,6 +81,28 @@ def test_check_file_info_connected_user_with_access():
     }
 
 
+def test_check_file_info_base_file_name_without_staged_folder():
+    """A file staged under a folder of its own (encrypted or decrypted once) is named
+    without it: OnlyOffice reads the document's type from that name."""
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="3f0e0b8e-0000-4000-8000-000000000000/hey.odt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+    )
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+
+    access_token, _ = AccessUserItemService().insert_new_access(item, user)
+    response = APIClient().get(
+        f"/api/v1.0/wopi/files/{item.id}/", HTTP_AUTHORIZATION=f"Bearer {access_token}"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["BaseFileName"] == "hey.odt"
+
+
 def test_check_file_info_connected_user_reader_access():
     """User with reader access to the item can get the file info with read permissions."""
     user = factories.UserFactory()
