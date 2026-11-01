@@ -24,7 +24,7 @@ keywords = ["Django", "Contacts", "Templates", "RBAC"]
 license = "MIT"
 requires-python = "~=3.13.0"
 dependencies = [
-    "boto3==1.43.114",
+    "boto3==1.43.118",
     "Brotli==1.2.1",
     "dj-database-url==3.1.2",
     "celery[redis]==5.6.3",
@@ -35,7 +35,7 @@ dependencies = [
     "django-countries==9.1.0",
     "django-filter==26.2",
     "django-lasuite[all]==0.1.0",
-    "django-ltree==0.6.0",
+    "django-ltree==0.8.0",
     "django-parler==2.4",
     "django-prometheus==2.5.0",
     "django-pydantic-field==0.5.6",
@@ -51,10 +51,10 @@ dependencies = [
     "factory_boy==3.3.3",
     "gunicorn==26.2.0",
     "jsonschema==4.26.0",
-    "markdown==3.11.1",
+    "markdown==3.11.2",
     "mozilla-django-oidc<5.0.0",
     "nested-multipart-parser==1.6.0",
-    "posthog==7.71.0",
+    "posthog==7.75.11",
     "prometheus-client==0.26.0",
     "psycopg[binary,pool]==3.3.6",
     "pydantic==2.14.1",
@@ -62,7 +62,7 @@ dependencies = [
     "python-magic==0.4.27",
     "redis<6.0.0",
     "requests==2.34.2",
-    "sentry-sdk==2.72.0",
+    "sentry-sdk==2.73.0",
     "url-normalize==3.0.1",
     "whitenoise==6.12.0",
     "zipstream-ng==1.9.3",
@@ -91,7 +91,7 @@ dev = [
     "pytest-icdiff==0.9",
     "pytest-xdist==3.8.0",
     "responses==0.26.3",
-    "ruff==0.17.1",
+    "ruff==0.17.2",
     "types-requests==2.33.0.20261006",
 ]
 
