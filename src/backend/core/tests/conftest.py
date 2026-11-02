@@ -77,20 +77,25 @@ def resource_server_backend_setup(settings):
 def resource_server_backend_conf(settings):
     """
     A fixture to create a user token for testing.
+
+    Register the external API routes, and unregisters them again afterwards:
+    the url configuration is module level state shared by the whole session.
     """
     resource_server_backend_setup(settings)
+    reload_urls()
+
+    yield settings
+
+    settings.OIDC_RESOURCE_SERVER_ENABLED = False
     reload_urls()
 
 
 @pytest.fixture
-def resource_server_backend(settings):
+def resource_server_backend(resource_server_backend_conf):
     """
     A fixture to create a user token for testing.
     Including a mocked introspection endpoint.
     """
-    resource_server_backend_setup(settings)
-    reload_urls()
-
     with responses.RequestsMock() as rsps:
         rsps.add(
             responses.POST,
@@ -98,7 +103,7 @@ def resource_server_backend(settings):
             json={
                 "iss": "https://oidc.example.com",
                 "aud": "some_client_id",  # settings.OIDC_RS_CLIENT_ID
-                "sub": "very-specific-sub",
+                "sub": "specific-sub",
                 "client_id": "some_service_provider",
                 "scope": "openid groups",
                 "active": True,
@@ -113,7 +118,7 @@ def user_specific_sub():
     """
     A fixture to create a user token for testing.
     """
-    user = factories.UserFactory(sub="very-specific-sub")
+    user = factories.UserFactory(sub="specific-sub")
 
     yield user
 
