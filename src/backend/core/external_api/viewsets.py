@@ -2,8 +2,6 @@
 
 from django.conf import settings
 
-from lasuite.oidc_resource_server.authentication import ResourceServerAuthentication
-
 from core.api.permissions import (
     InvitationPermission,
     IsSelf,
@@ -16,7 +14,8 @@ from core.api.viewsets import (
     ItemViewSet,
     UserViewSet,
 )
-from core.external_api.permissions import ResourceServerClientPermission
+from core.external_api.authentication import MenshenAuthentication, ResourceServerAuthentication
+from core.external_api.permissions import MenshenPermission, ResourceServerClientPermission
 
 # pylint: disable=too-many-ancestors
 
@@ -36,18 +35,19 @@ class ResourceServerRestrictionMixin:
         """Apply the resource server checks to every action, whatever its permission classes."""
         return [ResourceServerClientPermission(), *super().get_permissions()]
 
+# TODO: Put back Menshen Permissions
 
 class ResourceServerItemViewSet(ResourceServerRestrictionMixin, ItemViewSet):
     """Resource Server Viewset for the Drive app."""
 
-    authentication_classes = [ResourceServerAuthentication]
+    authentication_classes = [MenshenAuthentication, ResourceServerAuthentication]
 
     permission_classes = [ItemPermission]
 
     @property
     def resource_server_actions(self):
         """Build resource_server_actions from settings."""
-        return self._get_resource_server_actions("items")
+        return self._get_resource_server_actions(self.resource)
 
     def get_create_extra_attributes(self):
         """Apply per-audience item attributes from EXTERNAL_API_AUD_ITEM_ATTRIBUTES."""

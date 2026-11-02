@@ -14,7 +14,11 @@ import structlog
 from cryptography.fernet import Fernet
 
 from core import factories
-from core.tests.utils.menshen import menshen_backend_setup
+from core.tests.utils.menshen import (
+    MENSHEN_INTROSPECTION_URL,
+    menshen_backend_setup,
+    menshen_introspection_response,
+)
 from core.tests.utils.urls import reload_urls
 
 USER = "user"
@@ -180,6 +184,22 @@ def menshen_backend_conf(settings):
     settings.MENSHEN_ENABLED = False
     settings.OIDC_RESOURCE_SERVER_ENABLED = False
     reload_urls()
+
+
+@pytest.fixture
+def menshen_backend(menshen_backend_conf):
+    """
+    A fixture enabling the Menshen token exchange backend.
+    Including a mocked introspection endpoint answering with an active token.
+    """
+    with responses.RequestsMock() as rsps:
+        rsps.add(
+            responses.POST,
+            MENSHEN_INTROSPECTION_URL,
+            json=menshen_introspection_response(),
+        )
+
+        yield rsps
 
 
 @pytest.fixture(name="indexer_settings")
