@@ -91,7 +91,7 @@ export const getFilesList = (page: Page): Locator =>
   page.locator(".file-upload-toast__files");
 
 /**
- * Mock a slow upload by intercepting PUT requests to S3/minio.
+ * Mock a slow upload by intercepting PUT requests to S3.
  * Returns a resolve function to unblock the upload.
  */
 export const mockSlowUpload = async (
@@ -102,7 +102,7 @@ export const mockSlowUpload = async (
     resolveUpload = resolve;
   });
 
-  await page.route(/.*s3.*|.*minio.*/, async (route) => {
+  await page.route(/.*s3.*/, async (route) => {
     if (route.request().method() === "PUT") {
       await uploadPromise;
       await route.continue();

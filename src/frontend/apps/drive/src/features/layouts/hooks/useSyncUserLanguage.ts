@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/features/auth/Auth";
 import { getDriver } from "@/features/config/Config";
-import { LANGUAGES } from "../components/header/Header";
+import { LANGUAGES } from "@/features/i18n/conf";
 
 /**
  * Auto-sync browser language to backend for new users whose
@@ -21,7 +21,9 @@ export const useSyncUserLanguage = () => {
       return;
     }
 
-    const detectedLang = i18n.language?.toLowerCase();
+    // i18n.language is resolved against the languages we ship, so a browser
+    // announcing "fr" reaches us as "fr-fr" and matches an entry below.
+    const detectedLang = i18n.language;
     if (!detectedLang) {
       return;
     }

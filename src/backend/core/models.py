@@ -13,6 +13,7 @@ from os.path import splitext
 from django.conf import settings
 from django.contrib.auth import models as auth_models
 from django.contrib.auth.base_user import AbstractBaseUser
+from django.contrib.auth.hashers import check_password, identify_hasher, make_password
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.indexes import GistIndex
 from django.contrib.sites.models import Site
@@ -28,6 +29,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import get_language, override
 from django.utils.translation import gettext_lazy as _
 
+from django_ltree.fields import PathField
 from django_ltree.functions import NLevel
 from django_ltree.managers import TreeManager, TreeQuerySet
 from django_ltree.models import TreeModel
@@ -37,14 +39,14 @@ from lasuite.drf.models.choices import (
     LinkReachChoices,
     LinkRoleChoices,
     RoleChoices,
-    get_equivalent_link_definition,
 )
+from lasuite.drf.models.choices import get_equivalent_link_definition as get_equivalent_reach_role
 from pydantic import BaseModel as PydanticBaseModel
 from timezone_field import TimeZoneField
 
+from core.permissions import get_permissions_backend
 from core.storage.cache import invalidate_storage_used_cache
 from core.utils.item_title import manage_unique_title as manage_unique_title_utils
-from wopi.conversion.policy import target_extension_for
 
 logger = getLogger(__name__)
 
@@ -71,6 +73,7 @@ class ItemTypeChoices(models.TextChoices):
 
     FOLDER = "folder", _("Folder")
     FILE = "file", _("File")
+    RESTRICTION = "restriction", _("Restriction")
 
 
 class ItemUploadStateChoices(models.TextChoices):
@@ -156,11 +159,14 @@ class UserManager(auth_models.UserManager):
                 return None
 
             if settings.OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION:
-                try:
-                    return self.get(email__iexact=email)
-                except self.model.DoesNotExist:
-                    pass
-            elif (
+                # Active users first, an inactive one is returned so the login is refused
+                users = self.filter(email__iexact=email).order_by("-is_active")[:2]
+                if len(users) == 2 and users[1].is_active:
+                    raise DuplicateEmailError(
+                        _("Several active users are associated with this email.")
+                    ) from err
+                return users[0] if users else None
+            if (
                 self.filter(email__iexact=email).exists()
                 and not settings.OIDC_ALLOW_DUPLICATE_EMAILS
             ):
@@ -388,6 +394,17 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
         Must be cached if retrieved remotely.
         """
         return []
+
+    @cached_property
+    def unlocked_link_items(self):
+        """Return the unlock keys of the item links the user unlocked."""
+        # An item link password cleared in bulk leaves its unlocked traces behind
+        return {
+            link_unlock_key(item_id, link_password)
+            for item_id, link_password in self.link_traces.filter(
+                link_unlocked_at__isnull=False, item__link_password__isnull=False
+            ).values_list("item_id", "item__link_password")
+        }
 
 
 class UserReconciliation(BaseModel):
@@ -772,6 +789,192 @@ class UserReconciliationCsvImport(BaseModel):
         self.send_email(subject, emails, context, language)
 
 
+class IdInPath(models.Func):  # pylint: disable=abstract-method
+    """
+    Whether an item id is one of the labels of a path, meaning the item is the one at
+    the path or one of its ancestors: an item path is made of its ancestors ids and its
+    own id.
+
+    Prefer it to an `item__path__ancestors` lookup in correlated subqueries: it is
+    resolved on the item id index of the filtered table without joining items, where
+    the ancestors lookup scans every row of the filtered table that matches the other
+    conditions (e.g. all the accesses of a user) for each outer row.
+
+    Measured on a production sized dataset (4M items, 140k accesses), for a user
+    holding 1,526 accesses and listing 200 items: the user roles subquery took
+    830ms with `item__path__ancestors`, because Postgres went through all the
+    accesses of the user for each listed item (305k index lookups). With IdInPath
+    it takes 5ms, with the same results. Do not switch back to `__ancestors` here:
+    its `@>` operator can only use the GiST index of paths, and Postgres misestimates
+    it, so it picks the wrong side of the join. See docs/scaling.md.
+    """
+
+    arity = 2
+    output_field = models.BooleanField()
+
+    def as_sql(self, compiler, connection, **extra_context):  # pylint: disable=arguments-differ
+        """Compare the id to the path labels cast to uuids."""
+        id_sql, id_params = compiler.compile(self.source_expressions[0])
+        path_sql, path_params = compiler.compile(self.source_expressions[1])
+        return (
+            f"{id_sql} = ANY(string_to_array(({path_sql})::text, '.')::uuid[])",
+            (*id_params, *path_params),
+        )
+
+
+# ltree compares labels byte by byte and the hyphen is the lowest byte allowed in a
+# label, so the subtree of "a.b" (the path itself and all its descendants, and only
+# them) sorts in ["a.b", "a.b-"). Looking a subtree up as a range of the path btree
+# index is much faster than a `path__descendants` lookup on the GiST index: see the
+# `path__in_subtree` lookup (InSubtree) and IdInSubtrees.
+SUBTREE_UPPER_BOUND_SUFFIX = "-"
+
+
+@PathField.register_lookup
+class InSubtree(models.Lookup):  # pylint: disable=abstract-method
+    """
+    `path__in_subtree=X` matches X and all its descendants: the same rows as the
+    built-in `path__descendants=X`, found faster.
+
+    `path__descendants` uses the ltree `<@` operator, which only the GiST index on
+    paths supports. On millions of paths made of UUIDs, one GiST search costs about
+    1ms. This lookup reads the subtree as a range of the unique btree index on paths
+    instead, about 20 times faster (see SUBTREE_UPPER_BOUND_SUFFIX for why the range
+    is exact).
+
+    Before:
+        Item.objects.filter(path__descendants="A.B")
+        -- WHERE path <@ 'A.B'                          GiST index scan
+
+    After:
+        Item.objects.filter(path__in_subtree="A.B")
+        -- WHERE path >= 'A.B' AND path < 'A.B-'        btree index range
+
+    Both match A.B, A.B.C and A.B.C.D, but neither A.C nor a sibling like A.BX.
+    The value can be a path, an F() or an OuterRef(), for example to count the
+    children of each item in a correlated subquery.
+    """
+
+    lookup_name = "in_subtree"
+
+    def as_sql(self, compiler, connection):
+        """Compare the path with the bounds of the subtree, both served by the btree."""
+        lhs, lhs_params = self.process_lhs(compiler, connection)
+        rhs, rhs_params = self.process_rhs(compiler, connection)
+        upper_bound = f"(({rhs})::text || '{SUBTREE_UPPER_BOUND_SUFFIX}')::ltree"
+        return (
+            f"({lhs} >= {rhs} AND {lhs} < {upper_bound})",
+            (*lhs_params, *rhs_params, *lhs_params, *rhs_params),
+        )
+
+
+class ParentPath(models.Func):  # pylint: disable=abstract-method
+    """
+    The path of the parent of an item, "" for a root item: "A.B.C" → "A.B".
+
+    The item table is indexed on this expression (item_parent_path_idx), so that the
+    children of an item are found with one exact lookup returning only the children.
+    `path__descendants` combined with a depth condition reads the whole subtree
+    instead: for a folder with 9 children and 62k items below it, 1,255ms against
+    0.7ms. Use it with the exact same expression for the index to apply:
+    `.alias(parent_path=ParentPath("path")).filter(parent_path=...)`.
+    """
+
+    arity = 1
+    output_field = PathField()
+
+    def as_sql(self, compiler, connection, **extra_context):  # pylint: disable=arguments-differ
+        """Keep all the labels but the last one, the path is used twice."""
+        path_sql, path_params = compiler.compile(self.source_expressions[0])
+        return (
+            f"subpath({path_sql}, 0, nlevel({path_sql}) - 1)",
+            (*path_params, *path_params),
+        )
+
+
+class IdInSubtrees(models.Func):  # pylint: disable=abstract-method
+    """
+    Whether an item id belongs to one of the subtrees rooted at the given paths.
+
+    Equivalent to OR-ing `path__descendants` lookups, which Postgres resolves with one
+    scan of the GiST index per path: too slow for users reaching thousands of trees.
+    Instead, each subtree is looked up as a range of the path btree index. Ids are read
+    from the last label of the paths found, which lets the btree answer alone, and the
+    whole list is computed once before looking items up by id.
+
+    With `trashed=True`, only the soft-deleted items of the subtrees are matched. They
+    are read from the index holding the paths of soft-deleted items only
+    (item_trashed_path_idx): the cost then depends on how many items were deleted in
+    the subtrees, not on their size.
+    """
+
+    arity = 1
+    output_field = models.BooleanField()
+
+    def __init__(self, expression, paths, trashed=False, **extra):
+        super().__init__(expression, **extra)
+        self.paths = [str(path) for path in paths]
+        self.trashed = trashed
+
+    def as_sql(self, compiler, connection, **extra_context):  # pylint: disable=arguments-differ
+        """Build the id list from a join of the subtree ranges on the path index."""
+        # Example with paths ["A.B", "F"], where every label is an item id:
+        #
+        #   tree                     path btree index (sorted)
+        #   A                        A.B     ┐ subtree of A.B: ["A.B", "A.B-")
+        #   ├── A.B      ← path      A.B.C   ┘
+        #   │   └── A.B.C            A.C       excluded: "A.C" sorts after "A.B-"
+        #   └── A.C                  F       ┐ subtree of F: ["F", "F-")
+        #   F            ← path      F.G     ┘
+        #   └── F.G
+        #
+        # 1. The query receives two parameters, the lower and upper bounds:
+        #        %s = ["A.B", "F"]      %s = ["A.B-", "F-"]
+        #    unnest() with two arrays reads them side by side, element by element,
+        #    and builds a table with one row per subtree, named "subtree":
+        #        subtree
+        #        lower_bound | upper_bound
+        #        ------------+------------
+        #        A.B         | A.B-
+        #        F           | F-
+        #    The ::text[]::ltree[] casts turn the Python lists of strings into ltree
+        #    arrays, so that the bounds can be compared with paths.
+        # 2. Each row of "subtree" is joined with a range scan of the unique btree
+        #    index on paths, which returns A.B, A.B.C, F and F.G.
+        # 3. subpath(path, -1) keeps the last label, which is the item id: B, C, F, G.
+        #    Reading only the path lets Postgres answer from the btree alone (index
+        #    only scan). Selecting subtree_item.id instead needs the table, and
+        #    Postgres then picks the GiST index, about 40 times slower.
+        # 4. ARRAY() does not depend on the outer row: Postgres computes the id list
+        #    once, then looks the outer items up by primary key with
+        #    "id = ANY(...)". Written as "id IN (subquery)", the ranges were
+        #    misestimated and Postgres scanned the whole item table instead.
+        # 5. With trashed=True, the condition added to the join is the one of the
+        #    partial index on the paths of soft-deleted items, written the same way
+        #    for Postgres to pick this index instead of the one on all paths.
+        id_sql, id_params = compiler.compile(self.source_expressions[0])
+        table = connection.ops.quote_name(Item._meta.db_table)  # noqa: SLF001
+        join_condition = (
+            "subtree_item.path >= subtree.lower_bound AND subtree_item.path < subtree.upper_bound"
+        )
+        if self.trashed:
+            join_condition += " AND subtree_item.deleted_at IS NOT NULL"
+        # Only the compiled id expression, the quoted table name and a constant
+        # join condition are interpolated
+        return (
+            f"{id_sql} = ANY(ARRAY("  # noqa: S608
+            "SELECT subpath(subtree_item.path, -1)::text::uuid "
+            "FROM unnest(%s::text[]::ltree[], %s::text[]::ltree[]) "
+            "AS subtree(lower_bound, upper_bound) "
+            f"JOIN {table} AS subtree_item ON {join_condition}))",
+            (
+                *id_params,
+                self.paths,
+                [f"{path}{SUBTREE_UPPER_BOUND_SUFFIX}" for path in self.paths],
+            ),
+        )
+
+
 class AnnotateUserRoleQuerySetMixin:
     """Mixin to use in a QuerySet to add user_roles annotation."""
 
@@ -785,7 +988,7 @@ class AnnotateUserRoleQuerySetMixin:
         if user.is_authenticated:
             user_roles_subquery = ItemAccess.objects.filter(
                 models.Q(user=user) | models.Q(team__in=user.teams),
-                item__path__ancestors=models.OuterRef(self.path_property),
+                IdInPath(models.F("item_id"), models.OuterRef(self.path_property)),
             ).values_list("role", flat=True)
 
             return self.annotate(
@@ -799,10 +1002,63 @@ class AnnotateUserRoleQuerySetMixin:
         )
 
 
+def link_unlock_key(item_id, link_password):
+    """Return the key remembering an unlock, bound to the password it was made with."""
+    # The salt is regenerated with every password, no need to hash anything
+    salt = identify_hasher(link_password).decode(link_password)["salt"]
+    return f"{item_id}:{salt}"
+
+
+def get_equivalent_link_definition(links):
+    """
+    Return the (reach, role, password item) equivalent to a list of link definitions.
+    The password is the one of the closest link providing the equivalent reach and role.
+    """
+    definition = get_equivalent_reach_role(links)
+    definition["link_password_item"] = None
+    definition["link_unlock_key"] = None
+    if definition["link_reach"] not in (None, LinkReachChoices.RESTRICTED):
+        for link in reversed(links):
+            if (
+                link["link_reach"] == definition["link_reach"]
+                and link["link_role"] == definition["link_role"]
+            ):
+                definition["link_password_item"] = link.get("link_password_item")
+                definition["link_unlock_key"] = link.get("link_unlock_key")
+                break
+    return definition
+
+
 class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
     """Custom queryset for Item model with additional methods."""
 
     path_property = "path"
+
+    def annotate_has_restriction(self):
+        """Annotate whether a restriction targets each item."""
+        return self.annotate(
+            has_restriction=models.Exists(self.model.objects.filter(target=models.OuterRef("pk")))
+        )
+
+    def with_restriction_target(self, user):
+        """Load restriction targets along with the accesses the user holds on them."""
+        queryset = self.select_related("target")
+        if not user.is_authenticated:
+            return queryset
+        return queryset.prefetch_related(
+            models.Prefetch(
+                "target__accesses",
+                queryset=ItemAccess.objects.filter(
+                    models.Q(user=user) | models.Q(team__in=user.teams)
+                ),
+                to_attr="viewer_accesses",
+            ),
+            models.Prefetch(
+                "target__link_traces",
+                queryset=LinkTrace.objects.filter(user=user),
+                to_attr="viewer_link_traces",
+            ),
+        )
 
     def readable_per_se(self, user):
         """
@@ -811,14 +1067,35 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         :param user: The user for whom readable documents are to be fetched.
         :return: A queryset of documents readable by the user.
         """
+        link_not_expired = models.Q(link_expires_at__isnull=True) | models.Q(
+            link_expires_at__gt=timezone.now()
+        )
         if user.is_authenticated:
+            link_unlocked = models.Q(
+                id__in=LinkTrace.objects.filter(user=user, link_unlocked_at__isnull=False).values(
+                    "item_id"
+                )
+            )
+            link_open = link_not_expired & (models.Q(link_password__isnull=True) | link_unlocked)
             return self.filter(
                 models.Q(accesses__user=user)
                 | models.Q(accesses__team__in=user.teams)
-                | ~models.Q(link_reach=LinkReachChoices.RESTRICTED)
+                # A null link reach is inherited: it grants nothing by itself.
+                | (
+                    models.Q(
+                        link_reach__in=[LinkReachChoices.PUBLIC, LinkReachChoices.AUTHENTICATED]
+                    )
+                    & link_open
+                )
             )
 
-        return self.filter(models.Q(link_reach=LinkReachChoices.PUBLIC))
+        link_open = models.Q(link_password__isnull=True)
+        for key in getattr(user, "unlocked_link_items", ()):
+            item_id, salt = key.split(":", 1)
+            link_open |= models.Q(id=item_id, link_password__contains=salt)
+        return self.filter(
+            models.Q(link_reach=LinkReachChoices.PUBLIC) & link_not_expired & link_open
+        )
 
     def filter_non_deleted(self, **kwargs):
         """Filter the non deleted items"""
@@ -851,10 +1128,51 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         """Filter items the given user owns, directly or through an ancestor access."""
         owner_access = ItemAccess.objects.filter(
             models.Q(user=user) | models.Q(team__in=user.teams),
+            IdInPath(models.F("item_id"), models.OuterRef("path")),
             role=RoleChoices.OWNER,
-            item__path__ancestors=models.OuterRef("path"),
         )
         return self.filter(models.Exists(owner_access))
+
+    def trashed_owned_by(self, user):
+        """
+        Filter soft-deleted items the given user owns, directly or through an ancestor
+        access.
+
+        `owned_by` checks each candidate item against the accesses of the user: on
+        soft-deleted items, every item deleted by anyone is a candidate. Here the
+        subtrees the user owns are resolved first, and only the items deleted inside
+        them are read (see IdInSubtrees).
+        """
+        owned_paths = list(
+            ItemAccess.objects.filter(
+                models.Q(user=user) | models.Q(team__in=user.teams),
+                role=RoleChoices.OWNER,
+            ).values_list("item__path", flat=True)
+        )
+        if not owned_paths:
+            return self.none()
+
+        return self.filter(
+            IdInSubtrees(models.F("id"), owned_paths, trashed=True),
+            deleted_at__isnull=False,
+        )
+
+    def annotate_user_has_link_trace(self, user):
+        """Annotate item queryset with whether the current user has a link trace on the item."""
+        if user.is_authenticated:
+            link_trace_subquery = LinkTrace.objects.filter(item_id=models.OuterRef("pk"), user=user)
+            return self.annotate(user_has_link_trace=models.Exists(link_trace_subquery))
+        return self.annotate(user_has_link_trace=models.Value(False))
+
+    def annotate_user_has_direct_access(self, user):
+        """Annotate item queryset with whether the current user has a direct ItemAccess on it."""
+        if user.is_authenticated:
+            direct_access_subquery = ItemAccess.objects.filter(
+                models.Q(user=user) | models.Q(team__in=user.teams),
+                item_id=models.OuterRef("pk"),
+            )
+            return self.annotate(user_has_direct_access=models.Exists(direct_access_subquery))
+        return self.annotate(user_has_direct_access=models.Value(False))
 
     def annotate_is_favorite(self, user):
         """
@@ -878,7 +1196,7 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         if user.is_authenticated:
             user_roles_subquery = ItemAccess.objects.filter(
                 models.Q(user=user) | models.Q(team__in=user.teams),
-                item__path__ancestors=models.OuterRef("path"),
+                IdInPath(models.F("item_id"), models.OuterRef("path")),
             ).values_list("role", flat=True)
 
             return self.annotate(
@@ -897,14 +1215,15 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         and folder children (_numchild_folder).
         Uses two correlated subqueries; the Item.numchild property reads these annotations.
         """
+        # Looked up on the parent path index: only the children are read, whatever
+        # the size of the subtree below them (see ParentPath)
         direct_children_qs = (
-            Item.objects.filter(
-                path__descendants=models.OuterRef("path"),
+            Item.objects.alias(parent_path=ParentPath("path"))
+            .filter(
+                parent_path=models.OuterRef("path"),
                 deleted_at__isnull=True,
                 ancestors_deleted_at__isnull=True,
             )
-            .annotate(_depth_diff=NLevel("path") - NLevel(models.OuterRef("path")))
-            .filter(_depth_diff=1)
             .order_by()
         )
 
@@ -921,7 +1240,9 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         )
 
         numchild_folder_sq = models.Subquery(
-            direct_children_qs.filter(type=ItemTypeChoices.FOLDER)
+            direct_children_qs.filter(
+                type__in=[ItemTypeChoices.FOLDER, ItemTypeChoices.RESTRICTION]
+            )
             .values(group_key=models.Value(1))
             .annotate(count=models.Count("pk"))
             .values("count"),
@@ -981,7 +1302,7 @@ class ItemManager(TreeManager.from_queryset(ItemQuerySet)):
         return item
 
 
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods,too-many-instance-attributes
 class Item(TreeModel, BaseModel):
     """Item in the tree."""
 
@@ -995,6 +1316,8 @@ class Item(TreeModel, BaseModel):
     link_role = models.CharField(
         max_length=20, choices=LinkRoleChoices.choices, default=LinkRoleChoices.READER
     )
+    link_expires_at = models.DateTimeField(_("link expiration date"), null=True, blank=True)
+    link_password = models.CharField(_("link password"), max_length=128, null=True, blank=True)
     creator = models.ForeignKey(
         User,
         on_delete=models.RESTRICT,
@@ -1019,6 +1342,13 @@ class Item(TreeModel, BaseModel):
         blank=True,
     )
     mimetype = models.CharField(max_length=255, null=True, blank=True)
+    target = models.OneToOneField(
+        "self",
+        on_delete=models.CASCADE,
+        related_name="restriction",
+        null=True,
+        blank=True,
+    )
     main_workspace = models.BooleanField(default=False)
     size = models.BigIntegerField(null=True, blank=True)
     quota_excluded = models.BooleanField(
@@ -1049,11 +1379,26 @@ class Item(TreeModel, BaseModel):
                     | models.Q(deleted_at=models.F("ancestors_deleted_at"))
                 ),
                 name="check_deleted_at_matches_ancestors_deleted_at_when_set",
-            )
+            ),
+            models.CheckConstraint(
+                condition=(
+                    (models.Q(type=ItemTypeChoices.RESTRICTION) & models.Q(target__isnull=False))
+                    | (~models.Q(type=ItemTypeChoices.RESTRICTION) & models.Q(target__isnull=True))
+                ),
+                name="check_target_only_on_restrictions",
+            ),
         ]
         indexes = [
             GistIndex(fields=["path"]),
             models.Index(NLevel(models.F("path")), name="drive_item_path_nlevel_idx"),
+            # Finds the children of an item, see ParentPath.
+            models.Index(ParentPath(models.F("path")), name="item_parent_path_idx"),
+            # Finds the soft-deleted items of a subtree, see IdInSubtrees.
+            models.Index(
+                fields=["path"],
+                condition=models.Q(deleted_at__isnull=False),
+                name="item_trashed_path_idx",
+            ),
             # Covers the storage used computation by creator.
             models.Index(
                 fields=["creator"],
@@ -1139,6 +1484,24 @@ class Item(TreeModel, BaseModel):
         """Return the descendants of the item excluding the item itself."""
         return super().descendants().exclude(id=self.id)
 
+    def children(self):
+        """
+        Return the direct children of the item, looked up on the parent path index
+        rather than among all its descendants, see ParentPath.
+        """
+        return Item.objects.alias(parent_path=ParentPath("path")).filter(parent_path=self.path)
+
+    def set_quota_excluded(self, value):
+        """Set quota_excluded on the item and its descendants, return the updated count."""
+        items = self._meta.model.objects.filter(path__in_subtree=self.path).exclude(
+            quota_excluded=value
+        )
+        # The bulk update bypasses Item.save() invalidating the storage used cache
+        creator_ids = set(items.values_list("creator_id", flat=True))
+        count = items.update(quota_excluded=value)
+        transaction.on_commit(lambda: invalidate_storage_used_cache(creator_ids))
+        return count
+
     @property
     def extension(self):
         """Return the extension related to the filename."""
@@ -1187,6 +1550,22 @@ class Item(TreeModel, BaseModel):
             title,
         )
 
+    @classmethod
+    def prefetch_nb_accesses(cls, items):
+        """
+        Read the cached number of accesses of many items in a single cache round trip,
+        items missing from the cache compute it when their `nb_accesses` is read.
+        """
+        items_by_cache_key = {
+            item.get_nb_accesses_cache_key(): item
+            for item in items
+            if not hasattr(item, "_nb_accesses")
+        }
+        for cache_key, nb_accesses in cache.get_many(list(items_by_cache_key)).items():
+            if nb_accesses is not None:
+                # pylint: disable-next=protected-access
+                items_by_cache_key[cache_key]._nb_accesses = nb_accesses  # noqa: SLF001
+
     @property
     def nb_accesses(self):
         """Calculate the number of accesses."""
@@ -1197,9 +1576,7 @@ class Item(TreeModel, BaseModel):
             nb_accesses = cache.get(cache_key)
 
             if nb_accesses is None:
-                nb_accesses = ItemAccess.objects.filter(
-                    item__path__ancestors=self.path,
-                ).count()
+                nb_accesses = get_permissions_backend().effective_accesses(self).count()
                 cache.set(cache_key, nb_accesses)
 
             return nb_accesses
@@ -1219,9 +1596,22 @@ class Item(TreeModel, BaseModel):
         """Return True if the item is the root of the tree."""
         return len(self.path) == 1
 
+    @property
+    def is_restricted(self):
+        """Return whether a restriction targets this folder."""
+        if (annotated := getattr(self, "has_restriction", None)) is not None:
+            return annotated
+        return self._meta.model.objects.filter(target=self).exists()
+
     def get_root(self):
         """Return the root of the tree."""
         return self.ancestors().filter(path__depth=1).first()
+
+    def parent(self):
+        """Return the direct parent, looked up by its exact path."""
+        if len(self.path) > 1:
+            return self._meta.model.objects.filter(path=str(self.path[:-1])).first()
+        return None
 
     def invalidate_nb_accesses_cache(self):
         """
@@ -1239,10 +1629,7 @@ class Item(TreeModel, BaseModel):
         try:
             roles = self.user_roles or []
         except AttributeError:
-            roles = ItemAccess.objects.filter(
-                models.Q(user=user) | models.Q(team__in=user.teams),
-                item__path__ancestors=self.path,
-            ).values_list("role", flat=True)
+            roles = get_permissions_backend().roles_for(user, self)
 
         return RoleChoices.max(*roles)
 
@@ -1259,17 +1646,88 @@ class Item(TreeModel, BaseModel):
         paths_links_mapping = {}
 
         for ancestor in ancestors:
-            ancestors_links.append(
-                {"link_reach": ancestor.link_reach, "link_role": ancestor.link_role}
-            )
+            ancestors_links.append(ancestor.link_definition)
             paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
 
         return paths_links_mapping
 
+    @classmethod
+    def compute_items_ancestors_links_paths_mapping(cls, items):
+        """
+        Compute the ancestors links of a collection of items in a single query. The
+        mapping is meant to be read at the items parent path: unlike the mapping
+        computed on an item, it covers the items parents and their ancestors but not
+        the items themselves, so that no query is needed for root items.
+        """
+        paths = set()
+        for item in items:
+            labels = str(item.path).split(".")
+            paths.update(".".join(labels[:depth]) for depth in range(1, len(labels)))
+        if not paths:
+            return {}
+
+        ancestors = (
+            cls.objects.filter(path__in=paths, ancestors_deleted_at__isnull=True)
+            .order_by("path")
+            .only("path", "link_reach", "link_role", "link_expires_at", "link_password")
+        )
+        paths_links_mapping = {}
+        for ancestor in ancestors:
+            # Paths are sorted so the closest ancestor found is already mapped. Deleted
+            # ancestors are skipped, as when walking the ancestors of a single item.
+            labels = str(ancestor.path).split(".")
+            ancestors_links = next(
+                (
+                    paths_links_mapping[parent_path]
+                    for depth in range(len(labels) - 1, 0, -1)
+                    if (parent_path := ".".join(labels[:depth])) in paths_links_mapping
+                ),
+                [],
+            )
+            paths_links_mapping[str(ancestor.path)] = [
+                *ancestors_links,
+                ancestor.link_definition,
+            ]
+
+        return paths_links_mapping
+
+    @property
+    def is_link_expired(self):
+        """Return whether the link expiration date is past."""
+        return self.link_expires_at is not None and self.link_expires_at <= timezone.now()
+
     @property
     def link_definition(self):
-        """Returns link reach/role as a definition in dictionary format."""
-        return {"link_reach": self.link_reach, "link_role": self.link_role}
+        """Return link reach/role/password item as a definition in dictionary format."""
+        # An expired link behaves as restricted, so inheritance and abilities need no change
+        if self.is_link_expired:
+            return {
+                "link_reach": LinkReachChoices.RESTRICTED,
+                "link_role": None,
+                "link_password_item": None,
+                "link_unlock_key": None,
+            }
+        return {
+            "link_reach": self.link_reach,
+            "link_role": self.link_role,
+            "link_password_item": self.id if self.link_password else None,
+            "link_unlock_key": self.link_unlock_key,
+        }
+
+    @property
+    def link_unlock_key(self):
+        """Return the key remembering an unlock of this item link, or None without password."""
+        return link_unlock_key(self.id, self.link_password) if self.link_password else None
+
+    def set_link_password(self, raw_password):
+        """Store the hash of the given link password, or remove it when empty."""
+        self.link_password = make_password(raw_password) if raw_password else None
+        # Changing the password locks the link again for everyone
+        self.link_traces.update(link_unlocked_at=None)
+
+    def check_link_password(self, raw_password):
+        """Return whether the given password matches the link password."""
+        return bool(self.link_password) and check_password(raw_password, self.link_password)
 
     @property
     def ancestors_link_definition(self):
@@ -1321,104 +1779,29 @@ class Item(TreeModel, BaseModel):
         """Actual link role on the document."""
         return self.computed_link_definition["link_role"]
 
+    def has_link_trace(self, user):
+        """Return whether the user has a link trace on this item."""
+        if not user.is_authenticated:
+            return False
+        try:
+            return self.user_has_link_trace
+        except AttributeError:
+            return self.link_traces.filter(user=user).exists()
+
+    def has_direct_access(self, user):
+        """Return whether the user has a direct ItemAccess on this item."""
+        if not user.is_authenticated:
+            return False
+        try:
+            return self.user_has_direct_access
+        except AttributeError:
+            return self.accesses.filter(
+                models.Q(user=user) | models.Q(team__in=user.teams)
+            ).exists()
+
     def get_abilities(self, user):
-        """
-        Compute and return abilities for a given user on the item.
-        """
-        # First get the role based on specific access
-        role = self.get_role(user)
-        # Characteristics that are based only on specific access
-        is_owner = role == RoleChoices.OWNER
-        is_deleted = self.ancestors_deleted_at
-        is_owner_or_admin = is_owner or role == RoleChoices.ADMIN
-
-        # Compute access roles before adding link roles because we don't
-        # want anonymous users to access versions (we wouldn't know from
-        # which date to allow them anyway)
-        # Anonymous users should also not see item accesses
-        has_access_role = bool(role) and not is_deleted
-        link_select_options = (
-            LinkReachChoices.get_select_options(**self.ancestors_link_definition)
-            if has_access_role
-            else {}
-        )
-
-        link_definition = self.computed_link_definition
-
-        link_reach = link_definition["link_reach"]
-        if link_reach == LinkReachChoices.PUBLIC or (
-            link_reach == LinkReachChoices.AUTHENTICATED and user.is_authenticated
-        ):
-            # Set the user role to the highest role between the item role and the link role
-            # Needed for a user with an access lower than link_role
-            # Needed for a user without access to determine the role he has.
-            role = RoleChoices.max(role, link_definition["link_role"])
-        can_get = bool(role) and not is_deleted
-        retrieve = can_get or is_owner
-        can_manage = is_owner_or_admin and not is_deleted
-        can_update = (is_owner_or_admin or role == RoleChoices.EDITOR) and not is_deleted
-        can_create_children = can_update and user.is_authenticated
-        can_hard_delete = (
-            is_owner
-            if self.is_root
-            else (
-                is_owner_or_admin
-                or (
-                    user.is_authenticated
-                    and self.creator_id == user.pk
-                    and role == RoleChoices.EDITOR
-                )
-            )
-        )
-        can_destroy = can_hard_delete and not is_deleted
-        can_duplicate = (
-            can_get
-            and user.is_authenticated
-            and self.type == ItemTypeChoices.FILE
-            and self.upload_state == ItemUploadStateChoices.READY
-        )
-        can_export = can_get and self.type == ItemTypeChoices.FOLDER
-        can_convert = (
-            can_update
-            and self.type == ItemTypeChoices.FILE
-            and self.upload_state
-            in (
-                ItemUploadStateChoices.READY,
-                ItemUploadStateChoices.ANALYZING,
-            )
-            and bool(target_extension_for(self.extension))
-            and bool(settings.WOPI_ONLYOFFICE_CONVERT_JWT_SECRET)
-        )
-
-        return {
-            "accesses_manage": can_manage,
-            "accesses_view": has_access_role,
-            "breadcrumb": can_get,
-            "children_list": can_get,
-            "children_create": can_create_children,
-            "destroy": can_destroy,
-            "download": can_get,
-            "duplicate": can_duplicate,
-            "export": can_export,
-            "hard_delete": can_hard_delete,
-            "favorite": can_get and user.is_authenticated,
-            "link_configuration": can_manage,
-            "invite_owner": is_owner and not is_deleted,
-            "link_select_options": link_select_options,
-            "move": can_manage,
-            "restore": is_owner,
-            "retrieve": retrieve,
-            "tree": can_get,
-            "media_auth": can_get,
-            "partial_update": can_update,
-            "update": can_update,
-            "upload_ended": can_update and user.is_authenticated,
-            "versions_view": can_get and self.type == ItemTypeChoices.FILE,
-            "versions_restore": can_update and self.type == ItemTypeChoices.FILE,
-            "versions_destroy": can_destroy and self.type == ItemTypeChoices.FILE,
-            "wopi": can_get,
-            "convert": can_convert,
-        }
+        """Compute and return abilities for a given user on the item."""
+        return get_permissions_backend().abilities(user, self)
 
     def send_email(self, subject, emails, context=None, language=None):
         """Generate and send email from a template."""
@@ -1502,6 +1885,16 @@ class Item(TreeModel, BaseModel):
 
         self.save(update_fields=["deleted_at", "ancestors_deleted_at"])
 
+        # The restriction of a restricted folder lives in another subtree: trash
+        # it along so that restoring the folder can bring it back
+        self._meta.model.objects.filter(
+            target=self,
+            ancestors_deleted_at__isnull=True,
+        ).update(
+            deleted_at=self.deleted_at,
+            ancestors_deleted_at=self.deleted_at,
+        )
+
         # Mark all descendants as soft deleted
         if self.type == ItemTypeChoices.FOLDER:
             self.descendants().filter(ancestors_deleted_at__isnull=True).update(
@@ -1548,6 +1941,9 @@ class Item(TreeModel, BaseModel):
 
         # Mark all descendants as hard deleted
         self.descendants().update(hard_deleted_at=self.hard_deleted_at)
+
+        # The restriction of a restricted folder must not survive its target
+        self._meta.model.objects.filter(target=self).update(hard_deleted_at=self.hard_deleted_at)
 
         transaction.on_commit(lambda: invalidate_storage_used_cache(creator_ids))
 
@@ -1604,6 +2000,16 @@ class Item(TreeModel, BaseModel):
             | models.Q(ancestors_deleted_at__lt=current_deleted_at)
         ).update(ancestors_deleted_at=None)
 
+        # Bring back the restriction trashed along the restricted folder, unless
+        # its own subtree went to the trash meanwhile
+        restriction = self._meta.model.objects.filter(
+            target=self, deleted_at=current_deleted_at
+        ).first()
+        if restriction and not restriction.ancestors().filter(deleted_at__isnull=False).exists():
+            self._meta.model.objects.filter(pk=restriction.pk).update(
+                deleted_at=None, ancestors_deleted_at=None
+            )
+
     @transaction.atomic
     def move(self, target):
         """
@@ -1615,6 +2021,30 @@ class Item(TreeModel, BaseModel):
                     "target": ValidationError(
                         _("Only folders can be targeted when moving an item"),
                         code="item_move_target_not_a_folder",
+                    )
+                }
+            )
+
+        if self.is_restricted:
+            raise ValidationError(
+                {
+                    "target": ValidationError(
+                        _("A restricted folder cannot be moved"),
+                        code="item_move_restricted",
+                    )
+                }
+            )
+
+        if (
+            self.type == ItemTypeChoices.RESTRICTION
+            and target
+            and str(target.path).startswith(str(self.target.path))
+        ):
+            raise ValidationError(
+                {
+                    "target": ValidationError(
+                        _("A restriction cannot be moved under its own target"),
+                        code="item_move_restriction_under_target",
                     )
                 }
             )
@@ -1632,6 +2062,160 @@ class Item(TreeModel, BaseModel):
             self._meta.model.objects.filter(path__descendants=old_path).update(
                 path=RawSQL("%s || subpath(path, nlevel(%s))", (str(self.path), str(old_path)))
             )
+
+    @transaction.atomic
+    def restrict(self, user):
+        """Restrict the folder by detaching it to the tree root behind a restriction."""
+        item = self._meta.model.objects.select_for_update().get(pk=self.pk)
+
+        if item.type != ItemTypeChoices.FOLDER:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("Only folders can be restricted"),
+                        code="item_restrict_type_folder_only",
+                    )
+                }
+            )
+        if item.is_restricted:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("This folder is already restricted"),
+                        code="item_restrict_already_restricted",
+                    )
+                }
+            )
+        if item.depth == 1:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("A root folder cannot be restricted"),
+                        code="item_restrict_root",
+                    )
+                }
+            )
+        if item.ancestors_deleted_at:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("A deleted folder cannot be restricted"),
+                        code="item_restrict_deleted",
+                    )
+                }
+            )
+        if item.get_role(user) != RoleChoices.OWNER:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("Only owners can restrict a folder"),
+                        code="item_restrict_owner_only",
+                    )
+                }
+            )
+
+        parent = item.parent()
+
+        ItemAccess.objects.update_or_create(
+            item=item, user=user, defaults={"role": RoleChoices.OWNER}
+        )
+
+        item.move(None)
+
+        if item.link_reach is None:
+            item.link_reach = LinkReachChoices.RESTRICTED
+            item.save(update_fields=["link_reach", "updated_at"])
+
+        self._meta.model.objects.create_child(
+            parent=parent,
+            creator=user,
+            type=ItemTypeChoices.RESTRICTION,
+            target=item,
+            title=item.title,
+        )
+        item.invalidate_nb_accesses_cache()
+
+        return item
+
+    def _normalize_explicit_accesses(self):
+        """Delete explicit accesses inferior or equal to the inherited role."""
+        inherited_accesses = (
+            ItemAccess.objects.filter(item__path__ancestors=self.path)
+            .exclude(item=self)
+            .values_list("user_id", "team", "role")
+        )
+        inherited_roles = {}
+        for user_id, team, role in inherited_accesses:
+            key = (user_id, team)
+            inherited_roles[key] = RoleChoices.max(inherited_roles.get(key), role)
+
+        redundant_ids = [
+            access.id
+            for access in ItemAccess.objects.filter(item=self)
+            if RoleChoices.get_priority(access.role)
+            <= RoleChoices.get_priority(inherited_roles.get((access.user_id, access.team)))
+        ]
+        if redundant_ids:
+            ItemAccess.objects.filter(id__in=redundant_ids).delete()
+
+    def _normalize_explicit_link_reach(self):
+        """Reset the link reach to inherit when inferior or equal to the inherited one."""
+        # The cached ancestors definition predates the move, recompute it
+        self._ancestors_link_definition = None
+        inherited_reach = self.ancestors_link_definition["link_reach"]
+        if LinkReachChoices.get_priority(self.link_reach) <= LinkReachChoices.get_priority(
+            inherited_reach
+        ):
+            self.link_reach = None
+            self.save(update_fields=["link_reach", "updated_at"])
+
+    def detach(self):
+        """Delete this restriction row, leaving its restricted target untouched."""
+        if self.type != ItemTypeChoices.RESTRICTION:
+            raise ValidationError(
+                {
+                    "type": ValidationError(
+                        _("Only restrictions can be detached"),
+                        code="item_detach_not_a_restriction",
+                    )
+                }
+            )
+
+        self._meta.model.objects.filter(pk=self.pk).delete()
+
+    @transaction.atomic
+    def unrestrict(self):
+        """Lift restriction and reattach the folder at the restriction's location."""
+        item = self._meta.model.objects.select_for_update().get(pk=self.pk)
+
+        restriction = self._meta.model.objects.select_for_update().filter(target=item).first()
+        if restriction is None:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("This folder is not restricted"),
+                        code="item_unrestrict_not_restricted",
+                    )
+                }
+            )
+
+        parent = None
+        if restriction.ancestors_deleted_at is None:
+            parent = restriction.parent()
+        self._meta.model.objects.filter(pk=restriction.pk).delete()
+
+        if parent:
+            item.title = manage_unique_title_utils(
+                self._meta.model.objects.children(parent.path), item.title
+            )
+            item.save(update_fields=["title", "updated_at"])
+            item.move(parent)
+            item._normalize_explicit_accesses()  # noqa: SLF001  # pylint: disable=protected-access
+            item._normalize_explicit_link_reach()  # noqa: SLF001  # pylint: disable=protected-access
+
+        item.invalidate_nb_accesses_cache()
+
+        return item
 
 
 class ItemVersion(BaseModel):
@@ -1727,6 +2311,7 @@ class LinkTrace(BaseModel):
         related_name="link_traces",
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="link_traces")
+    link_unlocked_at = models.DateTimeField(_("link unlocked at"), null=True, blank=True)
 
     class Meta:
         db_table = "drive_link_trace"

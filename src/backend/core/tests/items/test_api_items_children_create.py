@@ -3,7 +3,7 @@ Tests for items API endpoint in drive's core app: create
 """
 
 from concurrent.futures import ThreadPoolExecutor
-from random import choice, randint
+from random import randint
 from unittest import mock
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
@@ -130,6 +130,7 @@ def test_api_items_children_create_authenticated_success(reach, role, depth):
     response = client.post(
         f"/api/v1.0/items/{item.id!s}/children/",
         {
+            "size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file.txt",
         },
@@ -201,6 +202,7 @@ def test_api_items_children_create_related_success(role, depth):
         response = client.post(
             f"/api/v1.0/items/{item.id!s}/children/",
             {
+                "size": 8,
                 "type": ItemTypeChoices.FILE,
                 "filename": "file.txt",
             },
@@ -231,7 +233,7 @@ def test_api_items_children_create_related_success(role, depth):
     ]
     assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
     assert query_params.pop("X-Amz-Expires") == ["60"]
-    assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
+    assert query_params.pop("X-Amz-SignedHeaders") == ["content-length;host;x-amz-acl"]
     assert query_params.pop("X-Amz-Signature") is not None
 
     assert len(query_params) == 0
@@ -260,6 +262,7 @@ def test_api_items_children_create_related_success_override_s3_endpoint(settings
         response = client.post(
             f"/api/v1.0/items/{item.id!s}/children/",
             {
+                "size": 8,
                 "type": ItemTypeChoices.FILE,
                 "filename": "file.txt",
             },
@@ -290,7 +293,7 @@ def test_api_items_children_create_related_success_override_s3_endpoint(settings
     ]
     assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
     assert query_params.pop("X-Amz-Expires") == ["60"]
-    assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
+    assert query_params.pop("X-Amz-SignedHeaders") == ["content-length;host;x-amz-acl"]
     assert query_params.pop("X-Amz-Signature") is not None
 
     assert len(query_params) == 0
@@ -300,7 +303,7 @@ def test_api_items_children_create_file_extension_not_allowed(settings):
     """
     Creating a file item with an extension not allowed should fail.
     """
-    settings.RESTRICT_UPLOAD_FILE_TYPE = True
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "allowlist"
     user = factories.UserFactory()
     item = factories.ItemFactory(link_reach="restricted", type=ItemTypeChoices.FOLDER)
     factories.UserItemAccessFactory(user=user, item=item, role="owner")
@@ -309,6 +312,7 @@ def test_api_items_children_create_file_extension_not_allowed(settings):
     response = client.post(
         f"/api/v1.0/items/{item.id!s}/children/",
         {
+            "size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file.notallowed",
         },
@@ -333,7 +337,7 @@ def test_api_items_children_create_file_extension_not_allowed_not_checking_exten
     """
     Creating a file item with an extension not allowed should fail.
     """
-    settings.RESTRICT_UPLOAD_FILE_TYPE = False
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "off"
     user = factories.UserFactory()
     item = factories.ItemFactory(link_reach="restricted", type=ItemTypeChoices.FOLDER)
     factories.UserItemAccessFactory(user=user, item=item, role="owner")
@@ -342,6 +346,7 @@ def test_api_items_children_create_file_extension_not_allowed_not_checking_exten
     response = client.post(
         f"/api/v1.0/items/{item.id!s}/children/",
         {
+            "size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file.notallowed",
         },
@@ -365,6 +370,7 @@ def test_api_items_children_create_force_id_success():
     response = client.post(
         f"/api/v1.0/items/{access.item.id!s}/children/",
         {
+            "size": 8,
             "id": str(forced_id),
             "title": "my item",
             "type": ItemTypeChoices.FILE,
@@ -393,6 +399,7 @@ def test_api_items_children_create_force_id_existing():
     response = client.post(
         f"/api/v1.0/items/{access.item.id!s}/children/",
         {
+            "size": 8,
             "id": str(item.id),
             "title": "my item",
             "type": ItemTypeChoices.FILE,
@@ -414,7 +421,30 @@ def test_api_items_children_create_force_id_existing():
     }
 
 
-def test_api_items_children_create_not_a_folder():
+def test_api_items_children_create_restriction_rejected():
+    """A restriction cannot be created directly through the API."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=ItemTypeChoices.FOLDER,
+        users=[(user, "owner")],
+    )
+    target = factories.ItemFactory(type=ItemTypeChoices.FOLDER)
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/children/",
+        {"type": "restriction", "title": "sneaky", "target": str(target.id)},
+        format="json",
+    )
+
+    assert response.status_code == 400
+
+
+@pytest.mark.parametrize(
+    "item_type", [type for type in ItemTypeChoices.values if type != ItemTypeChoices.FOLDER]
+)
+def test_api_items_children_create_not_a_folder(item_type):
     """
     It should not be possible to create a nested item below an item
     of type other than folder.
@@ -423,17 +453,16 @@ def test_api_items_children_create_not_a_folder():
     client = APIClient()
     client.force_login(user)
 
-    access = factories.UserItemAccessFactory(
-        user=user,
-        role="editor",
-        item__type=choice(
-            [type for type in ItemTypeChoices.values if type != ItemTypeChoices.FOLDER]
-        ),
-    )
+    if item_type == ItemTypeChoices.RESTRICTION:
+        item = factories.RestrictionFactory()
+    else:
+        item = factories.ItemFactory(type=item_type)
+    access = factories.UserItemAccessFactory(user=user, role="editor", item=item)
 
     response = client.post(
         f"/api/v1.0/items/{access.item.id!s}/children/",
         {
+            "size": 8,
             "type": "file",
             "filename": "file.txt",
         },
@@ -577,6 +606,7 @@ def test_api_items_children_create_entitlements_backend_returns_falsy(
     response = client.post(
         f"/api/v1.0/items/{access.item.id!s}/children/",
         {
+            "size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file.txt",
         },
@@ -618,6 +648,7 @@ def test_api_items_children_create_related_success_sanitize_filename(
         response = client.post(
             f"/api/v1.0/items/{item.id!s}/children/",
             {
+                "size": 8,
                 "type": ItemTypeChoices.FILE,
                 "filename": "><img src=x onerror=alert()>␊.txt",
             },
@@ -651,7 +682,7 @@ def test_api_items_children_create_related_success_sanitize_filename(
     ]
     assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
     assert query_params.pop("X-Amz-Expires") == ["60"]
-    assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
+    assert query_params.pop("X-Amz-SignedHeaders") == ["content-length;host;x-amz-acl"]
     assert query_params.pop("X-Amz-Signature") is not None
 
     assert len(query_params) == 0
@@ -680,6 +711,7 @@ def test_api_items_children_create_related_invalid_filename(
         response = client.post(
             f"/api/v1.0/items/{item.id!s}/children/",
             {
+                "size": 8,
                 "type": ItemTypeChoices.FILE,
                 "filename": "!@#$%^&*().txt",
             },

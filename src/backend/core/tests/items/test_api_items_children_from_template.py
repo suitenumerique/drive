@@ -381,3 +381,40 @@ def test_api_items_children_from_template_title_with_slash_is_sanitized():
 
     child = Item.objects.get(id=response.json()["id"])
     assert child.filename == "30-03-30 - liste à faire.odt"
+
+
+@mock.patch("core.api.viewsets.get_entitlements_backend")
+def test_api_items_children_from_template_entitlements_backend_returns_falsy(
+    mock_get_entitlements_backend,
+):
+    """
+    We should not be able to create items from template if the quota is exceeded.
+    """
+    mock_entitlement_backend = mock.Mock()
+    mock_entitlement_backend.can_upload.return_value = {
+        "result": False,
+        "reason": "user_quota_exceeded",
+    }
+    mock_get_entitlements_backend.return_value = mock_entitlement_backend
+
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    access = factories.UserItemAccessFactory(
+        user=user, role="owner", item__type=ItemTypeChoices.FOLDER
+    )
+
+    response = client.post(
+        f"/api/v1.0/items/{access.item.id!s}/children/",
+        {
+            "title": "my document",
+            "extension": "odt",
+            "type": "file",
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json()["errors"][0]["code"] == "user_quota_exceeded"
+    assert not Item.objects.filter(title="my document").exists()

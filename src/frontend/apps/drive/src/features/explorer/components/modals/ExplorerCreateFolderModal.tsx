@@ -3,7 +3,7 @@ import {
   Modal,
   ModalProps,
   ModalSize,
-} from "@gouvfr-lasuite/cunningham-react";
+} from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { RhfInput } from "@/features/forms/components/RhfInput";
@@ -40,9 +40,10 @@ export const ExplorerCreateFolderModal = ({
         onSuccess: (createdItem) => {
           form.reset();
           props.onClose();
+          // Select the new folder so users can spot it among the items.
+          setSelectedItems([createdItem]);
           if (props.redirectAfterCreate && createdItem?.id) {
             router.push(`/explorer/items/${createdItem.id}`);
-            setSelectedItems([createdItem]);
           }
         },
       },

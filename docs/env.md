@@ -8,6 +8,9 @@ This document lists all configurable environment variables for the Drive applica
 | `ALLOWED_HOSTS` | List of allowed hosts for the application (used in Production) | `[]` |
 | `ALLOW_LOGOUT_GET_METHOD` | Allow logout via GET method | `True` |
 | `ALLOW_SHARE_IMPORT_FILE` | Enable batch sharing of an item from an imported contacts file | `False` |
+| `API_ITEMS_CREATE_THROTTLE_RATE_BURST` | Burst throttle rate for the item creation endpoints (create, children and duplicate) | `300/minute` |
+| `API_ITEMS_CREATE_THROTTLE_RATE_SUSTAINED` | Sustained throttle rate for the item creation endpoints (create, children and duplicate) | `5000/hour` |
+| `API_ITEMS_UNLOCK_THROTTLE_RATE` | Throttle rate for the item link unlock API | `10/minute` |
 | `API_USERS_LIST_LIMIT` | Maximum number of users returned in API user list | `5` |
 | `API_USERS_LIST_THROTTLE_RATE_BURST` | Burst throttle rate for user list API | `30/minute` |
 | `API_USERS_LIST_THROTTLE_RATE_SUSTAINED` | Sustained throttle rate for user list API | `180/hour` |
@@ -33,6 +36,10 @@ This document lists all configurable environment variables for the Drive applica
 | `DB_NAME` | Database name | `drive` |
 | `DB_PASSWORD` | Database password | `pass` |
 | `DB_PORT` | Database port | `5432` |
+| `DB_PSYCOPG_POOL_ENABLED` | Enable the psycopg connection pool on the default database. Keep it disabled on prefork celery workers: celery closes the pool after each task | `False` |
+| `DB_PSYCOPG_POOL_MAX_SIZE` | Maximum size of the psycopg connection pool (defaults to min size) | `None` |
+| `DB_PSYCOPG_POOL_MIN_SIZE` | Minimum size of the psycopg connection pool | `4` |
+| `DB_PSYCOPG_POOL_TIMEOUT` | Seconds to wait for a connection from the psycopg pool | `3` |
 | `DB_USER` | Database user | `dinum` |
 | `DJANGO_CELERY_BROKER_URL` | Celery broker URL for task queue | `redis://redis:6379/0` |
 | `DJANGO_CELERY_TASK_ROUTES` | Celery task routing configuration. Use this to route specific tasks to dedicated queues, e.g. `{"core.tasks.item.duplicate_file": {"queue": "duplicate_file"}}` | `{}` |
@@ -51,7 +58,9 @@ This document lists all configurable environment variables for the Drive applica
 | `FEATURES_ALPHA` | Enable alpha features | `False` |
 | `FEATURES_INDEXED_SEARCH` | Enable the search of indexed files through the API | `True` |
 | `FILE_EXTENSIONS_ALLOWED` | List of file extension allowed to be uploaded | See in the settings.py file |
+| `FILE_EXTENSIONS_DENIED` | List of file extension refused at upload in `denylist` mode | See in the settings.py file |
 | `FILE_MIMETYPE_ALLOWED` | List of file mimetype allowed to be uploaded | See in the setings.py file |
+| `FILE_MIMETYPE_DENIED` | List of file mimetype refused at upload in `denylist` mode | See in the settings.py file |
 | `FRONTEND_THEME` | Frontend theme configuration | `None` |
 | `FRONTEND_EXTERNAL_HOME_URL` | Frontend external home url to redirect to | `None` |
 | `FRONTEND_FEEDBACK_BUTTON_SHOW` | Show feedback button | `False` |
@@ -99,10 +108,20 @@ This document lists all configurable environment variables for the Drive applica
 | `OIDC_USER_INFO` | List of OIDC user info claims | `[]` |
 | `OIDC_USERINFO_FULLNAME_FIELDS` | Fields to use for full name | `["first_name", "last_name"]` |
 | `OIDC_USERINFO_SHORTNAME_FIELD` | Field to use for short name | `first_name` |
+| `PERMISSIONS_BACKEND` | Permissions backend class for items | `core.permissions.backends.role.RolePermissionsBackend` |
+| `PERMISSIONS_BACKEND_PARAMETERS` | Dictionary of parameters for the permissions backend | `{}` |
 | `POSTHOG_HOST` | PostHog analytics host URL | `https://eu.i.posthog.com` |
 | `POSTHOG_KEY` | PostHog analytics API key | `None` |
+| `PROMETHEUS_API_KEY` | Bearer token required on `/metrics`, see [prometheus.md](prometheus.md) | `None` |
+| `PROMETHEUS_BUSINESS_METRICS_CACHE_TTL` | Seconds the business metrics are kept in the cache | `300` |
+| `PROMETHEUS_BUSINESS_METRICS_ENABLED` | Report the business metrics on `/metrics` | `True` |
+| `PROMETHEUS_CELERY_QUEUE_METRICS_ENABLED` | Report the length of the Celery queue on `/metrics` | `True` |
+| `PROMETHEUS_DB_METRICS_ENABLED` | Count and time the SQL queries | `True` |
+| `PROMETHEUS_METRICS_ENABLED` | Serve the Prometheus metrics on `/metrics` | `False` |
+| `PROMETHEUS_METRICS_SSL_REDIRECT_EXEMPT` | Take `/metrics` out of the redirect to https | `False` |
+| `PROMETHEUS_MULTIPROC_DIR` | Directory the gunicorn workers share their metrics through | `<tmp>/drive-prometheus-<uid>` |
 | `REDIS_URL` | Redis connection URL | `redis://redis:6379/0` |
-| `RESTRICT_UPLOAD_FILE_TYPE` | Boolean to enable or not upload restriction based on file type (extension + mimetype) | `True` |
+| `RESTRICT_UPLOAD_FILE_TYPE` | Upload screening by extension and detected mimetype: `off`, `allowlist` (`FILE_*_ALLOWED`) or `denylist` (`FILE_*_DENIED`). Any other value stops the startup. The denylist does not inspect archives, refuses text starting with HTML markup, and relies on the media ingress serving files as attachments with `Content-Security-Policy: default-src 'none'`, as the Helm chart does | `allowlist` |
 | `S3_TRANSFER_CONFIG_MULTIPART_THRESHOLD` | `multipart_threshold` value for the `TransferConfig` configuration | `8388608` (8MB) |
 | `S3_TRANSFER_CONFIG_MULTIPART_CHUNKSIZE` | `multipart_chunksize` value for the `TransferConfig` configuration | `8388608` (8MB) |
 | `S3_TRANSFER_CONFIG_MAX_CONCURRENCY` | `max_concurrency` value for the `TransferConfig` configuration | `10` |
@@ -117,12 +136,15 @@ This document lists all configurable environment variables for the Drive applica
 | `SEARCH_INDEXER_CONTENT_MAX_SIZE` | Maximum size for an indexable file | `2097152` |
 | `SEARCH_INDEXER_URL` | Find application endpoint for indexation | `None` |
 | `SEARCH_INDEXER_QUERY_LIMIT` | Maximum number of results expected from search endpoint | 50 |
+| `SDK_ENABLED` | Enable the SDK picker pages (`/sdk`) and the SDK relay API | `False` |
 | `SENTRY_DSN` | Sentry DSN for error tracking | `None` |
 | `SENTRY_TRACES_SAMPLE_RATE` | Ratio of requests traced for Sentry performance monitoring (0 to 1) | `0.0` |
 | `SPECTACULAR_SETTINGS_ENABLE_DJANGO_DEPLOY_CHECK` | Enable Django deploy check in Spectacular | `False` |
 | `STORAGES_STATICFILES_BACKEND` | Backend for static files storage | `whitenoise.storage.CompressedManifestStaticFilesStorage` |
 | `TRASHBIN_CUTOFF_DAYS` | Number of days before items are automatically removed from trash after their soft deletion | `30` |
 | `PURGE_GRACE_DAYS` | Number of days before items and their associated file can be permanently purged from storage and database after the trashbin cutoff period | `7` |
+| `CLEAN_PENDING_ITEMS_SCHEDULE` | Schedule `clean_pending_items` with celery beat: a crontab expression (m h dom mon dow) followed by the command arguments, e.g. `30 0 * * * --hours=48`. Do not set it if the command already runs as a cron job (the Helm chart does), it would run twice. An invalid value stops the application at startup | |
+| `PURGE_DELETED_ITEMS_SCHEDULE` | Schedule `purge_deleted_items` with celery beat, same format, e.g. `45 0 * * *`. Do not set it if the command already runs as a cron job (the Helm chart does), it would run twice | |
 | `USER_RECONCILIATION_FORM_URL` | URL of a third-party form for user reconciliation requests, used in the email sent when a request fails | `None` |
 | `WOPI_CLIENTS` | List of client name. These client names will be used in the post_setup | [] |
 | `WOPI_{CLIENT_NAME}_DISCOVERY_URL` | The discovery url for each client present in the `WOPI_CLIENTS`. if `WOPI_CLIENTS=vendorA` then set `WOPI_VENDORA_DISCOVERY_URL` | |

@@ -1,0 +1,9 @@
+{% load i18n %}
+<li>
+  <details data-url="{% url 'admin:core_item_tree_node' item.pk %}"{% if item == current %} open{% endif %}>
+    <summary>
+      {% if item == current %}<strong>{{ item.title }}</strong>{% else %}<a href="{% url 'admin:core_item_change' item.pk %}">{{ item.title }}</a>{% endif %}
+      · {{ item.get_type_display }}{% if item.deleted_at or item.ancestors_deleted_at %} · {% translate "in trash" %}{% endif %}
+    </summary>
+  </details>
+</li>

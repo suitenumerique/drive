@@ -1,5 +1,5 @@
-import { test as base, BrowserContext, expect, Page } from "@playwright/test";
-import { clearDb, login } from "./utils-common";
+import { expect } from "@playwright/test";
+import { clearDb, login, MultiUserTest } from "./utils-common";
 import {
   clickToMyFiles,
   clickToSharedWithMe,
@@ -27,26 +27,6 @@ import {
 } from "./utils-explorer";
 import { setupPosthogEventCapture } from "./utils/posthog-utils";
 
-type TwoUsers = {
-  userA: { context: BrowserContext; page: Page };
-  userB: { context: BrowserContext; page: Page };
-};
-
-const MultiUserTest = base.extend<TwoUsers>({
-  userA: async ({ browser }, use) => {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await use({ context, page });
-    await context.close();
-  },
-
-  userB: async ({ browser }, use) => {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await use({ context, page });
-    await context.close();
-  },
-});
 
 MultiUserTest("Share folder with user", async ({ userA, userB }) => {
   await clearDb();

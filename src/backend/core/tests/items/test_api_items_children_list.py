@@ -5,6 +5,8 @@ Tests for items API endpoint in drive's core app: retrieve
 import random
 
 from django.contrib.auth.models import AnonymousUser
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 
 import pytest
 from rest_framework.test import APIClient
@@ -47,8 +49,12 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "depth": 2,
                 "id": str(child1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child1.link_reach,
                 "link_role": child1.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "nb_accesses": 1,
@@ -75,6 +81,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -91,8 +98,12 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "depth": 2,
                 "id": str(child2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child2.link_reach,
                 "link_role": child2.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "nb_accesses": 0,
@@ -119,6 +130,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -175,8 +187,12 @@ def test_api_items_children_list_anonymous_public_parent():
                 "depth": 4,
                 "id": str(child1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child1.link_reach,
                 "link_role": child1.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "nb_accesses": 1,
@@ -197,6 +213,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -213,8 +230,12 @@ def test_api_items_children_list_anonymous_public_parent():
                 "depth": 4,
                 "id": str(child2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child2.link_reach,
                 "link_role": child2.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "nb_accesses": 0,
@@ -235,6 +256,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -305,8 +327,12 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "depth": 2,
                 "id": str(child1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child1.link_reach,
                 "link_role": child1.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "nb_accesses": 1,
@@ -333,6 +359,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -349,8 +376,12 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "depth": 2,
                 "id": str(child2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child2.link_reach,
                 "link_role": child2.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "nb_accesses": 0,
@@ -377,6 +408,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -430,8 +462,12 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "depth": 4,
                 "id": str(child1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child1.link_reach,
                 "link_role": child1.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "nb_accesses": 1,
@@ -458,6 +494,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -474,8 +511,12 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "depth": 4,
                 "id": str(child2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child2.link_reach,
                 "link_role": child2.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "nb_accesses": 0,
@@ -502,6 +543,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -580,8 +622,12 @@ def test_api_items_children_list_authenticated_related_direct():
                 "depth": 2,
                 "id": str(child1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child1.link_reach,
                 "link_role": child1.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "nb_accesses": 3,
@@ -608,6 +654,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -624,8 +671,12 @@ def test_api_items_children_list_authenticated_related_direct():
                 "depth": 2,
                 "id": str(child2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child2.link_reach,
                 "link_role": child2.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "nb_accesses": 2,
@@ -652,6 +703,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -708,8 +760,12 @@ def test_api_items_children_list_authenticated_related_parent():
                 "depth": 4,
                 "id": str(child1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child1.link_reach,
                 "link_role": child1.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "nb_accesses": 2,
@@ -736,6 +792,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -752,8 +809,12 @@ def test_api_items_children_list_authenticated_related_parent():
                 "depth": 4,
                 "id": str(child2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child2.link_reach,
                 "link_role": child2.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "nb_accesses": 1,
@@ -780,6 +841,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -893,8 +955,12 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "depth": 2,
                 "id": str(child1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child1.link_reach,
                 "link_role": child1.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "nb_accesses": 1,
@@ -921,6 +987,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -937,8 +1004,12 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "depth": 2,
                 "id": str(child2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child2.link_reach,
                 "link_role": child2.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "nb_accesses": 1,
@@ -965,6 +1036,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -1019,8 +1091,12 @@ def test_api_items_children_list_filter_type():
                 "depth": 2,
                 "id": str(child1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child1.link_reach,
                 "link_role": child1.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "nb_accesses": 3,
@@ -1043,6 +1119,7 @@ def test_api_items_children_list_filter_type():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -1072,8 +1149,12 @@ def test_api_items_children_list_filter_type():
                 "depth": 2,
                 "id": str(child2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child2.link_reach,
                 "link_role": child2.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "nb_accesses": 3,
@@ -1100,6 +1181,7 @@ def test_api_items_children_list_filter_type():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -1379,8 +1461,12 @@ def test_api_items_children_list_computed_link_reach_and_role():
                 "depth": 3,
                 "id": str(item.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": "restricted",
                 "link_role": "reader",
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 1,
                 "numchild_folder": 1,
                 "nb_accesses": 0,
@@ -1401,6 +1487,7 @@ def test_api_items_children_list_computed_link_reach_and_role():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             }
         ],
     }
@@ -1427,8 +1514,12 @@ def test_api_items_children_list_computed_link_reach_and_role():
                 "depth": 4,
                 "id": str(child.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": "public",
                 "link_role": "editor",
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "nb_accesses": 0,
@@ -1449,6 +1540,7 @@ def test_api_items_children_list_computed_link_reach_and_role():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             }
         ],
     }
@@ -1535,3 +1627,45 @@ def test_api_items_children_list_filter_contact_inherited():
     assert response.status_code == 200
     results = response.json()["results"]
     assert {result["id"] for result in results} == {str(child.id)}
+
+
+def test_api_items_children_list_pagination_count_is_not_grouped():
+    """
+    The number of accesses of the children should not group the query: the pagination
+    count must stay a plain count, without computing the annotations of each child.
+
+    Counting the accesses with `Count("accesses")` joins the accesses table, so Django
+    adds a `GROUP BY` to get back one row per child. On a grouped query, Django cannot
+    count the rows directly: the pagination `queryset.count()` then wraps the whole
+    query, with all its annotations (restrictions, children counts...), in
+    `SELECT COUNT(*) FROM (... GROUP BY ...) subquery`, computing them again only to
+    get the number of children. On a large folder, this count alone took hundreds of ms.
+
+    Counting the accesses in a correlated subquery returns the same numbers without
+    grouping the query, so the count stays `SELECT COUNT(*) FROM drive_item WHERE ...`.
+    """
+    user = factories.UserFactory()
+    item = factories.ItemFactory(users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER)
+    child1, child2 = factories.ItemFactory.create_batch(
+        2, parent=item, type=models.ItemTypeChoices.FOLDER
+    )
+    factories.UserItemAccessFactory.create_batch(2, item=child1)
+
+    client = APIClient()
+    client.force_login(user)
+    with CaptureQueriesContext(connection) as context:
+        response = client.get(f"/api/v1.0/items/{item.id!s}/children/")
+
+    assert response.status_code == 200
+    nb_accesses = {result["id"]: result["nb_accesses"] for result in response.json()["results"]}
+    assert nb_accesses == {str(child1.id): 3, str(child2.id): 1}
+
+    # The pagination count, not the count of the accesses of the listed item
+    count_queries = [
+        q["sql"]
+        for q in context.captured_queries
+        if q["sql"].startswith("SELECT COUNT(*)") and '"drive_item_access"' not in q["sql"][:60]
+    ]
+    assert len(count_queries) == 1
+    assert count_queries[0].startswith('SELECT COUNT(*) AS "__count" FROM "drive_item" WHERE')
+    assert "GROUP BY" not in count_queries[0]

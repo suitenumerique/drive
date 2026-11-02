@@ -1,13 +1,14 @@
 """Tests for the item versioning services."""
 
-import pytest
+from unittest import mock
 
 from django.core.files.storage import default_storage
+
+import pytest
 
 from core import factories, models
 from core.services.item_versions import (
     delete_version,
-    enforce_max_versions,
     next_version_number,
     restore_version,
     snapshot_version,
@@ -16,14 +17,27 @@ from core.services.item_versions import (
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture
+def s3_client():
+    """Stub object storage so versioning tests do not need a live bucket."""
+    with (
+        mock.patch(
+            "core.services.item_versions.default_storage.exists",
+            return_value=True,
+        ),
+        mock.patch("core.services.item_versions._s3") as s3,
+    ):
+        yield s3
+
+
 def _make_file_item(**kwargs):
-    defaults = dict(
-        type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.READY,
-        filename="content.txt",
-        mimetype="text/plain",
-        size=5,
-    )
+    defaults = {
+        "type": models.ItemTypeChoices.FILE,
+        "update_upload_state": models.ItemUploadStateChoices.READY,
+        "filename": "content.txt",
+        "mimetype": "text/plain",
+        "size": 5,
+    }
     defaults.update(kwargs)
     return factories.ItemFactory(**defaults)
 
@@ -42,10 +56,9 @@ def test_snapshot_version_ignores_pending_files():
     assert not models.ItemVersion.objects.exists()
 
 
-def test_snapshot_version_copies_current_bytes(mocker):
+def test_snapshot_version_copies_current_bytes(s3_client):
     """Snapshotting stores the current content of the file as a version."""
     item = _make_file_item()
-    s3 = mocker.patch("core.services.item_versions._s3")
 
     version = snapshot_version(item, created_by=item.creator)
 
@@ -54,16 +67,16 @@ def test_snapshot_version_copies_current_bytes(mocker):
     assert version.mimetype == item.mimetype
     assert version.size == item.size
     assert version.created_by == item.creator
-    s3().copy_object.assert_called_once_with(
+    s3_client.return_value.copy_object.assert_called_once_with(
         Bucket=default_storage.bucket_name,
         Key=version.file_key,
-        CopySource={"Bucket": "bucket", "Key": item.file_key},
+        CopySource={"Bucket": default_storage.bucket_name, "Key": item.file_key},
     )
 
 
-def test_snapshot_version_increments_number(mocker):
+@pytest.mark.usefixtures("s3_client")
+def test_snapshot_version_increments_number():
     """Each snapshot on the same item uses an incremented version number."""
-    mocker.patch("core.services.item_versions._s3")
     item = _make_file_item()
     snapshot_version(item)
     second = snapshot_version(item)
@@ -76,16 +89,16 @@ def test_next_version_number_starts_at_one():
     assert next_version_number(item) == 1
 
 
-def test_enforce_max_versions_keeps_only_latest(mocker):
+@pytest.mark.usefixtures("s3_client")
+def test_enforce_max_versions_keeps_only_latest():
     """Only the configured maximum number of versions is kept."""
     item = _make_file_item()
-    s3 = mocker.patch("core.services.item_versions._s3")
-    s3.delete_object.return_value = None
 
     created = []
     for _ in range(7):
         created.append(snapshot_version(item))
 
+    assert all(version is not None for version in created)
     remaining = list(item.versions.order_by("version_number"))
     assert len(remaining) == 5
     assert [v.version_number for v in remaining] == [3, 4, 5, 6, 7]
@@ -93,17 +106,16 @@ def test_enforce_max_versions_keeps_only_latest(mocker):
     assert not deleted.exists()
 
 
-def test_restore_snapshots_current_and_updates_item(mocker):
+def test_restore_snapshots_current_and_updates_item(s3_client):
     """Restoring keeps the current content as a new version and promotes the target."""
     item = _make_file_item()
-    s3 = mocker.patch("core.services.item_versions._s3")
 
     old = snapshot_version(item)  # version 1 (older content)
     item.size = 10
     item.mimetype = "text/html"
     item.save(update_fields=["size", "mimetype"])
 
-    s3.reset_mock()
+    s3_client.reset_mock()
     restore_version(old, created_by=item.creator)
 
     item.refresh_from_db()
@@ -118,15 +130,15 @@ def test_restore_snapshots_current_and_updates_item(mocker):
     assert not models.ItemVersion.objects.filter(pk=old.pk).exists()
 
 
-def test_delete_version_removes_storage_and_record(mocker):
+def test_delete_version_removes_storage_and_record(s3_client):
     """Deleting a version removes its storage bytes and its record."""
     item = _make_file_item()
-    s3 = mocker.patch("core.services.item_versions._s3")
     version = snapshot_version(item)
+    s3_client.reset_mock()
 
     delete_version(version)
 
-    s3().delete_object.assert_called_once_with(
+    s3_client.return_value.delete_object.assert_called_once_with(
         Bucket=default_storage.bucket_name, Key=version.file_key
     )
     assert not models.ItemVersion.objects.filter(pk=version.pk).exists()

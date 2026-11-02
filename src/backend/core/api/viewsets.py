@@ -14,12 +14,13 @@ from django.contrib.postgres.search import TrigramSimilarity
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
-from django.db import IntegrityError, transaction
+from django.db import DatabaseError, IntegrityError, transaction
 from django.db import models as db
 from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce
 from django.http import StreamingHttpResponse
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.functional import cached_property
 from django.utils.text import capfirst, slugify
@@ -35,14 +36,13 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, inline_seri
 from lasuite.drf.models.choices import (
     PRIVILEGED_ROLES,
     LinkReachChoices,
-    get_equivalent_link_definition,
 )
 from lasuite.malware_detection import malware_detection
 from lasuite.oidc_login.decorators import refresh_oidc_access_token
 from rest_framework import response as drf_response
 from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny
-from rest_framework.throttling import UserRateThrottle
+from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 from rest_framework_api_key.permissions import HasAPIKey
 
 from core import enums, models
@@ -58,6 +58,7 @@ from core.services.search_indexers import (
     get_file_indexer,
     get_visited_items_ids_of,
 )
+from core.services.uploads import reserve_upload
 from core.storage.cache import invalidate_storage_used_cache
 from core.tasks.item import duplicate_file, process_item_purge, rename_file
 from core.utils.analytics import posthog_capture
@@ -67,7 +68,7 @@ from wopi.services import access as access_service
 from wopi.tasks.conversion import convert_file
 from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
 
-from . import permissions, serializers, utils
+from . import deletion_serializers, permissions, serializers, utils
 from .filters import (
     ItemFilter,
     ItemOrdering,
@@ -79,6 +80,8 @@ from .filters import (
 )
 
 logger = logging.getLogger(__name__)
+
+UNLOCKED_LINK_ITEMS_SESSION_KEY = "unlocked_link_items"
 
 ITEM_FOLDER = "item"
 UUID_REGEX = r"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
@@ -183,6 +186,18 @@ class UserListThrottleSustained(UserRateThrottle):
     """Throttle for the user list endpoint."""
 
     scope = "user_list_sustained"
+
+
+class ItemCreateThrottleBurst(UserRateThrottle):
+    """Throttle for the item creation endpoints."""
+
+    scope = "item_create_burst"
+
+
+class ItemCreateThrottleSustained(UserRateThrottle):
+    """Throttle for the item creation endpoints."""
+
+    scope = "item_create_sustained"
 
 
 class UserViewSet(
@@ -420,6 +435,7 @@ class ItemViewSet(
         permissions.ItemPermission,
     ]
     queryset = models.Item.objects.filter(hard_deleted_at__isnull=True)
+    throttle_scope = None
     serializer_class = serializers.ItemSerializer
     list_serializer_class = serializers.ListItemSerializer
     trashbin_serializer_class = serializers.ListItemSerializer
@@ -430,6 +446,32 @@ class ItemViewSet(
     breadcrumb_serializer_class = serializers.BreadcrumbItemSerializer
     recents_serializer_class = serializers.ListItemLightSerializer
     favorite_list_serializer_class = serializers.ListItemLightSerializer
+    throttle_classes = []
+
+    def get_throttles(self):
+        """
+        Rate limit the actions inserting an item, whatever its type: only files are
+        bounded by the upload entitlement, so nothing else caps how many rows a
+        client can create. Password attempts on a link are limited by their scope.
+        """
+        self.throttle_classes = []
+        if self.action in {"create", "duplicate"} or (
+            self.action == "children" and self.request.method == "POST"
+        ):
+            self.throttle_classes = [ItemCreateThrottleBurst, ItemCreateThrottleSustained]
+        elif self.action == "unlock":
+            self.throttle_classes = [ScopedRateThrottle]
+
+        return super().get_throttles()
+
+    def initial(self, request, *args, **kwargs):
+        """Attach the link items unlocked in the session to anonymous users."""
+        # Authenticated users read their unlocks from the database, see User
+        if not request.user.is_authenticated:
+            request.user.unlocked_link_items = set(
+                request.session.get(UNLOCKED_LINK_ITEMS_SESSION_KEY, [])
+            )
+        super().initial(request, *args, **kwargs)
 
     def _filter_suspicious_items(self, queryset, user):
         """
@@ -458,7 +500,7 @@ class ItemViewSet(
     def get_queryset(self):
         """Get queryset performing all annotation and filtering on the item tree structure."""
         user = self.request.user
-        queryset = super().get_queryset().select_related("creator")
+        queryset = super().get_queryset().select_related("creator").annotate_has_restriction()
         # Remove items with upload_state SUSPICIOUS for non-creators
         queryset = self._filter_suspicious_items(queryset, user)
 
@@ -489,12 +531,20 @@ class ItemViewSet(
         traced_items_ids = []
         for item in traced_items:
             links = ancestors_link_definition.get(str(item.path[:-1]), [])
-            item.ancestors_link_definition = get_equivalent_link_definition(links)
+            item.ancestors_link_definition = models.get_equivalent_link_definition(links)
             if item.computed_link_reach != LinkReachChoices.RESTRICTED:
                 traced_items_ids.append(item.id)
 
-        # Among all these items remove them that are restricted
-        return queryset.filter(db.Q(id__in=access_items_ids) | (db.Q(id__in=traced_items_ids)))
+        # Among all these items remove them that are restricted. A single subquery lets
+        # Postgres look items up by primary key, an OR would scan the whole table.
+        if traced_items_ids:
+            access_items_ids = access_items_ids.order_by().union(
+                models.Item.objects.filter(id__in=traced_items_ids)
+                .order_by()
+                .values_list("id", flat=True),
+                all=True,
+            )
+        return queryset.filter(id__in=access_items_ids)
 
     def get_queryset_for_descendants(self):
         """
@@ -519,15 +569,11 @@ class ItemViewSet(
             skip_sorting=True,
         )
 
-        path_list = db.Q()
-        for path in root_paths:
-            path_list |= db.Q(path__descendants=path)
-
-        queryset = self.queryset.select_related("creator")
+        queryset = self.queryset.select_related("creator").annotate_has_restriction()
         # Remove items with upload_state SUSPICIOUS for non-creators
         queryset = self._filter_suspicious_items(queryset, user)
         queryset = self._exclude_pending_items(queryset)
-        queryset = queryset.filter(path_list)
+        queryset = queryset.filter(models.IdInSubtrees(db.F("id"), root_paths))
         queryset = queryset.filter(ancestors_deleted_at__isnull=True)
 
         return queryset
@@ -539,6 +585,8 @@ class ItemViewSet(
         queryset = queryset.annotate_is_favorite(user)
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_with_numchild()
+        queryset = queryset.annotate_user_has_link_trace(user)
+        queryset = queryset.annotate_user_has_direct_access(user)
         return queryset
 
     def get_response_for_queryset(
@@ -565,44 +613,10 @@ class ItemViewSet(
 
     def _compute_ancestors_link_definition(self, items):
         """
-        Compute ancestors link definition for the items collection.
-        On the collection, we look for the deepest items, compute ancestors link definition
-        for each item and aggregate them in order to inject it in the serializer context.
+        Compute ancestors link definition for the items collection, in order to inject
+        it in the serializer context.
         """
-        if not items:
-            return {}
-
-        # Find deepest items and group them by parent path
-        # Items at the same depth in multiple trees (same parent path) share the same ancestors,
-        items_sorted = sorted(items, key=lambda x: len(x.path), reverse=True)
-        items_by_tree = {}  # Group deepest items by parent_path
-        seen_paths = set()  # Track all paths we've processed
-
-        for item in items_sorted:
-            # Check if this item is a parent of any longer path we've already seen
-            # A descendant path would start with the item's path followed by a dot
-            item_path_prefix = f"{item.path}."
-            has_descendants = any(
-                seen_path.startswith(item_path_prefix) for seen_path in seen_paths
-            )
-
-            if not has_descendants:
-                # Get parent path (empty string for root items)
-                parent_path = str(item.path[:-1]) if item.depth > 1 else ""
-                if parent_path not in items_by_tree:
-                    items_by_tree[parent_path] = item
-
-            # Add this item's path to the set for future checks (shorter paths)
-            seen_paths.add(str(item.path))
-
-        # Compute ancestors links paths mapping for one item per tree group and aggregate
-        paths_links_mapping = {}
-        for item in items_by_tree.values():
-            item_mapping = item.compute_ancestors_links_paths_mapping()
-            paths_links_mapping |= item_mapping
-
-        # Update the serializer context with the aggregated mapping
-        return paths_links_mapping
+        return models.Item.compute_items_ancestors_links_paths_mapping(items)
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -622,6 +636,10 @@ class ItemViewSet(
                 models.LinkTrace.objects.create(item=instance, user=request.user)
             except IntegrityError:
                 pass  # Race condition: trace already created by concurrent request
+
+        # The annotation computed before the trace was created is now stale; update it
+        # so has_link_trace() returns the correct value when serializing abilities.
+        instance.user_has_link_trace = user.is_authenticated
 
         return drf.response.Response(serializer.data)
 
@@ -665,32 +683,69 @@ class ItemViewSet(
         item.size = len(template_content)
         item.save(update_fields=["upload_state", "mimetype", "size", "updated_at"])
 
+        posthog_capture(
+            "item_created_from_template",
+            self.request.user,
+            {"extension": extension},
+            item=item,
+        )
+
+    def _check_can_upload(self, user, item_type):
+        """Refuse the creation of a file when the upload entitlement is falsy."""
+        if item_type != models.ItemTypeChoices.FILE:
+            return
+
+        can_upload = get_entitlements_backend().can_upload(user)
+        if not can_upload["result"]:
+            raise drf.exceptions.PermissionDenied(
+                detail=can_upload.get("message", "You do not have permission to upload files."),
+                code=can_upload.get("reason"),
+            )
+
     def get_create_extra_attributes(self):
         """Extra model attributes applied to items created by this viewset (subclass hook)."""
         return {}
 
     def perform_create(self, serializer):
         """Set the current user as creator and owner of the newly created object."""
-        extension = serializer.validated_data.pop("extension", None)
-
-        obj = models.Item.objects.create_child(
-            creator=self.request.user,
-            link_reach=LinkReachChoices.RESTRICTED,
-            **serializer.validated_data,
-            **self.get_create_extra_attributes(),
-        )
-        if extension:
-            self._create_file_from_template(obj, extension)
-        serializer.instance = obj
+        self._create_item(serializer)
         models.ItemAccess.objects.create(
-            item=obj,
+            item=serializer.instance,
             user=self.request.user,
             role=models.RoleChoices.OWNER,
         )
 
+    def _create_item(self, serializer, parent=None):
+        """Use the same admission check for root, child and external API uploads."""
+        data = serializer.validated_data.copy()
+        extension = data.pop("extension", None)
+        attributes = self.get_create_extra_attributes()
+        if parent is not None:
+            attributes["parent"] = parent
+        else:
+            attributes["link_reach"] = LinkReachChoices.RESTRICTED
+
+        if data["type"] == models.ItemTypeChoices.FILE and not extension:
+            with reserve_upload(self.request.user, get_entitlements_backend()):
+                serializer.instance = models.Item.objects.create_child(
+                    creator=self.request.user, **data, **attributes
+                )
+        else:
+            if extension:
+                self._check_can_upload(self.request.user, data["type"])
+            serializer.instance = models.Item.objects.create_child(
+                creator=self.request.user, **data, **attributes
+            )
+            if extension:
+                self._create_file_from_template(serializer.instance, extension)
+
     def perform_destroy(self, instance):
         """Override to implement a soft delete instead of dumping the record in database."""
-        instance.soft_delete()
+        if instance.type == models.ItemTypeChoices.RESTRICTION:
+            instance.detach()
+        else:
+            instance.soft_delete()
+            posthog_capture("item_deleted", self.request.user, {}, item=instance)
 
     def perform_update(self, serializer):
         """Override to check if a file is renamed in order to rename file on storage."""
@@ -710,6 +765,7 @@ class ItemViewSet(
         instance = self.get_object()
         instance.hard_delete()
         process_item_purge.delay(instance.id)
+        posthog_capture("item_hard_deleted", request.user, {}, item=instance)
         return drf.response.Response(status=status.HTTP_204_NO_CONTENT)
 
     @drf.decorators.action(detail=True, methods=["post"], url_path="convert")
@@ -741,6 +797,13 @@ class ItemViewSet(
             placeholder.delete()
             raise
 
+        posthog_capture(
+            "item_converted",
+            request.user,
+            {"converted_item_id": placeholder.id},
+            item=source,
+        )
+
         serializer = self.get_serializer(placeholder)
         return drf.response.Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -769,6 +832,39 @@ class ItemViewSet(
         )
         queryset = queryset.filter(path__in=root_paths)
 
+        # Hide restricted roots the user already reaches through a live
+        # restriction, so the folder shows up in a single location
+        if user.is_authenticated:
+            reachable_restrictions = models.Item.objects.filter(
+                type=models.ItemTypeChoices.RESTRICTION,
+                target_id=db.OuterRef("pk"),
+                ancestors_deleted_at__isnull=True,
+            ).filter(
+                db.Exists(
+                    models.ItemAccess.objects.filter(
+                        db.Q(user=user) | db.Q(team__in=user.teams),
+                        models.IdInPath(db.F("item_id"), db.OuterRef("path")),
+                    )
+                )
+                | (
+                    db.Exists(
+                        models.Item.objects.filter(
+                            models.IdInPath(db.F("id"), db.OuterRef("path")),
+                            link_reach__in=[
+                                LinkReachChoices.PUBLIC,
+                                LinkReachChoices.AUTHENTICATED,
+                            ],
+                        )
+                    )
+                    & db.Exists(
+                        models.LinkTrace.objects.filter(
+                            models.IdInPath(db.F("item_id"), db.OuterRef("path")), user=user
+                        )
+                    )
+                )
+            )
+            queryset = queryset.exclude(db.Exists(reachable_restrictions))
+
         # Annotate the queryset with an attribute marking instances as highest ancestor
         # in order to save some time while computing abilities in the instance
         queryset = queryset.annotate(
@@ -779,11 +875,13 @@ class ItemViewSet(
         queryset = queryset.annotate_is_favorite(user)
         queryset = filterset.filters["is_favorite"].filter(queryset, filter_data["is_favorite"])
         queryset = queryset.annotate_with_numchild()
+        queryset = queryset.annotate_user_has_link_trace(user)
+        queryset = queryset.annotate_user_has_direct_access(user)
 
         # Apply ordering only now that everyting is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
-        return self.get_response_for_queryset(queryset)
+        return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
     @drf.decorators.action(detail=True, methods=["post"], url_path="upload-ended")
     def upload_ended(self, request, *args, **kwargs):
@@ -805,31 +903,21 @@ class ItemViewSet(
                 code="item_upload_state_not_pending",
             )
 
-        entitlements_backend = get_entitlements_backend()
-        can_upload = entitlements_backend.can_upload(self.request.user)
-        if not can_upload["result"]:
-            self._complete_item_deletion(item)
-            raise drf.exceptions.PermissionDenied(
-                detail=can_upload.get("message", "You do not have permission to upload files."),
-                code=can_upload.get("reason"),
-            )
+        if item.size is None:
+            can_upload = get_entitlements_backend().can_upload(item.creator)
+            if not can_upload["result"]:
+                self._complete_item_deletion(item)
+                raise drf.exceptions.PermissionDenied(
+                    detail=can_upload.get("message", "You do not have permission to upload files."),
+                    code=can_upload.get("reason"),
+                )
 
         s3_client = default_storage.connection.meta.client
 
         head_response = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)
         file_size = head_response["ContentLength"]
 
-        if file_size > settings.DATA_UPLOAD_MAX_MEMORY_SIZE:
-            self._complete_item_deletion(item)
-            logger.info(
-                "upload_ended: file size (%s) for file %s higher than the allowed max size",
-                file_size,
-                item.file_key,
-            )
-            raise drf.exceptions.ValidationError(
-                detail="The file size is higher than the allowed max size.",
-                code="file_size_exceeded",
-            )
+        self._validate_uploaded_size(item, file_size)
 
         if file_size > 2048:
             range_response = s3_client.get_object(
@@ -847,7 +935,7 @@ class ItemViewSet(
         logger.info("upload_ended: detecting mimetype for file: %s", item.file_key)
         mimetype = utils.detect_mimetype(file_head, filename=item.filename)
 
-        if settings.RESTRICT_UPLOAD_FILE_TYPE and mimetype not in settings.FILE_MIMETYPE_ALLOWED:
+        if not utils.is_mimetype_allowed(mimetype):
             self._complete_item_deletion(item)
             logger.info(
                 "upload_ended: mimetype not allowed %s for filename %s",
@@ -858,12 +946,6 @@ class ItemViewSet(
                 detail="The file type is not allowed.",
                 code="file_type_not_allowed",
             )
-
-        item.upload_state = models.ItemUploadStateChoices.ANALYZING
-        item.mimetype = mimetype
-        item.size = file_size
-
-        item.save(update_fields=["upload_state", "mimetype", "size"])
 
         if head_response["ContentType"] != mimetype:
             logger.info(
@@ -894,7 +976,22 @@ class ItemViewSet(
                     error.response["Error"]["Message"],
                 )
 
-        malware_detection.analyse_file(item.file_key, item_id=item.id)
+        with transaction.atomic():
+            item = models.Item.objects.select_for_update().get(pk=item.pk)
+            if item.hard_deleted_at or item.ancestors_deleted_at:
+                raise drf.exceptions.PermissionDenied()
+            if item.upload_state != models.ItemUploadStateChoices.PENDING:
+                raise drf.exceptions.ValidationError(
+                    {"item": "This action is only available for items in PENDING state."},
+                    code="item_upload_state_not_pending",
+                )
+            item.upload_state = models.ItemUploadStateChoices.ANALYZING
+            item.mimetype = mimetype
+            item.size = file_size
+            item.save(update_fields=["upload_state", "mimetype", "size"])
+            transaction.on_commit(
+                lambda: malware_detection.analyse_file(item.file_key, item_id=item.id)
+            )
 
         serializer = self.get_serializer(item)
 
@@ -910,6 +1007,27 @@ class ItemViewSet(
         )
 
         return drf_response.Response(serializer.data, status=status.HTTP_200_OK)
+
+    def _validate_uploaded_size(self, item, file_size):
+        """Verify storage metadata even though the PUT has a signed length."""
+        if item.size is not None and file_size != item.size:
+            self._complete_item_deletion(item)
+            raise drf.exceptions.ValidationError(
+                detail="The uploaded file size does not match the reserved size.",
+                code="file_size_mismatch",
+            )
+
+        if file_size > settings.DATA_UPLOAD_MAX_MEMORY_SIZE:
+            self._complete_item_deletion(item)
+            logger.info(
+                "upload_ended: file size (%s) for file %s higher than the allowed max size",
+                file_size,
+                item.file_key,
+            )
+            raise drf.exceptions.ValidationError(
+                detail="The file size is higher than the allowed max size.",
+                code="file_size_exceeded",
+            )
 
     def _complete_item_deletion(self, item):
         """Completely delete an item."""
@@ -941,7 +1059,10 @@ class ItemViewSet(
         )
 
         queryset = queryset.filter(id__in=favorite_items_ids)
+        queryset = queryset.with_restriction_target(user)
         queryset = queryset.annotate_with_numchild()
+        queryset = queryset.annotate_user_has_link_trace(user)
+        queryset = queryset.annotate_user_has_direct_access(user)
 
         # Apply ordering only now that everyting is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
@@ -959,18 +1080,19 @@ class ItemViewSet(
         The selected items are those deleted within the cutoff period defined in the
         settings (see TRASHBIN_CUTOFF_DAYS), before they are considered permanently deleted.
 
-        Optimized version that uses EXISTS instead of expensive subqueries to check
-        owner access on items or their ancestors.
+        Owner access on items or their ancestors is resolved from the subtrees the user
+        owns, see `trashed_owned_by`.
         """
         user = request.user
 
         # Restrict to soft-deleted items the user owns (directly or through an
-        # ancestor access). Filtering on the owner access subquery is much faster
-        # than on the user_roles annotation.
+        # ancestor access), read from the subtrees the user owns rather than checking
+        # the owner of every deleted item.
         queryset = (
             self.queryset.select_related("creator")
+            .annotate_has_restriction()
             .filter(deleted_at__gte=models.get_trashbin_cutoff())
-            .owned_by(user)
+            .trashed_owned_by(user)
         )
 
         # Apply filtering similar to children method
@@ -981,9 +1103,10 @@ class ItemViewSet(
 
         # Only annotate with user roles for the filtered set if needed by serializer
         queryset = queryset.annotate_user_roles(user)
+        queryset = queryset.annotate_user_has_direct_access(user)
         queryset = queryset.annotate_with_numchild()
 
-        return self.get_response_for_queryset(queryset)
+        return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
     @drf.decorators.action(detail=True, methods=["post"])
     @transaction.atomic
@@ -1110,31 +1233,7 @@ class ItemViewSet(
             )
             serializer.is_valid(raise_exception=True)
 
-            entitlements_backend = get_entitlements_backend()
-            can_upload = entitlements_backend.can_upload(self.request.user)
-            if (
-                serializer.validated_data.get("type") == models.ItemTypeChoices.FILE
-                and not can_upload["result"]
-            ):
-                raise drf.exceptions.PermissionDenied(
-                    detail=can_upload.get("message", "You do not have permission to upload files."),
-                    code=can_upload.get("reason"),
-                )
-
-            extension = serializer.validated_data.pop("extension", None)
-
-            child_item = models.Item.objects.create_child(
-                creator=request.user,
-                parent=item,
-                **serializer.validated_data,
-                **self.get_create_extra_attributes(),
-            )
-
-            if extension:
-                self._create_file_from_template(child_item, extension)
-
-            # Set the created instance to the serializer
-            serializer.instance = child_item
+            self._create_item(serializer, parent=item)
 
             headers = self.get_success_headers(serializer.data)
             return drf.response.Response(
@@ -1142,7 +1241,13 @@ class ItemViewSet(
             )
 
         # GET: List children
-        queryset = item.children().select_related("creator").filter(deleted_at__isnull=True)
+        queryset = (
+            item.children()
+            .select_related("creator")
+            .with_restriction_target(request.user)
+            .annotate_has_restriction()
+            .filter(deleted_at__isnull=True)
+        )
         queryset = self._filter_suspicious_items(queryset, request.user)
         queryset = self._exclude_pending_items(queryset)
         queryset = self.filter_queryset(queryset)
@@ -1154,11 +1259,20 @@ class ItemViewSet(
         # Apply ordering only now that everything is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
-        # Pre-compute number of accesses
+        # Pre-compute number of accesses. The direct accesses of each child are counted
+        # in a subquery: joining them would group the whole query, including the
+        # pagination count, which would then compute every annotation again
         item_nb_accesses = item.nb_accesses
+        nb_direct_accesses = (
+            models.ItemAccess.objects.filter(item_id=db.OuterRef("pk"))
+            .order_by()
+            .values("item_id")
+            .annotate(count=db.Count("id"))
+            .values("count")
+        )
         queryset = queryset.annotate(
             _nb_accesses=db.Value(item_nb_accesses)
-            + Coalesce(db.Count("accesses", distinct=True), 0),
+            + Coalesce(db.Subquery(nb_direct_accesses, output_field=db.IntegerField()), 0),
         )
 
         # Pass ancestors' links paths mapping to the serializer as a context variable
@@ -1184,8 +1298,9 @@ class ItemViewSet(
         except models.Item.DoesNotExist as exc:
             raise drf.exceptions.NotFound from exc
 
+        prefixes = [str(item.path[:i]) for i in range(1, len(item.path) + 1)]
         highest_ancestor = (
-            self.queryset.filter(path__ancestors=item.path, ancestors_deleted_at__isnull=True)
+            self.queryset.filter(path__in=prefixes, ancestors_deleted_at__isnull=True)
             .readable_per_se(request.user)
             .only("path")
             .order_by("path")
@@ -1206,7 +1321,7 @@ class ItemViewSet(
                 ancestors_deleted_at__isnull=True,
             )
             .order_by("path")
-            .values_list("path", "link_reach", "link_role", named=True)
+            .only("path", "link_reach", "link_role", "link_expires_at", "link_password")
         )
 
         if len(ancestors) == 0:
@@ -1233,14 +1348,18 @@ class ItemViewSet(
 
             # Compute cache for ancestors links to avoid many queries while computing
             # abilties for his items in the tree!
-            ancestors_links.append(
-                {"link_reach": ancestor.link_reach, "link_role": ancestor.link_role}
-            )
+            ancestors_links.append(ancestor.link_definition)
             paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
 
         tree = (
             self.queryset.select_related("creator")
-            .filter(clause, type=models.ItemTypeChoices.FOLDER, deleted_at__isnull=True)
+            .with_restriction_target(request.user)
+            .annotate_has_restriction()
+            .filter(
+                clause,
+                type__in=[models.ItemTypeChoices.FOLDER, models.ItemTypeChoices.RESTRICTION],
+                deleted_at__isnull=True,
+            )
             .order_by("created_at")
         )
 
@@ -1248,6 +1367,8 @@ class ItemViewSet(
         tree = tree.annotate_user_roles(user)
         tree = tree.annotate_is_favorite(user)
         tree = tree.annotate_with_numchild()
+        tree = tree.annotate_user_has_link_trace(user)
+        tree = tree.annotate_user_has_direct_access(user)
         tree = self._filter_suspicious_items(tree, user)
 
         serializer = self.get_serializer(
@@ -1283,42 +1404,188 @@ class ItemViewSet(
         queryset = queryset.annotate_is_favorite(user)
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_with_numchild()
+        queryset = queryset.with_restriction_target(user)
+        queryset = queryset.annotate_user_has_link_trace(user)
+        queryset = queryset.annotate_user_has_direct_access(user)
 
         # Apply ordering only now that everyting is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
         return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
-    @drf.decorators.action(detail=True, methods=["get"])
-    def breadcrumb(self, request, *args, **kwargs):
-        """
-        List the breadcrumb for an item
-        """
-        item = self.get_object()
+    @extend_schema(
+        request=deletion_serializers.ItemsDeletionInfoRequestSerializer,
+        responses={
+            200: {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "object",
+                    "properties": {"hasRestrictedDescendent": {"type": "boolean"}},
+                    "required": ["hasRestrictedDescendent"],
+                },
+            }
+        },
+    )
+    @drf.decorators.action(detail=False, methods=["post"], url_path="deletion-info")
+    def deletion_info(self, request):
+        """Return deletion metadata for an entire selection without changing items."""
+        payload = deletion_serializers.ItemsDeletionInfoRequestSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        ids = payload.validated_data["ids"]
+        restrictions = models.Item.objects.filter(
+            type=models.ItemTypeChoices.RESTRICTION,
+            path__descendants=db.OuterRef("path"),
+            deleted_at__isnull=True,
+            ancestors_deleted_at__isnull=True,
+            hard_deleted_at__isnull=True,
+            target__isnull=False,
+            target__deleted_at__isnull=True,
+            target__ancestors_deleted_at__isnull=True,
+            target__hard_deleted_at__isnull=True,
+        ).exclude(pk=db.OuterRef("pk"))
+        items = list(
+            self.queryset.filter(pk__in=ids)
+            .annotate_user_roles(request.user)
+            .annotate_user_has_direct_access(request.user)
+            .annotate_user_has_link_trace(request.user)
+            .annotate_has_restriction()
+            .annotate(has_restricted_descendent=db.Exists(restrictions))
+        )
+        if len(items) != len(ids):
+            raise drf.exceptions.NotFound()
 
-        highest_ancestor = (
-            self.queryset.filter(path__ancestors=item.path, ancestors_deleted_at__isnull=True)
-            .readable_per_se(request.user)
-            .only("path")
-            .order_by("path")
-            .first()
+        # Permissions need inherited link settings as well as access roles.
+        # Fetch every ancestor once, even when the selection spans several trees.
+        ancestor_ids = {ancestor for item in items for ancestor in item.path[:-1]}
+        ancestors = {
+            str(ancestor.pk): ancestor.link_definition
+            for ancestor in self.queryset.filter(
+                pk__in=ancestor_ids, ancestors_deleted_at__isnull=True
+            )
+        }
+        for item in items:
+            item.ancestors_link_definition = models.get_equivalent_link_definition(
+                [ancestors[ancestor] for ancestor in item.path[:-1] if ancestor in ancestors]
+            )
+            self.check_object_permissions(request, item)
+            if item.type != models.ItemTypeChoices.FOLDER:
+                item.has_restricted_descendent = False
+
+        return drf.response.Response(
+            {
+                str(item.pk): deletion_serializers.ItemDeletionInfoSerializer(item).data
+                for item in items
+            }
         )
 
-        if not highest_ancestor:
+    def _physical_breadcrumb(self, item, user):
+        """Return the accessible, live part of an item's physical ancestor chain.
+
+        For Root -> Projects -> Reports -> Current, a user with access to Projects
+        but not Root gets [Projects, Reports, Current]. If no ancestor (including
+        Current itself) is readable, return an empty list.
+
+        This follows stored paths only. A restricted folder lives in a separate
+        physical tree; breadcrumb() reconnects it to accessible parent hierarchies.
+        """
+        # Include Current itself, but exclude directly or indirectly deleted items.
+        prefixes = [str(item.path[:i]) for i in range(1, len(item.path) + 1)]
+        ancestors = self.queryset.filter(
+            path__in=prefixes,
+            deleted_at__isnull=True,
+            ancestors_deleted_at__isnull=True,
+        )
+        # Projects can provide access through a user/team grant or sharing link;
+        # Reports and Current inherit that access within this physical tree.
+        highest = ancestors.readable_per_se(user).order_by("path").first()
+        if highest is None:
+            return []
+        # Keep Projects -> Reports -> Current, ordered from parent to child.
+        # The restriction flag lets breadcrumb() identify detached roots later.
+        chain = list(
+            ancestors.filter(path__descendants=highest.path)
+            .annotate_has_restriction()
+            .order_by("path")
+        )
+        # A missing/deleted ancestor must interrupt the chain, not be skipped.
+        # If Reports is missing, [Projects (depth 2), Current (depth 4)] becomes
+        # [Current]: Projects must not appear to be Current's immediate parent.
+        # Walking backwards keeps only the continuous chain nearest Current.
+        for index in range(len(chain) - 1, 0, -1):
+            if chain[index].depth != chain[index - 1].depth + 1:
+                return chain[index:]
+        return chain
+
+    @drf.decorators.action(detail=True, methods=["get"])
+    def breadcrumb(self, request, *args, **kwargs):
+        """Reconnect accessible parent chains across nested restriction boundaries.
+
+        For Root -> Projects -> Restricted -> Current, restriction splits storage
+        into Root -> Projects -> Entry and a separate Restricted -> Current tree.
+        Follow Entry's target relationship backwards to rebuild the displayed
+        [Root, Projects, Restricted, Current] chain, without including Entry or
+        changing any stored paths/depths.
+        """
+        # Start with the readable physical segment, e.g. [Restricted, Current].
+        breadcrumb = self._physical_breadcrumb(self.get_object(), request.user)
+        if not breadcrumb:
             raise (
                 drf.exceptions.PermissionDenied()
                 if request.user.is_authenticated
                 else drf.exceptions.NotAuthenticated()
             )
+        visited = {item.pk for item in breadcrumb}
+        # Only reconnect at a physical root. If access starts below that root,
+        # stop rather than trying to expose the inaccessible hierarchy above it.
+        while breadcrumb[0].depth == 1 and breadcrumb[0].has_restriction:
+            entry = self.queryset.filter(
+                target=breadcrumb[0],
+                type=models.ItemTypeChoices.RESTRICTION,
+                deleted_at__isnull=True,
+                ancestors_deleted_at__isnull=True,
+            ).first()
+            if entry is None or entry.depth <= 1:
+                break
+            # A path [root_id, projects_id, entry_id] has Projects at [-2].
+            # The depth guard guarantees at least two IDs, but the parent record
+            # may still be missing/deleted. Use the entry's current location so
+            # moving Entry from Projects to Archive updates the breadcrumb too.
+            parent = self.queryset.filter(
+                pk=entry.path[-2], deleted_at__isnull=True, ancestors_deleted_at__isnull=True
+            ).first()
+            if parent is None or parent.pk in visited:
+                break
+            # This yields [Root, Projects], or just [Projects] if Root is private.
+            prefix = self._physical_breadcrumb(parent, request.user)
+            # Check the whole prefix: with breadcrumb [A, Current], parent B may
+            # be new while its prefix [A, B] would duplicate A and create a cycle.
+            if not prefix or any(item.pk in visited for item in prefix):
+                break
+            visited.update(item.pk for item in prefix)
+            # [Root, Projects] + [Restricted, Current]. If the new first item is
+            # itself a restricted root, repeat to cross the next boundary.
+            breadcrumb = prefix + breadcrumb
+        return drf.response.Response(self.get_serializer(breadcrumb, many=True).data)
 
-        breadcrumb = self.queryset.filter(
-            path__ancestors=item.path,
-            path__descendants=highest_ancestor.path,
-            ancestors_deleted_at__isnull=True,
-        ).order_by("path")
-
-        serializer = self.get_serializer(breadcrumb, many=True)
-        return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
+    def _filter_retrievable(self, items, user):
+        """
+        Keep only the items the user can retrieve: the search scope and the index only
+        know the link reach and ignore link expiration and password.
+        """
+        paths_links_mapping = self._compute_ancestors_link_definition(items)
+        for item in items:
+            links = paths_links_mapping.get(str(item.path[:-1]), [])
+            item.ancestors_link_definition = models.get_equivalent_link_definition(links)
+        # A link never grants access to deleted items, an explicit role does
+        return [
+            item
+            for item in items
+            if (
+                bool(item.get_role(user))
+                if item.ancestors_deleted_at
+                else item.get_abilities(user)["retrieve"]
+            )
+        ]
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
     @method_decorator(refresh_oidc_access_token)
@@ -1341,11 +1608,13 @@ class ItemViewSet(
 
         queryset = queryset.filter(pk__in=result_ids)
         queryset = queryset.annotate_user_roles(user)
+        queryset = queryset.annotate_user_has_direct_access(user)
         queryset = queryset.annotate_is_favorite(user)
         queryset = queryset.annotate_with_numchild()
 
         files_by_uuid = {str(d.pk): d for d in queryset}
         ordered_files = [files_by_uuid[id] for id in result_ids if id in files_by_uuid]
+        ordered_files = self._filter_retrievable(ordered_files, user)
 
         page = self.paginate_queryset(ordered_files)
 
@@ -1400,23 +1669,37 @@ class ItemViewSet(
         queryset = self._filter_suspicious_items(queryset, user)
         queryset = self._exclude_pending_items(queryset)
 
+        # Restrictions are tree entries, not searchable content
+        queryset = queryset.exclude(type=models.ItemTypeChoices.RESTRICTION)
+
         queryset = queryset.annotate_is_favorite(user)
 
         if workspace:
             item_access_queryset = item_access_queryset.filter(item__id=workspace)
 
-        top_level_items = item_access_queryset.values_list("item__path", flat=True)
+        top_level_paths = list(item_access_queryset.values_list("item__path", flat=True))
+
+        # Items unlocked with their link password stay searchable while their link is live
+        if user.is_authenticated and not workspace:
+            link_not_expired = db.Q(link_expires_at__isnull=True) | db.Q(
+                link_expires_at__gt=timezone.now()
+            )
+            top_level_paths += self.queryset.filter(
+                link_not_expired,
+                link_traces__user=user,
+                link_traces__link_unlocked_at__isnull=False,
+                link_reach__in=[LinkReachChoices.PUBLIC, LinkReachChoices.AUTHENTICATED],
+                hard_deleted_at__isnull=True,
+            ).values_list("path", flat=True)
+
         # Then look for all items that are children of the top level items
 
-        if not top_level_items:
+        if not top_level_paths:
             return self.get_response_for_queryset(queryset.none())
 
         # Among the results, we may have items that are ancestors/descendants
         # of each other. In this case we want to keep only the highest ancestors.
-        root_paths = utils.filter_root_paths(
-            top_level_items,
-            skip_sorting=True,
-        )
+        root_paths = utils.filter_root_paths(sorted(top_level_paths, key=str), skip_sorting=True)
 
         path_list = db.Q()
         for top_level_item in root_paths:
@@ -1435,10 +1718,17 @@ class ItemViewSet(
                 text=filterset.form.cleaned_data.pop("title"),
             )
 
+        # Link passwords are the only restriction the scope cannot express, keep the
+        # database pagination when the scope holds none
+        scope_has_link_password = queryset.filter(link_password__isnull=False).exists()
+
         # Without the indexer, the "title" filtering is kept
         queryset = filterset.filter_queryset(queryset)
         queryset = queryset.annotate_user_roles(user)
+        queryset = queryset.annotate_user_has_direct_access(user)
         queryset = queryset.annotate_with_numchild()
+        if scope_has_link_password:
+            queryset = self._filter_retrievable(list(queryset), user)
 
         page = self.paginate_queryset(queryset)
 
@@ -1496,7 +1786,7 @@ class ItemViewSet(
         if models.LinkReachChoices.get_priority(
             item.link_reach
         ) >= models.LinkReachChoices.get_priority(previous_link_reach):
-            item.descendants().update(link_reach=None)
+            item.descendants().update(link_reach=None, link_expires_at=None, link_password=None)
 
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
@@ -1578,6 +1868,34 @@ class ItemViewSet(
             status=drf.status.HTTP_200_OK,
         )
 
+    @drf.decorators.action(detail=True, methods=["post"], throttle_scope="items_unlock")
+    def unlock(self, request, *args, **kwargs):
+        """Unlock the item share link with its password for the current session."""
+        item = self.get_object()
+        serializer = serializers.LinkPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        password_item_id = item.computed_link_definition["link_password_item"]
+        password_item = (
+            item if password_item_id == item.id else models.Item.objects.get(pk=password_item_id)
+        )
+        if not password_item.check_link_password(serializer.validated_data["password"]):
+            raise drf.exceptions.PermissionDenied()
+
+        request.user.unlocked_link_items.add(password_item.link_unlock_key)
+        if request.user.is_authenticated:
+            models.LinkTrace.objects.update_or_create(
+                user=request.user,
+                item=password_item,
+                defaults={"link_unlocked_at": timezone.now()},
+            )
+        else:
+            request.session[UNLOCKED_LINK_ITEMS_SESSION_KEY] = list(
+                request.user.unlocked_link_items
+            )
+
+        return drf.response.Response(self.get_serializer(item).data, status=drf.status.HTTP_200_OK)
+
     @drf.decorators.action(detail=True, methods=["post", "delete"], url_path="favorite")
     def favorite(self, request, *args, **kwargs):
         """
@@ -1624,6 +1942,48 @@ class ItemViewSet(
             {"detail": "item was already not marked as favorite"},
             status=drf.status.HTTP_200_OK,
         )
+
+    @drf.decorators.action(detail=True, methods=["post", "delete"], url_path="restrict")
+    def restrict(self, request, *args, **kwargs):
+        """Activate or deactivate restriction on the folder based on the HTTP method."""
+        item = self.get_object()
+
+        if request.method == "POST":
+            item = item.restrict(request.user)
+        else:
+            item = item.unrestrict()
+
+        serializer = self.get_serializer(item)
+        return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
+
+    @drf.decorators.action(
+        detail=True,
+        methods=["post"],
+    )
+    def leave(self, request, *args, **kwargs):
+        """
+        Remove item_accesses if exists and the link_trace related to the current item
+        for the connected user.
+        """
+        item = self.get_object()
+        try:
+            with transaction.atomic():
+                for access in models.ItemAccess.objects.filter(
+                    item__path__in_subtree=item.path, user=request.user
+                ):
+                    access.delete()
+                models.LinkTrace.objects.filter(
+                    item__path__in_subtree=item.path, user=request.user
+                ).delete()
+        except DatabaseError:
+            logger.error(
+                "Impossible to leave item %s for user %s",
+                str(item.id),
+                str(request.user.id),
+            )
+            raise
+        posthog_capture("item_left", request.user, {}, item=item)
+        return drf.response.Response(status=drf.status.HTTP_204_NO_CONTENT)
 
     def _authorize_subrequest(self, request, pattern):
         """
@@ -1730,6 +2090,8 @@ class ItemViewSet(
 
         descendants = export_descendants(folder)
         zip_stream = build_zip_stream(descendants)
+
+        posthog_capture("item_exported", request.user, {}, item=folder)
 
         encoded_name = quote(f"{folder.title}.zip", safe="")
         return StreamingHttpResponse(
@@ -2435,6 +2797,7 @@ class ConfigView(drf.views.APIView):
             "POSTHOG_HOST",
             "LANGUAGES",
             "LANGUAGE_CODE",
+            "SDK_ENABLED",
             "SENTRY_DSN",
         ]
         dict_settings = {}
@@ -2484,6 +2847,12 @@ class SDKRelayEventViewset(drf.viewsets.ViewSet):
     permission_classes = [AllowAny]
 
     throttle_scope = "sdk_event_relay"
+
+    def initial(self, request, *args, **kwargs):
+        """Hide the whole relay when the SDK is disabled."""
+        if not settings.SDK_ENABLED:
+            raise drf.exceptions.NotFound()
+        super().initial(request, *args, **kwargs)
 
     def get_permissions(self):
         """

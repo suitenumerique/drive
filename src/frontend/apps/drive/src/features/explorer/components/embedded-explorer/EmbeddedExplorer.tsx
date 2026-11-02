@@ -13,7 +13,7 @@ import {
   getOriginalIdFromTreeId,
 } from "@/features/explorer/components/GlobalExplorerContext";
 import { useQuery } from "@tanstack/react-query";
-import { Spinner } from "@gouvfr-lasuite/ui-kit";
+import { Spinner } from "@gouvfr-lasuite/ui-components";
 import { ItemFilters } from "@/features/drivers/Driver";
 import {
   EmbeddedExplorerGrid,
@@ -55,6 +55,14 @@ export const useEmbeddedExplorer = (props: EmbeddedExplorerProps) => {
 };
 
 /**
+ * This component must remain usable independently of the app explorer.
+ * It and its descendants, including their hooks, must not depend on
+ * GlobalExplorerProvider or read useGlobalExplorer.
+ * App-specific behavior must be supplied through explicit props or callbacks.
+ *
+ * TODO: Remove legacy global dependencies in delete, rename, move, keyboard
+ * navigation and drag state. Sharing must not add to those dependencies.
+ *
  * Standalone component to display the embedded explorer with:
  * - Breadcrumbs
  * - Grid

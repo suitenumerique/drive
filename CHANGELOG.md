@@ -10,11 +10,138 @@ and this project adheres to
 
 ### Added
 
-- 📈(backend) add a Sentry performance monitoring sample rate setting
+- ✨(backend) allow to leave an item #826
+- ✨(frontend) allow to leave an item #826
+- ✨(frontend) restrict and reopen folder access from the share modal
+- 🔊(backend) log rejected WOPI requests
+- ✨(backend) browse the item tree and its accesses from the admin
+- ✨(backend) list the root items of a user in the admin
+
+### Changed
+
+- ⬆️(ci) bump GitHub Actions to latest versions
+- ✨(backend) screen uploads with a denylist
 
 ### Fixed
 
+- 🐛(frontend) show the full item title in a tooltip when truncated
+- 🐛(backend) fix the upload mimetype allowlist
+
+## [v0.25.3] - 2026-10-23
+
+### Security
+
+- ⬆️(backend) upgrade djangorestframework to 3.18.3 to fix CVEs
+- ⬆️(backend) upgrade Brotli to 1.2.1 to fix a CVE
+
+## [v0.25.2] - 2026-10-22
+
+### Fixed
+
+- 🐛(backend) fix user's inactive token introspection failure
+  (upgrade to `django-lasuite==0.1.0`)
+
+## [v0.25.1] - 2026-10-22
+
+### Fixed
+
+- 🐛(backend) fix anonymous export of public folders
+
+## [v0.25.0] - 2026-10-19
+
+### Added
+
+- ✨(backend) show the last login of users in the admin
+- ✨(backend) filter users sharing an email in the admin
+- ✨(backend) merge users from the admin
+- ✨(backend) show the release in the admin header
+- ✨(backend) transfer items from a user to another in the admin
+- ✨(backend) deactivate the least recently used duplicates in the admin
+- ✨(backend) add SDK_ENABLED setting to gate the sdk relay
+- ✨(frontend) hide sdk pages when SDK_ENABLED is off
+- ✨(frontend) select the uploaded file after a single file upload
+- ✨(frontend) select the item created from the new menu
+
+### Fixed
+
+- 🐛(backend) log in the active user when several users share an email
+- 🔒️(wopi) verify WOPI request proofs whatever the item upload state
+- 🐛(backend) keep re-analyzed items ready when the analysis fails
+- ⚡️(backend) speed up the trashbin on large databases
+
+### Removed
+
+- 🔥(backend) remove unused default authentication backend
+
+## [v0.24.0] - 2026-10-09
+
+### Added
+
+- ✨(backend) rate limit the item creation endpoints
+- ✨(backend) add a command to generate a production sized dataset
+- ✨(backend) add a command to profile the main API endpoints
+- ✨(backend) schedule management commands with celery beat
+- ✨(backend) capture a posthog event on template based creation
+- ✨(backend) capture posthog events on item deletion
+- ✨(backend) capture a posthog event on conversion request
+- ✨(backend) capture a posthog event on folder export
+- ✨(wopi) capture a posthog event on document edition
+- ✨(backend) show and change the storage quota exclusion of items
+- ✨(backend) show user storage quota and biggest files in the admin
+- ✨(backend) set the storage limit override of users in GB in the admin
+- ✨(backend) add opt-in prometheus metrics on /metrics
+- ✨(backend) add database pool and celery queue metrics
+- ✨(backend) add business metrics to the prometheus endpoint
+- ✨(helm) add metrics monitors and ingress
+
+### Changed
+
+- 🔧(docker) replace MinIO with RustFS for local object storage
+- ✨(backend) require a size reservation to upload a file
+- ♻️(backend,frontend) format sizes the same way in the admin and the app
+- 🔧(helm) relax the backend readiness probe
+- ⚡️(docker) build the frontend assets once on the native platform
+
+### Fixed
+
+- ⚡️(backend) speed up the item list, recents and favorites on large databases
+- 🐛(backend) do not clean a pending item whose upload just ended
+- 🐛(backend) purge the stored object of stale pending items
+- 🔒️(backend) serve WOPI file content as a sandboxed download
+
+## [v0.23.0] - 2026-09-23
+
+### Added
+
+- 🔧(backend) allow enabling and configuring the psycopg connection pool
+- 🔧(helm) allow specific env vars for the backend web deployment
+
+### Fixed
+
+- 🐛(frontend) refresh the Recent view after item mutations
+- 🧑‍💻(project) install frontend dependencies via container in bootstrap
+- 🐛(backend) gate item creation at the root on the upload entitlement
+
+## [v0.22.0] - 2026-09-09
+
+### Added
+
+- 📈(backend) add a Sentry performance monitoring sample rate setting
+- ♻️(backend) route permission decisions through a swappable backend
+- ✨(backend) add restricted access on folders, detached behind a restriction
+- ✨(backend) add an expiration date to item share links
+- ✨(backend) protect item share links with a password
+
+### Changed
+
+- ♻️(frontend) migrate to the merged @gouvfr-lasuite/ui-components package
+
+### Fixed
+
+- 🐛(frontend) resolve region-less browser languages to the locale we ship
+- 🐛(frontend) render the JPEG 2000 layers of scanned PDFs in the preview
 - 🐛(backend) prevent item deletion by a creator whose access was revoked
+- 🐛(backend) resolve the direct parent by exact path after a move
 
 ## [v0.21.2] - 2026-08-25
 
@@ -37,6 +164,7 @@ and this project adheres to
 
 ### Added
 
+- ✨(load-tests) add JMeter load-testing scenarios and a LoadTest configuration
 - ✨(backend) make the upload ACL configurable to support GCS based storages
 - ✨(frontend) show the messages widget button on the homepage
 - ✨(frontend) open the messages widget from the help menu
@@ -523,7 +651,14 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.21.2...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.25.3...main
+[v0.25.3]: https://github.com/suitenumerique/drive/releases/v0.25.3
+[v0.25.2]: https://github.com/suitenumerique/drive/releases/v0.25.2
+[v0.25.1]: https://github.com/suitenumerique/drive/releases/v0.25.1
+[v0.25.0]: https://github.com/suitenumerique/drive/releases/v0.25.0
+[v0.24.0]: https://github.com/suitenumerique/drive/releases/v0.24.0
+[v0.23.0]: https://github.com/suitenumerique/drive/releases/v0.23.0
+[v0.22.0]: https://github.com/suitenumerique/drive/releases/v0.22.0
 [v0.21.2]: https://github.com/suitenumerique/drive/releases/v0.21.2
 [v0.21.1]: https://github.com/suitenumerique/drive/releases/v0.21.1
 [v0.21.0]: https://github.com/suitenumerique/drive/releases/v0.21.0

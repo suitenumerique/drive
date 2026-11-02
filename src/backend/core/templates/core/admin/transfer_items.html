@@ -1,0 +1,21 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+{% block extrahead %}{{ block.super }}{{ form.media }}{% endblock %}
+{% block content %}
+<p>{% translate "Items created by the source user and its accesses in these items and their descendants will be moved to the target user. The target user gets the role the source user inherits from the parent folders, which the source user keeps:" %}</p>
+<ul>
+  {% for item in items %}
+  <li>{{ item.title }} ({{ item.pk }})</li>
+  {% endfor %}
+</ul>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  {% for item in items %}
+  <input type="hidden" name="{{ action_checkbox_name }}" value="{{ item.pk }}">
+  {% endfor %}
+  <input type="hidden" name="action" value="transfer_items">
+  <input type="hidden" name="apply" value="1">
+  <input type="submit" value="{% translate 'Transfer' %}">
+</form>
+{% endblock %}

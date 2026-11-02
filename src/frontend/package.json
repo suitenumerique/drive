@@ -1,6 +1,6 @@
 {
   "name": "main",
-  "version": "0.21.2",
+  "version": "0.25.3",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -18,7 +18,7 @@
   },
   "resolutions": {
     "postcss": "8.5.26",
-    "sharp": "0.35.3"
+    "sharp": "0.35.5"
   },
   "devDependencies": {
     "turbo": "2.9.14"

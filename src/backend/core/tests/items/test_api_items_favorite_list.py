@@ -80,6 +80,8 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "id": str(item.id),
                 "link_reach": item.link_reach,
                 "link_role": item.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "path": str(item.path),
@@ -103,7 +105,10 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
                 "is_favorite": True,
+                "is_restricted": False,
+                "target": None,
             }
         ],
     }
@@ -278,7 +283,7 @@ def test_api_item_favorite_list_ordering_by_fields(ordering, django_assert_num_q
     is_descending = ordering.startswith("-")
     querystring = f"?ordering={ordering}"
 
-    with django_assert_num_queries(6):
+    with django_assert_num_queries(5):
         response = client.get(f"/api/v1.0/items/favorites/{querystring:s}")
     assert response.status_code == 200
     results = response.json()["results"]

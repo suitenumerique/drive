@@ -3,17 +3,20 @@ import {
   ModalProps,
   ModalSize,
   useModals,
-} from "@gouvfr-lasuite/cunningham-react";
-import { useTranslation } from "react-i18next";
-
-import {
   QuickSearch,
   QuickSearchGroup,
   QuickSearchItemTemplate,
   SmartScroller,
-} from "@gouvfr-lasuite/ui-kit";
+} from "@gouvfr-lasuite/ui-components";
+import { useTranslation } from "react-i18next";
+
 import { useEffect, useRef, useState } from "react";
-import { Item, ItemType } from "@/features/drivers/types";
+import { Item } from "@/features/drivers/types";
+import {
+  getNavigableItem,
+  isFolder,
+  isFolderAccessDenied,
+} from "@/features/drivers/utils";
 import { getDriver } from "@/features/config/Config";
 import { ItemIcon } from "../../icons/ItemIcon";
 import {
@@ -89,19 +92,21 @@ export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
   const modals = useModals();
 
   const onItemClick = (item: Item) => {
-    if (item.type === ItemType.FOLDER) {
+    if (isFolder(item) && !isFolderAccessDenied(item)) {
+      const navigableItem = getNavigableItem(item);
+      if (!navigableItem) return;
       if (item.deleted_at) {
         messageModalTrashNavigate(modals);
       } else {
         clearFromRoute();
         onNavigate({
-          item,
+          item: navigableItem,
           type: NavigationEventType.ITEM,
         });
         props.onClose();
       }
     } else {
-      if (item.is_wopi_supported) {
+      if (!isFolderAccessDenied(item) && item.is_wopi_supported) {
         openWopiInNewTab(itemToPreviewFile(item));
         props.onClose();
         return;

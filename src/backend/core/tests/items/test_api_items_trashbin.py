@@ -79,6 +79,8 @@ def test_api_items_trashbin_format(settings):
         "depth": 1,
         "link_reach": item.link_reach,
         "link_role": item.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 3,
         "numchild": 0,
         "numchild_folder": 0,
@@ -103,7 +105,10 @@ def test_api_items_trashbin_format(settings):
         "size": None,
         "description": None,
         "hard_delete_at": ((now + timedelta(days=30)).isoformat()),
+        "is_restricted": False,
+        "target": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -152,10 +157,10 @@ def test_api_items_trashbin_authenticated_direct(django_assert_num_queries):
 
     expected_ids = {str(item1.id), str(item2.id), str(item3.id)}
 
-    with django_assert_num_queries(7):
+    with django_assert_num_queries(8):
         response = client.get("/api/v1.0/items/trashbin/")
 
-    with django_assert_num_queries(4):
+    with django_assert_num_queries(5):
         response = client.get("/api/v1.0/items/trashbin/")
 
     assert response.status_code == 200
@@ -249,10 +254,10 @@ def test_api_items_trashbin_authenticated_via_team(django_assert_num_queries, mo
 
     expected_ids = {str(deleted_item_team1.id), str(deleted_item_team2.id)}
 
-    with django_assert_num_queries(5):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/trashbin/")
 
-    with django_assert_num_queries(3):
+    with django_assert_num_queries(4):
         response = client.get("/api/v1.0/items/trashbin/")
 
     assert response.status_code == 200
@@ -336,3 +341,37 @@ def test_api_items_trashbin_distinct():
     content = response.json()
     assert len(content["results"]) == 1
     assert content["results"][0]["id"] == str(item.id)
+
+
+@pytest.mark.parametrize("nb_items", [1, 3, 10])
+def test_api_items_trashbin_nested_items_constant_queries(django_assert_num_queries, nb_items):
+    """
+    The number of queries should not depend on the number of listed items, even when
+    they are nested: their ancestors are fetched at once.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER)
+    items = []
+    for _index in range(nb_items):
+        folder = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+        item = factories.ItemFactory(
+            parent=folder,
+            type=models.ItemTypeChoices.FILE,
+            update_upload_state=models.ItemUploadStateChoices.READY,
+        )
+        item.soft_delete()
+        items.append(item)
+
+    # Warm up the caches read by the serializer
+    client.get("/api/v1.0/items/trashbin/")
+
+    with django_assert_num_queries(5):
+        response = client.get("/api/v1.0/items/trashbin/")
+
+    assert response.status_code == 200
+    assert {result["id"] for result in response.json()["results"]} == {
+        str(item.id) for item in items
+    }

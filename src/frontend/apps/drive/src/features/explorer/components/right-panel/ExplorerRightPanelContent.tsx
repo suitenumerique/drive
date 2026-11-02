@@ -1,15 +1,16 @@
 import { Item, ItemUploadState } from "@/features/drivers/types";
 import { ItemIcon } from "../icons/ItemIcon";
-import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
+import { Button, IconSize } from "@gouvfr-lasuite/ui-components";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
+import { useItemActionMenuItems } from "../../hooks/useItemActionMenuItems";
+import { useAppRestrictionUpdated } from "../app-view/useAppRestrictionUpdated";
+import { useSelectionStore } from "../../stores/selectionStore";
 import { useSelectedItems } from "../../stores/selectionStore";
 import { InfoRow } from "@/features/ui/components/info/InfoRow";
 import { useTranslation } from "react-i18next";
 
 import multipleSelection from "@/assets/mutliple-selection.png";
 import emptySelection from "@/assets/empty-selection.png";
-import { IconSize } from "@gouvfr-lasuite/ui-kit";
-import { ItemShareModal } from "../modals/share/ItemShareModal";
 import { ItemInfo } from "@/features/items/components/ItemInfo";
 
 type ExplorerRightPanelContentProps = {
@@ -19,9 +20,31 @@ type ExplorerRightPanelContentProps = {
 export const ExplorerRightPanelContent = ({
   item,
 }: ExplorerRightPanelContentProps) => {
+  const selectionStore = useSelectionStore();
+  const updateAppAfterRestriction = useAppRestrictionUpdated();
+  const { openShareModal, modals } = useItemActionMenuItems({
+    onRestrictionUpdated: async () => {
+      selectionStore.clear();
+      await updateAppAfterRestriction();
+    },
+  });
+
+  return (
+    <>
+      <RightPanelSelectionContent item={item} onShare={openShareModal} />
+      {modals}
+    </>
+  );
+};
+
+const RightPanelSelectionContent = ({
+  item,
+  onShare,
+}: ExplorerRightPanelContentProps & {
+  onShare: (item: Item) => void;
+}) => {
   const { setRightPanelOpen } = useGlobalExplorer();
   const selectedItems = useSelectedItems();
-  const shareModal = useModal();
   const { t } = useTranslation();
 
   const firstSelectedItem = item ?? selectedItems[0];
@@ -103,7 +126,7 @@ export const ExplorerRightPanelContent = ({
             <div className="explorer__right-panel__suspicious-warning">
               <div className="explorer__right-panel__suspicious-warning__text">
                 {t(
-                  `explorer.rightPanel.${firstSelectedItem.upload_state}.text`
+                  `explorer.rightPanel.${firstSelectedItem.upload_state}.text`,
                 )}
               </div>
             </div>
@@ -117,12 +140,15 @@ export const ExplorerRightPanelContent = ({
                   <Button
                     variant="secondary"
                     icon={<span className="material-icons">group</span>}
-                    onClick={shareModal.open}
+                    onClick={() => onShare(firstSelectedItem)}
                   >
                     {firstSelectedItem?.nb_accesses}
                   </Button>
                 ) : (
-                  <Button variant="tertiary" onClick={shareModal.open}>
+                  <Button
+                    variant="tertiary"
+                    onClick={() => onShare(firstSelectedItem)}
+                  >
                     {t("explorer.rightPanel.share")}
                   </Button>
                 )
@@ -133,13 +159,6 @@ export const ExplorerRightPanelContent = ({
 
         <ItemInfo item={firstSelectedItem} />
       </div>
-      {firstSelectedItem && shareModal.isOpen && (
-        <ItemShareModal
-          isOpen={shareModal.isOpen}
-          onClose={shareModal.close}
-          item={firstSelectedItem}
-        />
-      )}
     </>
   );
 };

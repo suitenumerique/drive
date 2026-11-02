@@ -6,6 +6,7 @@ from unittest import mock
 
 from django.core import mail
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 import pytest
 
@@ -101,3 +102,29 @@ def test_models_users_send_email():
 
     assert "My message" in email_content
     assert "https://example.com/some-link/" in email_content
+
+
+def test_models_users_unlocked_link_items():
+    """A user loaded from the database should keep the roles granted by unlocked links."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(link_reach="public", link_role="editor")
+    item.set_link_password("s3cret")
+    item.save()
+    models.LinkTrace.objects.create(user=user, item=item, link_unlocked_at=timezone.now())
+
+    user = models.User.objects.get(pk=user.pk)
+
+    assert user.unlocked_link_items == {item.link_unlock_key}
+    assert item.get_abilities(user)["update"] is True
+
+
+def test_models_users_unlocked_link_items_password_cleared():
+    """An unlocked trace on an item that lost its link password should be ignored."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(link_reach="public")
+    item.set_link_password("s3cret")
+    item.save()
+    models.LinkTrace.objects.create(user=user, item=item, link_unlocked_at=timezone.now())
+    models.Item.objects.filter(pk=item.pk).update(link_password=None)
+
+    assert user.unlocked_link_items == set()

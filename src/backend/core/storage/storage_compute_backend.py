@@ -17,3 +17,7 @@ class StorageComputeBackend(ABC):
         Returns:
             int: The total storage used in bytes.
         """
+
+    @abstractmethod
+    def storage_used_expression(self):
+        """Return an expression of the storage used, to annotate a User queryset."""

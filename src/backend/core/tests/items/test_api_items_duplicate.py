@@ -450,9 +450,8 @@ def test_api_items_duplicate_deleted_item():
 # Posthog events
 
 
-def test_api_items_duplicate_posthog_event(settings):
+def test_api_items_duplicate_posthog_event(posthog_capture_mock):
     """Duplicating an item should send an 'item_duplicate' event."""
-    settings.POSTHOG_KEY = "fake-key"
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
@@ -465,13 +464,14 @@ def test_api_items_duplicate_posthog_event(settings):
         users=[(user, "owner")],
     )
 
-    with (
-        mock.patch("core.tasks.item.duplicate_file.delay"),
-        mock.patch("core.api.viewsets.posthog_capture") as mock_capture,
-    ):
+    with mock.patch("core.tasks.item.duplicate_file.delay"):
         response = client.post(f"/api/v1.0/items/{item.id!s}/duplicate/")
 
     assert response.status_code == 201
 
     duplicated_item = models.Item.objects.get(id=response.json()["id"])
-    mock_capture.assert_called_once_with("item_duplicate", user, {}, item=duplicated_item)
+    posthog_capture_mock.assert_called_once_with(
+        "item_duplicate", distinct_id=user.email, properties=mock.ANY
+    )
+    properties = posthog_capture_mock.call_args.kwargs["properties"]
+    assert properties.items() >= {"item_id": duplicated_item.id}.items()

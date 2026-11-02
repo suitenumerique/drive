@@ -1,0 +1,19 @@
+{% load i18n %}
+<table>
+  <tr>
+    <th>{% translate "title" %}</th>
+    <th>{% translate "type" %}</th>
+    <th>{% translate "role" %}</th>
+    <th></th>
+  </tr>
+  {% for access in accesses %}
+  <tr>
+    <td><a href="{% url 'admin:core_item_change' access.item.pk %}">{{ access.item.title }}</a></td>
+    <td>{{ access.item.get_type_display }}</td>
+    <td>{{ access.get_role_display }}</td>
+    <td>{% if access.item.main_workspace %}{% translate "main workspace" %}{% endif %}{% if access.item.deleted_at %} {% translate "in trash" %}{% endif %}</td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="4">{% translate "No root item" %}</td></tr>
+  {% endfor %}
+</table>

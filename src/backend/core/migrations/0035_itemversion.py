@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0028_item_creator_size_quota_idx"),
+        ("core", "0034_linktrace_link_unlocked_at"),
     ]
 
     operations = [

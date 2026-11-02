@@ -1,6 +1,9 @@
-import { DropdownMenu, useDropdownMenu } from "@gouvfr-lasuite/ui-kit";
+import {
+  DropdownMenu,
+  useDropdownMenu,
+  Button,
+} from "@gouvfr-lasuite/ui-components";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
-import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { useTranslation } from "react-i18next";
 import { ExplorerSearchButton } from "@/features/explorer/components/app-view/ExplorerSearchButton";
 import { useCreateMenuItems } from "../../hooks/useCreateMenuItems";

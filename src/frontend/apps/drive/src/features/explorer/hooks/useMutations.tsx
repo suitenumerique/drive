@@ -6,15 +6,21 @@ import {
   generateTreeId,
 } from "../components/GlobalExplorerContext";
 import { useRemoveItemsFromPaginatedList } from "./useOptimisticPagination";
-import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import { useTreeContext } from "@gouvfr-lasuite/ui-components";
 import {
   useRefreshQueryCacheAfterMutation,
   useDeleteMutationCallbacks,
   useRefreshItemCache,
   useRefreshFavoriteCache,
   useRefreshEntitlementsQueryCache,
+  useGetQueryKeyToRefresh,
 } from "./useRefreshItems";
 import { DefaultRoute } from "@/utils/defaultRoutes";
+import { useTranslation } from "react-i18next";
+import {
+  addToast,
+  ToasterItem,
+} from "@/features/ui/components/toaster/Toaster";
 
 // ============================================================================
 // MUTATIONS
@@ -60,7 +66,7 @@ export const useMutationDeleteItems = () => {
   const driver = getDriver();
   const { item } = useGlobalExplorer();
 
-  const mutationCallbacks = useDeleteMutationCallbacks(
+  const { onSuccess } = useDeleteMutationCallbacks(
     item?.originalId ?? item?.id,
   );
 
@@ -68,7 +74,8 @@ export const useMutationDeleteItems = () => {
     mutationFn: async (...payload: Parameters<typeof driver.deleteItems>) => {
       await driver.deleteItems(...payload);
     },
-    ...mutationCallbacks,
+    // Keep rows and selection intact until the server confirms deletion.
+    onSuccess,
   });
 };
 
@@ -107,14 +114,14 @@ export const useMutationRenameItem = () => {
         return;
       }
 
-      refreshItemCache(variables.id);
+      void refreshItemCache(variables.id);
     },
 
     onSuccess: (_, itemUpdated) => {
       if (!itemUpdated?.id) {
         return;
       }
-      refreshItemCache(itemUpdated.id, itemUpdated);
+      void refreshItemCache(itemUpdated.id, itemUpdated);
     },
   });
 };
@@ -152,6 +159,33 @@ export const useMutationUpdateLinkConfiguration = () => {
         queryKey: ["itemAccesses"],
       });
     },
+  });
+};
+
+export const useMutationUpdateRestriction = (
+  onRestrictionUpdated?: (item: Item) => void | Promise<void>,
+) => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { id: string; is_restricted: boolean }) =>
+      driver.updateItemRestriction(payload),
+    onSuccess: async (item) => {
+      queryClient.setQueryData(["items", item.id], item);
+      // Restriction moves the subtree, changing inherited access, links and paths.
+      await Promise.all(
+        [
+          "items",
+          "itemAccesses",
+          "itemInvitations",
+          "breadcrumb",
+          "searchItems",
+          "firstLevelItems",
+        ].map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
+      );
+      await onRestrictionUpdated?.(item);
+    },
+    meta: { showErrorOn403: true },
   });
 };
 
@@ -241,6 +275,51 @@ export const useMutationDuplicateItem = () => {
   });
 };
 
+export const useMutationLeaveItem = () => {
+  const { t } = useTranslation();
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  const getQueryKeys = useGetQueryKeyToRefresh();
+  const refresh = useRefreshQueryCacheAfterMutation();
+  const removeItems = useRemoveItemsFromPaginatedList();
+
+  return useMutation({
+    mutationFn: (itemId: string) => {
+      return driver.leaveItem(itemId);
+    },
+    onMutate: async (itemId: string) => {
+      const queryKeys = getQueryKeys();
+      // Stop pending refetches so they don't bring the item back meanwhile
+      await Promise.all(
+        queryKeys.map((queryKey) => queryClient.cancelQueries({ queryKey })),
+      );
+      // Snapshot every listing so the item can be shown again if leaving fails
+      const previousData = queryKeys.flatMap((queryKey) =>
+        queryClient.getQueriesData({ queryKey }),
+      );
+      queryKeys.forEach((queryKey) => removeItems(queryKey, [itemId]));
+      return { previousData };
+    },
+    onSuccess: () => {
+      refresh();
+    },
+    onError: (_error, _itemId, context) => {
+      context?.previousData.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+      addToast(
+        <ToasterItem type="error">
+          <span className="material-icons">logout</span>
+          <span>{t("explorer.item.actions.leave_toast_error")}</span>
+        </ToasterItem>,
+      );
+    },
+    meta: {
+      noGlobalError: true,
+    },
+  });
+};
+
 export const useMutationConvertItem = () => {
   const driver = getDriver();
   const { item } = useGlobalExplorer();
@@ -270,7 +349,7 @@ export const useMutationCreateFavoriteItem = () => {
     },
     onSuccess: (_, itemId: string) => {
       refreshFavoriteCache(itemId, true);
-      refreshItemCache(itemId, { is_favorite: true });
+      void refreshItemCache(itemId, { is_favorite: true });
     },
   });
 };
@@ -295,7 +374,7 @@ export const useMutationDeleteFavoriteItem = () => {
       );
       treeContext?.treeData.deleteNode(rootFavoriteTreeId);
       removeItems(["items", "infinite"], [itemId]);
-      refreshItemCache(itemId, { is_favorite: false });
+      void refreshItemCache(itemId, { is_favorite: false });
       refreshFavoriteCache(itemId, false);
     },
   });

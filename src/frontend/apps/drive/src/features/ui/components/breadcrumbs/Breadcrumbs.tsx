@@ -1,8 +1,9 @@
-import { Button } from "@gouvfr-lasuite/cunningham-react";
+import { Button } from "@gouvfr-lasuite/ui-components";
 import React, { ReactElement, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 export type BreadcrumbItem = {
+  id: string;
   content: ReactNode;
 };
 
@@ -35,7 +36,7 @@ export const Breadcrumbs = ({
 
       {items.map((item, index) => {
         return (
-          <React.Fragment key={index}>
+          <React.Fragment key={item.id}>
             {index > 0 && (
               <span className="material-icons c__breadcrumbs__separator">
                 chevron_right

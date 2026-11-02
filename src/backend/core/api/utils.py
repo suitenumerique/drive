@@ -6,14 +6,17 @@ import re
 import unicodedata
 from datetime import datetime
 from os.path import splitext
+from urllib.parse import parse_qs, urlparse
 
 from django.conf import settings
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.files.storage import default_storage
 
 import boto3
 import botocore
 import magic
+
+from core.enums import UploadScreeningMode
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +109,9 @@ def generate_upload_policy(item):
     Generate a S3 upload policy for a given item.
     """
 
+    if item.size is None:
+        raise ValueError("An upload authorization requires a storage reservation.")
+
     # Generate a unique key for the item
     key = f"{item.key_base}/{item.filename}"
 
@@ -130,7 +136,11 @@ def generate_upload_policy(item):
     else:
         s3_client = default_storage.connection.meta.client
 
-    params = {"Bucket": default_storage.bucket_name, "Key": key}
+    params = {
+        "Bucket": default_storage.bucket_name,
+        "Key": key,
+        "ContentLength": item.size,
+    }
     if settings.AWS_S3_UPLOAD_ACL and settings.AWS_S3_UPLOAD_ACL != "default":
         params["ACL"] = settings.AWS_S3_UPLOAD_ACL
 
@@ -140,6 +150,13 @@ def generate_upload_policy(item):
         Params=params,
         ExpiresIn=settings.AWS_S3_UPLOAD_POLICY_EXPIRATION,
     )
+
+    # An unsigned Content-Length would make the URL a write grant of any length.
+    signed_headers = parse_qs(urlparse(policy).query).get("X-Amz-SignedHeaders", [""])[0]
+    if "content-length" not in signed_headers.split(";"):
+        raise ImproperlyConfigured(
+            "Upload authorizations require SigV4 with signed Content-Length."
+        )
 
     return policy
 
@@ -227,6 +244,43 @@ def detect_mimetype(file_buffer: bytes, filename: str | None = None) -> str:
 
     # Default to content-based detection (most reliable)
     return mimetype_from_content or "application/octet-stream"
+
+
+def get_file_extension(filename):
+    """Return the lowercased extension of a filename, ignoring trailing dots and spaces."""
+    # Unlike splitext, a leading dot counts: Windows runs ".exe" as an executable
+    _root, dot, extension = filename.rstrip(". ").rpartition(".")
+    return f".{extension}".lower() if dot else ""
+
+
+def _is_upload_type_allowed(value, allowed, denied):
+    """Screen a lowercased file type against the RESTRICT_UPLOAD_FILE_TYPE mode."""
+    if settings.RESTRICT_UPLOAD_FILE_TYPE == UploadScreeningMode.ALLOWLIST:
+        return value in {item.lower() for item in allowed}
+    if settings.RESTRICT_UPLOAD_FILE_TYPE == UploadScreeningMode.DENYLIST:
+        return value not in {item.lower() for item in denied}
+    if settings.RESTRICT_UPLOAD_FILE_TYPE == UploadScreeningMode.OFF:
+        return True
+    # post_setup already rejects it, fail closed anyway
+    raise ValueError(f"Unknown RESTRICT_UPLOAD_FILE_TYPE {settings.RESTRICT_UPLOAD_FILE_TYPE!r}")
+
+
+def is_extension_allowed(filename):
+    """Check the extension of a filename against the upload screening."""
+    return _is_upload_type_allowed(
+        get_file_extension(filename),
+        settings.FILE_EXTENSIONS_ALLOWED,
+        settings.FILE_EXTENSIONS_DENIED,
+    )
+
+
+def is_mimetype_allowed(mimetype):
+    """Check a detected mimetype against the upload screening."""
+    return _is_upload_type_allowed(
+        mimetype.lower(),
+        settings.FILE_MIMETYPE_ALLOWED,
+        settings.FILE_MIMETYPE_DENIED,
+    )
 
 
 def format_template_filename(title, extension):

@@ -1,0 +1,25 @@
+<ul class="item-tree">
+  {% for item in items %}{% include "core/admin/item_tree_entry.html" %}{% endfor %}
+</ul>
+<style>
+  .item-tree ul { margin-left: 1.5em; }
+  .item-tree li { list-style: none; }
+</style>
+<script>
+  (() => {
+    const load = async (node) => {
+      if (!node.open || !node.dataset.url || node.dataset.loaded) return;
+      node.dataset.loaded = "1";
+      const response = await fetch(node.dataset.url);
+      if (!response.ok) {
+        delete node.dataset.loaded;
+        node.open = false;
+        return;
+      }
+      node.insertAdjacentHTML("beforeend", await response.text());
+    };
+    // toggle does not bubble, listen on the capture phase
+    document.addEventListener("toggle", (event) => load(event.target), true);
+    document.querySelectorAll(".item-tree details[open]").forEach(load);
+  })();
+</script>

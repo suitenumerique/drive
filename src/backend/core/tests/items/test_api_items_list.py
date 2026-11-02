@@ -106,8 +106,12 @@ def test_api_items_list_format():
             },
             "depth": 1,
             "is_favorite": False,
+            "is_restricted": False,
+            "target": None,
             "link_reach": item3.link_reach,
             "link_role": item3.link_role,
+            "link_expires_at": None,
+            "has_link_password": False,
             "nb_accesses": 0,
             "numchild": 0,
             "numchild_folder": 0,
@@ -128,6 +132,7 @@ def test_api_items_list_format():
             "deleted_at": None,
             "hard_delete_at": None,
             "is_wopi_supported": False,
+            "quota_excluded": False,
         },
         {
             "id": str(item2.id),
@@ -144,8 +149,12 @@ def test_api_items_list_format():
             },
             "depth": 1,
             "is_favorite": True,
+            "is_restricted": False,
+            "target": None,
             "link_reach": item2.link_reach,
             "link_role": item2.link_role,
+            "link_expires_at": None,
+            "has_link_password": False,
             "nb_accesses": 3,
             "numchild": 0,
             "numchild_folder": 0,
@@ -166,6 +175,7 @@ def test_api_items_list_format():
             "deleted_at": None,
             "hard_delete_at": None,
             "is_wopi_supported": False,
+            "quota_excluded": False,
         },
         {
             "id": str(item.id),
@@ -182,8 +192,12 @@ def test_api_items_list_format():
             },
             "depth": 1,
             "is_favorite": True,
+            "is_restricted": False,
+            "target": None,
             "link_reach": item.link_reach,
             "link_role": item.link_role,
+            "link_expires_at": None,
+            "has_link_password": False,
             "nb_accesses": 3,
             "numchild": 0,
             "numchild_folder": 0,
@@ -204,6 +218,7 @@ def test_api_items_list_format():
             "deleted_at": None,
             "hard_delete_at": None,
             "is_wopi_supported": False,
+            "quota_excluded": False,
         },
     ]
 
@@ -285,11 +300,11 @@ def test_api_items_list_authenticated_direct(django_assert_num_queries):
         str(child4_with_access.id),
     }
 
-    with django_assert_num_queries(11):
+    with django_assert_num_queries(10):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(7):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200
@@ -369,11 +384,11 @@ def test_api_items_list_authenticated_link_reach_restricted(
     folder_item = factories.ItemFactory(link_reach="public", type=models.ItemTypeChoices.FOLDER)
     models.LinkTrace.objects.create(item=folder_item, user=user)
 
-    with django_assert_num_queries(8):
+    with django_assert_num_queries(7):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(6):
+    with django_assert_num_queries(5):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200
@@ -427,11 +442,11 @@ def test_api_items_list_authenticated_link_reach_public_or_authenticated(
         str(visible_child.id),
     }
 
-    with django_assert_num_queries(12):
+    with django_assert_num_queries(10):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(9):
+    with django_assert_num_queries(7):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200

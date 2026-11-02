@@ -43,8 +43,12 @@ def test_api_items_retrieve_anonymous_public_standalone():
         },
         "depth": 1,
         "is_favorite": False,
+        "is_restricted": False,
+        "target": None,
         "link_reach": "public",
         "link_role": item.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 0,
         "numchild": 0,
         "numchild_folder": 0,
@@ -67,6 +71,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -100,8 +105,12 @@ def test_api_items_retrieve_anonymous_public_parent():
         },
         "depth": 3,
         "is_favorite": False,
+        "is_restricted": False,
+        "target": None,
         "link_reach": item.link_reach,
         "link_role": item.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 0,
         "numchild": 0,
         "numchild_folder": 0,
@@ -124,6 +133,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -204,8 +214,12 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         },
         "depth": 1,
         "is_favorite": False,
+        "is_restricted": False,
+        "target": None,
         "link_reach": reach,
         "link_role": item.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 0,
         "numchild": 0,
         "numchild_folder": 0,
@@ -228,6 +242,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
     assert models.LinkTrace.objects.filter(item=item, user=user).exists() is True
 
@@ -267,8 +282,12 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         },
         "depth": 3,
         "is_favorite": False,
+        "is_restricted": False,
+        "target": None,
         "link_reach": item.link_reach,
         "link_role": item.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 0,
         "numchild": 0,
         "numchild_folder": 0,
@@ -291,6 +310,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -408,8 +428,12 @@ def test_api_items_retrieve_authenticated_related_direct():
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "depth": 1,
         "is_favorite": False,
+        "is_restricted": False,
+        "target": None,
         "link_reach": item.link_reach,
         "link_role": item.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 2,
         "numchild": 0,
         "numchild_folder": 0,
@@ -432,6 +456,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -475,8 +500,12 @@ def test_api_items_retrieve_authenticated_related_parent():
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "depth": 3,
         "is_favorite": False,
+        "is_restricted": False,
+        "target": None,
         "link_reach": "restricted",
         "link_role": item.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 2,
         "numchild": 0,
         "numchild_folder": 0,
@@ -499,6 +528,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -652,8 +682,12 @@ def test_api_items_retrieve_authenticated_related_team_members(teams, role, mock
         },
         "depth": 1,
         "is_favorite": False,
+        "is_restricted": False,
+        "target": None,
         "link_reach": "restricted",
         "link_role": item.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 5,
         "numchild": 0,
         "numchild_folder": 0,
@@ -676,6 +710,7 @@ def test_api_items_retrieve_authenticated_related_team_members(teams, role, mock
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -727,8 +762,12 @@ def test_api_items_retrieve_authenticated_related_team_administrators(teams, rol
         },
         "depth": 1,
         "is_favorite": False,
+        "is_restricted": False,
+        "target": None,
         "link_reach": "restricted",
         "link_role": item.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 5,
         "numchild": 0,
         "numchild_folder": 0,
@@ -751,6 +790,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(teams, rol
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -802,8 +842,12 @@ def test_api_items_retrieve_authenticated_related_team_owners(teams, mock_user_t
         },
         "depth": 1,
         "is_favorite": False,
+        "is_restricted": False,
+        "target": None,
         "link_reach": "restricted",
         "link_role": item.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 5,
         "numchild": 0,
         "numchild_folder": 0,
@@ -826,6 +870,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(teams, mock_user_t
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -885,6 +930,28 @@ def test_api_items_retrieve_numqueries_with_link_trace(django_assert_num_queries
     assert response.status_code == 200
 
     assert response.json()["id"] == str(item.id)
+
+
+def test_api_items_retrieve_first_visit_leave_ability():
+    """
+    On a user's first visit to an item via a public/authenticated link, the LinkTrace
+    is created during retrieve(). The annotation is computed before the trace exists,
+    so we force-update it afterwards. The response must show leave=True, not False.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(link_reach="authenticated")
+
+    # No LinkTrace exists yet — this is the first visit
+    assert not models.LinkTrace.objects.filter(item=item, user=user).exists()
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json()["abilities"]["leave"] is True
+    assert models.LinkTrace.objects.filter(item=item, user=user).exists()
 
 
 def test_api_items_retrieve_concurrent_link_trace_creation():
@@ -1201,8 +1268,12 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         },
         "depth": 1,
         "is_favorite": False,
+        "is_restricted": False,
+        "target": None,
         "link_reach": "public",
         "link_role": item.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 1,
         "numchild": 0,
         "numchild_folder": 0,
@@ -1223,6 +1294,7 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -1274,8 +1346,12 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
         },
         "depth": 1,
         "is_favorite": False,
+        "is_restricted": False,
+        "target": None,
         "link_reach": "public",
         "link_role": item.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 1,
         "numchild": 0,
         "numchild_folder": 0,
@@ -1296,6 +1372,7 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -1337,8 +1414,12 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
         },
         "depth": 1,
         "is_favorite": False,
+        "is_restricted": False,
+        "target": None,
         "link_reach": "public",
         "link_role": item.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 1,
         "numchild": 0,
         "numchild_folder": 0,
@@ -1361,6 +1442,7 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -1482,9 +1564,14 @@ def test_api_items_retrieve_file_analysing_not_creator():
         },
         "depth": 1,
         "is_favorite": False,
+        "is_restricted": False,
+        "target": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
         "link_reach": "public",
         "link_role": item.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 1,
         "numchild": 0,
         "numchild_folder": 0,
@@ -1542,3 +1629,85 @@ def test_api_items_retrieve_wopi_supported():
 
     assert response.status_code == 200
     assert response.json()["is_wopi_supported"] is True
+
+
+def test_api_items_retrieve_quota_excluded():
+    """The quota exclusion of an item should be returned."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(quota_excluded=True, users=[(user, "owner")])
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json()["quota_excluded"] is True
+
+
+@pytest.mark.parametrize("reach", ["public", "authenticated"])
+def test_api_items_retrieve_link_expired(reach):
+    """Link holders should not be able to retrieve an item whose link has expired."""
+    item = factories.ItemFactory(
+        link_reach=reach, link_expires_at=timezone.now() - timedelta(minutes=1)
+    )
+
+    client = APIClient()
+    client.force_login(factories.UserFactory())
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 403
+
+
+def test_api_items_retrieve_link_expired_owner():
+    """An expired link should not prevent users with an access from retrieving the item."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        link_reach="public",
+        link_expires_at=timezone.now() - timedelta(minutes=1),
+        users=[(user, "reader")],
+    )
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json()["link_expires_at"] == item.link_expires_at.isoformat().replace(
+        "+00:00", "Z"
+    )
+
+
+def test_api_items_retrieve_link_password_locked():
+    """Link holders should not retrieve a password protected item until they unlock it."""
+    item = factories.ItemFactory(link_reach="public")
+    item.set_link_password("s3cret")
+    item.save()
+
+    client = APIClient()
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+    assert response.status_code == 401
+
+    session = client.session
+    session["unlocked_link_items"] = [item.link_unlock_key]
+    session.save()
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+    assert response.status_code == 200
+    assert response.json()["abilities"]["unlock"] is False
+
+
+def test_api_items_retrieve_has_link_password():
+    """The item should tell whether its link has a password without exposing it."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(link_reach="public", users=[(user, "owner")])
+    item.set_link_password("s3cret")
+    item.save()
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json()["has_link_password"] is True
+    assert "link_password" not in response.json()

@@ -34,6 +34,7 @@ def test_models_sub_item_abilities_downgraded():
     response = client.post(
         f"/api/v1.0/items/{item.id!s}/children/",
         data={
+            "size": 8,
             "type": models.ItemTypeChoices.FILE,
             "filename": "file.txt",
         },
@@ -55,6 +56,7 @@ def test_models_sub_item_abilities_downgraded():
         "hard_delete": True,
         "favorite": True,
         "invite_owner": False,
+        "leave": False,
         "link_configuration": False,
         "link_select_options": {
             "authenticated": ["reader", "editor"],
@@ -64,12 +66,17 @@ def test_models_sub_item_abilities_downgraded():
         "media_auth": True,
         "download": True,
         "move": False,
+        "unlock": False,
         "partial_update": True,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "versions_view": True,
+        "versions_restore": True,
+        "versions_destroy": True,
         "wopi": True,
         "convert": False,
     }
@@ -91,6 +98,7 @@ def test_models_sub_item_abilities_downgraded():
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
+        "leave": False,
         "link_configuration": False,
         "link_select_options": {
             "authenticated": ["reader", "editor"],
@@ -100,12 +108,17 @@ def test_models_sub_item_abilities_downgraded():
         "media_auth": True,
         "download": True,
         "move": False,
+        "unlock": False,
         "partial_update": False,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
         "update": False,
         "upload_ended": False,
+        "versions_view": True,
+        "versions_restore": False,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }
@@ -135,7 +148,9 @@ def test_models_items_root_get_abilities_owner(
     item = factories.ItemFactory(
         users=[(user, "owner")], type=item_type, update_upload_state=upload_state
     )
-    link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
+    link_select_options = LinkReachChoices.get_select_options(
+        item.ancestors_link_reach, item.ancestors_link_role
+    )
     can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": True,
@@ -149,21 +164,29 @@ def test_models_items_root_get_abilities_owner(
         "hard_delete": True,
         "favorite": True,
         "invite_owner": True,
+        "leave": False,
         "link_configuration": True,
         "link_select_options": link_select_options,
         "media_auth": True,
         "download": True,
         "move": True,
+        "unlock": False,
         "partial_update": True,
+        "restrict": False,
         "restore": True,
         "retrieve": True,
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "versions_view": item_type == models.ItemTypeChoices.FILE,
+        "versions_restore": item_type == models.ItemTypeChoices.FILE,
+        "versions_destroy": item_type == models.ItemTypeChoices.FILE,
         "wopi": True,
         "convert": False,
     }
-    with django_assert_num_queries(1):
+    # A folder at the tree root checks for a targeting restriction
+    nb_queries = 2 if item_type == models.ItemTypeChoices.FOLDER else 1
+    with django_assert_num_queries(nb_queries):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
@@ -179,17 +202,23 @@ def test_models_items_root_get_abilities_owner(
         "hard_delete": True,
         "favorite": False,
         "invite_owner": False,
+        "leave": False,
         "link_configuration": False,
         "link_select_options": {},
         "media_auth": False,
         "download": False,
         "move": False,
+        "unlock": False,
         "partial_update": False,
+        "restrict": False,
         "restore": True,
         "retrieve": True,
         "tree": False,
         "update": False,
         "upload_ended": False,
+        "versions_view": False,
+        "versions_restore": False,
+        "versions_destroy": False,
         "wopi": False,
         "convert": False,
     }
@@ -222,7 +251,9 @@ def test_models_items_root_get_abilities_administrator(
         filename=("document.pdf" if item_type == models.ItemTypeChoices.FILE else None),
         update_upload_state=upload_state,
     )
-    link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
+    link_select_options = LinkReachChoices.get_select_options(
+        item.ancestors_link_reach, item.ancestors_link_role
+    )
     can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": True,
@@ -236,21 +267,29 @@ def test_models_items_root_get_abilities_administrator(
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
+        "leave": False,
         "link_configuration": True,
         "link_select_options": link_select_options,
         "media_auth": True,
         "download": True,
         "move": True,
+        "unlock": False,
         "partial_update": True,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "versions_view": item_type == models.ItemTypeChoices.FILE,
+        "versions_restore": item_type == models.ItemTypeChoices.FILE,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }
-    with django_assert_num_queries(1):
+    # A folder at the tree root checks for a targeting restriction
+    nb_queries = 2 if item_type == models.ItemTypeChoices.FOLDER else 1
+    with django_assert_num_queries(nb_queries):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
@@ -288,7 +327,9 @@ def test_models_items_root_get_abilities_editor_user(
         filename="document.pdf" if item_type == models.ItemTypeChoices.FILE else None,
         update_upload_state=upload_state,
     )
-    link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
+    link_select_options = LinkReachChoices.get_select_options(
+        item.ancestors_link_reach, item.ancestors_link_role
+    )
     can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": False,
@@ -302,17 +343,23 @@ def test_models_items_root_get_abilities_editor_user(
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
+        "leave": True,
         "link_configuration": False,
         "link_select_options": link_select_options,
         "media_auth": True,
         "download": True,
         "move": False,
+        "unlock": False,
         "partial_update": True,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "versions_view": item_type == models.ItemTypeChoices.FILE,
+        "versions_restore": item_type == models.ItemTypeChoices.FILE,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }
@@ -341,7 +388,9 @@ def test_models_items_root_get_abilities_reader_user(
     user = factories.UserFactory()
     item = factories.ItemFactory(users=[(user, "reader")], type=item_type)
     access_from_link = item.link_reach != "restricted" and item.link_role == "editor"
-    link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
+    link_select_options = LinkReachChoices.get_select_options(
+        item.ancestors_link_reach, item.ancestors_link_role
+    )
     can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": False,
@@ -355,17 +404,23 @@ def test_models_items_root_get_abilities_reader_user(
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
+        "leave": True,
         "link_configuration": False,
         "link_select_options": link_select_options,
         "media_auth": True,
         "download": True,
         "move": False,
+        "unlock": False,
         "partial_update": access_from_link,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
         "update": access_from_link,
         "upload_ended": access_from_link,
+        "versions_view": item_type == models.ItemTypeChoices.FILE,
+        "versions_restore": item_type == models.ItemTypeChoices.FILE and access_from_link,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }

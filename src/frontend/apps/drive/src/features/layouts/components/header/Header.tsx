@@ -1,6 +1,7 @@
-import { LanguagePicker, useResponsive } from "@gouvfr-lasuite/ui-kit";
+import { LanguagePicker, useResponsive } from "@gouvfr-lasuite/ui-components";
 import { useAuth } from "@/features/auth/Auth";
-import { useMemo, useState } from "react";
+import { LANGUAGES } from "@/features/i18n/conf";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { ExplorerSearchButton } from "@/features/explorer/components/app-view/ExplorerSearchButton";
 import { getDriver } from "@/features/config/Config";
@@ -20,30 +21,6 @@ export const HeaderIcon = () => {
   );
 };
 
-export const LANGUAGES = [
-  {
-    label: "Français",
-    value: "fr-fr",
-    shortLabel: "FR",
-  },
-  {
-    label: "English",
-    value: "en-us",
-    shortLabel: "EN",
-  },
-  {
-    label: "Nederlands",
-    value: "nl-nl",
-    shortLabel: "NL",
-  },
-  {
-    label: "Deutsch",
-    value: "de-de",
-    shortLabel: "DE",
-  },
-];
-
-
 export const HeaderRight = ({
   displaySearch,
   currentItem,
@@ -53,7 +30,6 @@ export const HeaderRight = ({
 }) => {
   const { user } = useAuth();
 
-  
   const isMinimalLayout = useIsMinimalLayout();
 
   const { isTablet } = useResponsive();
@@ -68,7 +44,6 @@ export const HeaderRight = ({
     }
     return {};
   }, [currentItem, isMinimalLayout]);
-
 
   return (
     <>
@@ -86,24 +61,20 @@ export const HeaderRight = ({
   );
 };
 
-
 export const LanguagePickerUserMenu = () => {
   const { i18n } = useTranslation();
   const { user, refreshUser } = useAuth();
   const driver = getDriver();
-  const [selectedLanguage, setSelectedLanguage] = useState(user?.language);
-
-  // We must set the language to lowercase because django does not use "en-US", but "en-us".
-
+  // i18n.language is always one of LANGUAGES_ALLOWED and already reflects the
+  // user, then the cookie, then the browser: it is the active language.
   const languages = useMemo(() => {
     return LANGUAGES.map((language) => ({
       ...language,
-      isChecked: language.value === selectedLanguage,
+      isChecked: language.value === i18n.language,
     }));
-  }, [selectedLanguage]);
+  }, [i18n.language]);
 
   const onChange = (value: string) => {
-    setSelectedLanguage(value);
     i18n.changeLanguage(value).catch((err) => {
       console.error("Error changing language", err);
     });

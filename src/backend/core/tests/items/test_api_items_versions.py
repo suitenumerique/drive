@@ -1,5 +1,7 @@
 """Tests for the item versions API endpoints."""
 
+from unittest import mock
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -9,14 +11,14 @@ pytestmark = pytest.mark.django_db
 
 
 def _file_item(user, **kwargs):
-    defaults = dict(
-        type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.READY,
-        filename="content.txt",
-        mimetype="text/plain",
-        size=5,
-        users=[(user, models.RoleChoices.OWNER)],
-    )
+    defaults = {
+        "type": models.ItemTypeChoices.FILE,
+        "update_upload_state": models.ItemUploadStateChoices.READY,
+        "filename": "content.txt",
+        "mimetype": "text/plain",
+        "size": 5,
+        "users": [(user, models.RoleChoices.OWNER)],
+    }
     defaults.update(kwargs)
     return factories.ItemFactory(**defaults)
 
@@ -91,27 +93,27 @@ def test_versions_download_redirects():
     version = _make_versions(item)[0]
     client = APIClient()
     client.force_login(user)
-    response = client.get(
-        f"/api/v1.0/items/{item.id!s}/versions/{version.id!s}/download/"
-    )
+    response = client.get(f"/api/v1.0/items/{item.id!s}/versions/{version.id!s}/download/")
     assert response.status_code == 302
     assert str(version.file_key) in response["Location"]
 
 
-def test_versions_restore_owner(mocker):
+def test_versions_restore_owner():
     """An owner can restore a version."""
     user = factories.UserFactory()
     item = _file_item(user)
     version = _make_versions(item)[0]
-    s3 = mocker.patch("core.services.item_versions._s3")
-    s3.return_value.copy_object.return_value = None
-    s3.return_value.delete_object.return_value = None
 
     client = APIClient()
     client.force_login(user)
-    response = client.post(
-        f"/api/v1.0/items/{item.id!s}/versions/{version.id!s}/restore/"
-    )
+    with (
+        mock.patch(
+            "core.services.item_versions.default_storage.exists",
+            return_value=True,
+        ),
+        mock.patch("core.services.item_versions._s3"),
+    ):
+        response = client.post(f"/api/v1.0/items/{item.id!s}/versions/{version.id!s}/restore/")
     assert response.status_code == 204
 
 
@@ -125,24 +127,20 @@ def test_versions_restore_reader_forbidden():
     version = _make_versions(item)[0]
     client = APIClient()
     client.force_login(user)
-    response = client.post(
-        f"/api/v1.0/items/{item.id!s}/versions/{version.id!s}/restore/"
-    )
+    response = client.post(f"/api/v1.0/items/{item.id!s}/versions/{version.id!s}/restore/")
     assert response.status_code == 403
 
 
-def test_versions_delete_owner(mocker):
+def test_versions_delete_owner():
     """An owner can delete a stored version."""
     user = factories.UserFactory()
     item = _file_item(user)
     version = _make_versions(item)[0]
-    mocker.patch("core.services.item_versions._s3")
 
     client = APIClient()
     client.force_login(user)
-    response = client.delete(
-        f"/api/v1.0/items/{item.id!s}/versions/{version.id!s}/"
-    )
+    with mock.patch("core.services.item_versions._s3"):
+        response = client.delete(f"/api/v1.0/items/{item.id!s}/versions/{version.id!s}/")
     assert response.status_code == 204
     assert not item.versions.filter(pk=version.pk).exists()
 
@@ -157,13 +155,11 @@ def test_versions_delete_editor_forbidden():
     version = _make_versions(item)[0]
     client = APIClient()
     client.force_login(user)
-    response = client.delete(
-        f"/api/v1.0/items/{item.id!s}/versions/{version.id!s}/"
-    )
+    response = client.delete(f"/api/v1.0/items/{item.id!s}/versions/{version.id!s}/")
     assert response.status_code == 403
 
 
-def test_versions_editor_can_restore(mocker):
+def test_versions_editor_can_restore():
     """Editors can restore a version (update ability)."""
     user = factories.UserFactory()
     item = _file_item(
@@ -171,13 +167,17 @@ def test_versions_editor_can_restore(mocker):
         users=[(user, models.RoleChoices.EDITOR)],
     )
     version = _make_versions(item)[0]
-    mocker.patch("core.services.item_versions._s3")
 
     client = APIClient()
     client.force_login(user)
-    response = client.post(
-        f"/api/v1.0/items/{item.id!s}/versions/{version.id!s}/restore/"
-    )
+    with (
+        mock.patch(
+            "core.services.item_versions.default_storage.exists",
+            return_value=True,
+        ),
+        mock.patch("core.services.item_versions._s3"),
+    ):
+        response = client.post(f"/api/v1.0/items/{item.id!s}/versions/{version.id!s}/restore/")
     assert response.status_code == 204
 
 

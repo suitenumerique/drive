@@ -50,7 +50,10 @@ def test_api_item_upload_ended_on_none_file_item(item_type):
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(type=item_type)
+    if item_type == ItemTypeChoices.RESTRICTION:
+        item = factories.RestrictionFactory()
+    else:
+        item = factories.ItemFactory(type=item_type)
     factories.UserItemAccessFactory(item=item, user=user, role="owner")
 
     response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
@@ -67,7 +70,9 @@ def test_api_item_upload_ended_on_none_file_item(item_type):
     }
 
 
-def test_api_item_upload_ended_on_wrong_upload_state():
+@pytest.mark.parametrize("size", [None, 0, 8])
+@pytest.mark.parametrize("state", [ItemUploadStateChoices.ANALYZING, ItemUploadStateChoices.READY])
+def test_api_item_upload_ended_on_wrong_upload_state(size, state):
     """
     Users should not be allowed to end an upload on items that are not in the PENDING upload state.
     """
@@ -75,8 +80,8 @@ def test_api_item_upload_ended_on_wrong_upload_state():
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(type=ItemTypeChoices.FILE)
-    item.upload_state = ItemUploadStateChoices.READY
+    item = factories.ItemFactory(type=ItemTypeChoices.FILE, size=size)
+    item.upload_state = state
     item.save()
     factories.UserItemAccessFactory(item=item, user=user, role="owner")
 
@@ -95,7 +100,7 @@ def test_api_item_upload_ended_on_wrong_upload_state():
     }
 
 
-def test_api_item_upload_ended_success_grist_file():
+def test_api_item_upload_ended_success_grist_file(django_capture_on_commit_callbacks):
     """Upload a .grist file (SQLite format) should succeed."""
     user = factories.UserFactory()
     client = APIClient()
@@ -109,7 +114,8 @@ def test_api_item_upload_ended_success_grist_file():
     default_storage.save(item.file_key, BytesIO(sqlite_header))
 
     with mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file:
-        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
     mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
     assert response.status_code == 200
@@ -119,7 +125,7 @@ def test_api_item_upload_ended_success_grist_file():
     assert item.mimetype == "application/vnd.sqlite3"
 
 
-def test_api_item_upload_ended_success():
+def test_api_item_upload_ended_success(django_capture_on_commit_callbacks):
     """
     Users should be able to end an upload on items that are files and in the UPLOADING upload state.
     """
@@ -138,7 +144,8 @@ def test_api_item_upload_ended_success():
     with (
         mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file,
     ):
-        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
     mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
     assert response.status_code == 200
@@ -151,7 +158,7 @@ def test_api_item_upload_ended_success():
     assert response.json()["mimetype"] == "text/plain"
 
 
-def test_api_item_upload_ended_empty_file():
+def test_api_item_upload_ended_empty_file(django_capture_on_commit_callbacks):
     """Upload an empty file should not raise an error."""
     user = factories.UserFactory()
     client = APIClient()
@@ -165,7 +172,8 @@ def test_api_item_upload_ended_empty_file():
     with (
         mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file,
     ):
-        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
     mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
     assert response.status_code == 200
@@ -275,7 +283,7 @@ def test_api_item_upload_ended_mimetype_not_allowed(settings, caplog):
     Test that the API returns a 400 when the mimetype is not allowed.
     Item should be deleted and the file should be deleted from the storage.
     """
-    settings.RESTRICT_UPLOAD_FILE_TYPE = True
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "allowlist"
     settings.FILE_MIMETYPE_ALLOWED = ["application/pdf"]
     user = factories.UserFactory()
     client = APIClient()
@@ -299,11 +307,13 @@ def test_api_item_upload_ended_mimetype_not_allowed(settings, caplog):
     assert not default_storage.exists(item.file_key)
 
 
-def test_api_item_upload_ended_mimetype_not_allowed_not_checking_mimetype(settings):
+def test_api_item_upload_ended_mimetype_not_allowed_not_checking_mimetype(
+    settings, django_capture_on_commit_callbacks
+):
     """
     Test that the API returns a 200 when the mimetype is not allowed but not checking the mimetype.
     """
-    settings.RESTRICT_UPLOAD_FILE_TYPE = False
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "off"
     settings.FILE_MIMETYPE_ALLOWED = ["application/pdf"]
     user = factories.UserFactory()
     client = APIClient()
@@ -318,7 +328,8 @@ def test_api_item_upload_ended_mimetype_not_allowed_not_checking_mimetype(settin
     )
 
     with mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file:
-        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
     mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
     assert response.status_code == 200
@@ -328,6 +339,58 @@ def test_api_item_upload_ended_mimetype_not_allowed_not_checking_mimetype(settin
     assert item.mimetype == "text/plain"
     assert item.size == 8
 
+    assert response.json()["mimetype"] == "text/plain"
+
+
+def test_api_item_upload_ended_mimetype_denied(settings, caplog):
+    """
+    Test that the API returns a 400 when the mimetype is denied in denylist mode.
+    Item should be deleted and the file should be deleted from the storage.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "denylist"
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(type=ItemTypeChoices.FILE, filename="my_file.pdf")
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"<!DOCTYPE html><html><body><script>alert(1)</script></body></html>"),
+    )
+
+    with caplog.at_level(logging.INFO):
+        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    assert response.status_code == 400
+    assert "upload_ended: mimetype not allowed text/html for filename my_file.pdf" in caplog.text
+
+    assert not models.Item.objects.filter(id=item.id).exists()
+    assert not default_storage.exists(item.file_key)
+
+
+def test_api_item_upload_ended_mimetype_not_denied(settings, django_capture_on_commit_callbacks):
+    """
+    Test that the API returns a 200 when the mimetype is not denied in denylist mode,
+    even if it is missing from the allowlist.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "denylist"
+    settings.FILE_MIMETYPE_ALLOWED = ["application/pdf"]
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(type=ItemTypeChoices.FILE, filename="my_file.txt")
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+
+    with mock.patch.object(malware_detection, "analyse_file"):
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    assert response.status_code == 200
     assert response.json()["mimetype"] == "text/plain"
 
 

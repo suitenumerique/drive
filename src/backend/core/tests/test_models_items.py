@@ -18,6 +18,7 @@ import pytest
 from lasuite.drf.models.choices import LinkReachChoices
 
 from core import factories, models
+from core.storage.cache import get_storage_used_cache_key
 
 pytestmark = pytest.mark.django_db
 
@@ -53,6 +54,18 @@ def test_models_items_path_for_children_contains_parent_path():
     parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
     child = factories.ItemFactory(parent=parent)
     assert str(child.path) == f"{parent.id!s}.{child.id!s}"
+
+
+def test_models_items_parent_resolves_by_path_after_move():
+    """The parent should stay the direct one after the subtree was moved."""
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    child = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    new_grandparent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+
+    parent.move(new_grandparent)
+    child.refresh_from_db()
+
+    assert child.parent() == parent
 
 
 def test_models_items_title_max_length():
@@ -101,7 +114,12 @@ def test_models_items_soft_delete(depth):
 
     with pytest.raises(RuntimeError) as exc_info:
         items[-1].soft_delete()
-        assert str(exc_info) == "This item is already deleted or has deleted ancestors."
+
+    # The item deleted at random is either the last item itself or one of its ancestors
+    assert str(exc_info.value) in (
+        "This item is already deleted or has deleted ancestors.",
+        "Cannot delete this item because one or more ancestors are already deleted.",
+    )
 
     assert deleted_item.deleted_at is not None
     assert deleted_item.ancestors_deleted_at == deleted_item.deleted_at
@@ -296,21 +314,28 @@ def test_models_items_get_abilities_forbidden(
         "hard_delete": False,
         "favorite": False,
         "invite_owner": False,
+        "leave": False,
         "media_auth": False,
         "download": False,
         "move": False,
+        "unlock": False,
         "link_configuration": False,
         "link_select_options": {},
         "partial_update": False,
+        "restrict": False,
         "restore": False,
         "retrieve": False,
         "tree": False,
         "update": False,
         "upload_ended": False,
+        "versions_view": False,
+        "versions_restore": False,
+        "versions_destroy": False,
         "wopi": False,
         "convert": False,
     }
-    nb_queries = 1 if is_authenticated else 0
+    # 1 query for get_role + 1 for has_link_trace (called when has_access_role=False)
+    nb_queries = 2 if is_authenticated else 0
     with django_assert_num_queries(nb_queries):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
@@ -346,21 +371,28 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
         "hard_delete": False,
         "favorite": is_authenticated,
         "invite_owner": False,
+        "leave": False,
         "link_configuration": False,
         "link_select_options": {},
         "media_auth": True,
         "download": True,
         "move": False,
+        "unlock": False,
         "partial_update": False,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
         "update": False,
         "upload_ended": False,
+        "versions_view": item.type == models.ItemTypeChoices.FILE,
+        "versions_restore": False,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }
-    nb_queries = 1 if is_authenticated else 0
+    # 1 query for get_role + 1 for has_link_trace (called when has_access_role=False)
+    nb_queries = 2 if is_authenticated else 0
     with django_assert_num_queries(nb_queries):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
@@ -417,7 +449,7 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
         ),
     ],
 )
-def test_models_items_get_abilities_editor(  # noqa: PLR0913
+def test_models_items_get_abilities_editor(  # noqa: PLR0913, PLR0917
     is_authenticated,
     reach,
     item_type,
@@ -451,21 +483,28 @@ def test_models_items_get_abilities_editor(  # noqa: PLR0913
         "hard_delete": False,
         "favorite": is_authenticated,
         "invite_owner": False,
+        "leave": False,
         "link_configuration": False,
         "link_select_options": {},
         "media_auth": True,
         "download": True,
         "move": False,
+        "unlock": False,
         "partial_update": True,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
         "update": True,
         "upload_ended": is_authenticated,
+        "versions_view": item_type == models.ItemTypeChoices.FILE,
+        "versions_restore": item_type == models.ItemTypeChoices.FILE,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }
-    nb_queries = 1 if is_authenticated else 0
+    # 1 query for get_role + 1 for has_link_trace (called when has_access_role=False)
+    nb_queries = 2 if is_authenticated else 0
     with django_assert_num_queries(nb_queries):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
@@ -517,6 +556,7 @@ def test_models_items_not_root_get_abilities_owner(
         "hard_delete": True,
         "favorite": True,
         "invite_owner": True,
+        "leave": False,
         "link_configuration": True,
         "link_select_options": {
             "authenticated": ["reader", "editor"],
@@ -526,16 +566,23 @@ def test_models_items_not_root_get_abilities_owner(
         "media_auth": True,
         "download": True,
         "move": True,
+        "unlock": False,
         "partial_update": True,
+        "restrict": False,
         "restore": True,
         "retrieve": True,
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "versions_view": item_type == models.ItemTypeChoices.FILE,
+        "versions_restore": item_type == models.ItemTypeChoices.FILE,
+        "versions_destroy": item_type == models.ItemTypeChoices.FILE,
         "wopi": True,
         "convert": False,
     }
-    with django_assert_num_queries(1):
+    # A folder at the tree root checks for a targeting restriction
+    nb_queries = 2 if item_type == models.ItemTypeChoices.FOLDER else 1
+    with django_assert_num_queries(nb_queries):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
@@ -551,17 +598,23 @@ def test_models_items_not_root_get_abilities_owner(
         "hard_delete": True,
         "favorite": False,
         "invite_owner": False,
+        "leave": False,
         "link_configuration": False,
         "link_select_options": {},
         "media_auth": False,
         "download": False,
         "move": False,
+        "unlock": False,
         "partial_update": False,
+        "restrict": False,
         "restore": True,
         "retrieve": True,
         "tree": False,
         "update": False,
         "upload_ended": False,
+        "versions_view": False,
+        "versions_restore": False,
+        "versions_destroy": False,
         "wopi": False,
         "convert": False,
     }
@@ -607,6 +660,7 @@ def test_models_items_not_root_get_abilities_administrator(
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
+        "leave": False,
         "link_configuration": True,
         "link_select_options": {
             "authenticated": ["reader", "editor"],
@@ -616,16 +670,23 @@ def test_models_items_not_root_get_abilities_administrator(
         "media_auth": True,
         "download": True,
         "move": True,
+        "unlock": False,
         "partial_update": True,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "versions_view": item_type == models.ItemTypeChoices.FILE,
+        "versions_restore": item_type == models.ItemTypeChoices.FILE,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }
-    with django_assert_num_queries(1):
+    # A folder at the tree root checks for a targeting restriction
+    nb_queries = 2 if item_type == models.ItemTypeChoices.FOLDER else 1
+    with django_assert_num_queries(nb_queries):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
@@ -667,7 +728,9 @@ def test_models_items_not_root_get_abilities_editor_user(
         filename="document.pdf" if item_type == models.ItemTypeChoices.FILE else None,
         update_upload_state=upload_state,
     )
-    link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
+    link_select_options = LinkReachChoices.get_select_options(
+        item.ancestors_link_reach, item.ancestors_link_role
+    )
     can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": False,
@@ -681,17 +744,23 @@ def test_models_items_not_root_get_abilities_editor_user(
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
+        "leave": False,
         "link_configuration": False,
         "link_select_options": link_select_options,
         "media_auth": True,
         "download": True,
         "move": False,
+        "unlock": False,
         "partial_update": True,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "versions_view": item_type == models.ItemTypeChoices.FILE,
+        "versions_restore": item_type == models.ItemTypeChoices.FILE,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }
@@ -730,6 +799,7 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
+        "leave": False,
         "link_configuration": False,
         "link_select_options": {
             "authenticated": ["reader", "editor"],
@@ -739,12 +809,17 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         "media_auth": True,
         "download": True,
         "move": False,
+        "unlock": False,
         "partial_update": access_from_link,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
         "update": access_from_link,
         "upload_ended": access_from_link,
+        "versions_view": item.type == models.ItemTypeChoices.FILE,
+        "versions_restore": item.type == models.ItemTypeChoices.FILE and access_from_link,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }
@@ -757,6 +832,32 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         for key, value in item.get_abilities(user).items()
         if key not in ["link_select_options"]
     )
+
+
+def test_models_items_get_abilities_leave_link_trace_only():
+    """
+    An authenticated user with only a link trace (no explicit ItemAccess) can leave.
+    This is the case for users who accessed an item via a public/authenticated link.
+    """
+    user = factories.UserFactory()
+    item = factories.ItemFactory(link_traces=[user])
+    assert item.get_abilities(user)["leave"] is True
+
+
+def test_models_items_get_abilities_leave_owner_on_parent_editor_on_child():
+    """
+    A user who is owner on a parent AND has an explicit editor access on a child
+    cannot leave the child. get_role returns the max role across all ancestors,
+    so the inherited owner role wins and leave is denied.
+    The redundant editor record on the child is not removable via leave.
+    """
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        users=[(user, "owner")],
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    child = factories.ItemFactory(parent=parent, users=[(user, "editor")])
+    assert child.get_abilities(user)["leave"] is False
 
 
 def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
@@ -779,7 +880,9 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         creator=other_user,
         users=[(other_user, "owner")],
     )
-    link_select_options = LinkReachChoices.get_select_options(**child.ancestors_link_definition)
+    link_select_options = LinkReachChoices.get_select_options(
+        child.ancestors_link_reach, child.ancestors_link_role
+    )
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
@@ -793,16 +896,22 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "hard_delete": True,
         "favorite": True,
         "invite_owner": True,
+        "leave": False,
         "link_configuration": True,
         "link_select_options": link_select_options,
         "media_auth": True,
         "move": True,
+        "unlock": False,
         "partial_update": True,
+        "restrict": False,
         "restore": True,
         "retrieve": True,
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "versions_view": True,
+        "versions_restore": True,
+        "versions_destroy": True,
         "wopi": True,
         "convert": False,
     }
@@ -824,16 +933,22 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "hard_delete": True,
         "favorite": False,
         "invite_owner": False,
+        "leave": False,
         "link_configuration": False,
         "link_select_options": {},
         "media_auth": False,
         "move": False,
+        "unlock": False,
         "partial_update": False,
+        "restrict": False,
         "restore": True,
         "retrieve": True,
         "tree": False,
         "update": False,
         "upload_ended": False,
+        "versions_view": False,
+        "versions_restore": False,
+        "versions_destroy": False,
         "wopi": False,
         "convert": False,
     }
@@ -1140,7 +1255,10 @@ def test_models_items_nb_accesses_cache_is_invalidated_on_access_removal(
 @pytest.mark.parametrize("item_type", models.ItemTypeChoices.values)
 def test_models_items_default_upload_state(item_type):
     """The default value for the upload_state field depends on the item type."""
-    item = factories.ItemFactory(type=item_type)
+    if item_type == models.ItemTypeChoices.RESTRICTION:
+        item = factories.RestrictionFactory()
+    else:
+        item = factories.ItemFactory(type=item_type)
     assert item.upload_state == (
         models.ItemUploadStateChoices.PENDING if item.type == models.ItemTypeChoices.FILE else None
     )
@@ -1445,3 +1563,194 @@ def test_models_items_restore_complex_bis():
     assert item.ancestors_deleted_at == item.deleted_at
     assert child1.ancestors_deleted_at == item.deleted_at
     assert child2.ancestors_deleted_at == item.deleted_at
+
+
+def _create_quota_tree():
+    """Create a folder with a subfolder and a file created by two users."""
+    alice, bob = factories.UserFactory.create_batch(2)
+    folder = factories.ItemFactory(creator=alice, type=models.ItemTypeChoices.FOLDER)
+    subfolder = factories.ItemFactory(
+        creator=bob, parent=folder, type=models.ItemTypeChoices.FOLDER
+    )
+    file = factories.ItemFactory(creator=alice, parent=subfolder, type=models.ItemTypeChoices.FILE)
+    return [folder, subfolder, file], [alice, bob]
+
+
+def test_models_items_set_quota_excluded_descendants(django_capture_on_commit_callbacks):
+    """Setting quota_excluded on a folder should apply it to all its descendants."""
+    tree, users = _create_quota_tree()
+    outside = factories.ItemFactory(creator=users[0])
+    for user in users:
+        cache.set(get_storage_used_cache_key(user.id), 1)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        assert tree[0].set_quota_excluded(True) == 3
+
+    for item in tree:
+        item.refresh_from_db()
+        assert item.quota_excluded is True
+    outside.refresh_from_db()
+    assert outside.quota_excluded is False
+    for user in users:
+        assert cache.get(get_storage_used_cache_key(user.id)) is None
+
+
+def test_models_items_set_quota_excluded_unchanged_items(django_capture_on_commit_callbacks):
+    """Items already at the value should not be counted nor invalidate their creator cache."""
+    (folder, subfolder, file), (alice, bob) = _create_quota_tree()
+    models.Item.objects.filter(pk=subfolder.pk).update(quota_excluded=True)
+    cache.set(get_storage_used_cache_key(bob.id), 1)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        assert folder.set_quota_excluded(True) == 2
+
+    file.refresh_from_db()
+    assert file.quota_excluded is True
+    assert cache.get(get_storage_used_cache_key(bob.id)) == 1
+    assert cache.get(get_storage_used_cache_key(alice.id)) is None
+
+
+def test_models_items_set_quota_excluded_file():
+    """Setting quota_excluded on a file should only change this file."""
+    (folder, _subfolder, file), _users = _create_quota_tree()
+
+    assert file.set_quota_excluded(True) == 1
+
+    file.refresh_from_db()
+    folder.refresh_from_db()
+    assert file.quota_excluded is True
+    assert folder.quota_excluded is False
+
+
+@pytest.mark.parametrize("is_authenticated", [True, False])
+@pytest.mark.parametrize("reach", ["public", "authenticated"])
+def test_models_items_get_abilities_link_expired(is_authenticated, reach):
+    """An expired link should not grant any ability to link holders."""
+    item = factories.ItemFactory(
+        link_reach=reach,
+        link_role="editor",
+        link_expires_at=timezone.now() - timedelta(minutes=1),
+    )
+    user = factories.UserFactory() if is_authenticated else AnonymousUser()
+
+    assert item.computed_link_reach == LinkReachChoices.RESTRICTED
+    assert item.computed_link_role is None
+    abilities = item.get_abilities(user)
+    assert abilities["retrieve"] is False
+    assert abilities["update"] is False
+
+
+def test_models_items_get_abilities_link_not_expired():
+    """A link with a future expiration date should grant abilities as usual."""
+    item = factories.ItemFactory(
+        link_reach="public",
+        link_role="reader",
+        link_expires_at=timezone.now() + timedelta(minutes=1),
+    )
+
+    assert item.computed_link_reach == LinkReachChoices.PUBLIC
+    assert item.get_abilities(AnonymousUser())["retrieve"] is True
+
+
+def test_models_items_link_expired_ancestor_blocks_descendants():
+    """An expired link on an ancestor should block access to its descendants."""
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach="public",
+        link_expires_at=timezone.now() - timedelta(minutes=1),
+    )
+    child = factories.ItemFactory(parent=parent, link_reach=None)
+
+    assert child.ancestors_link_reach == LinkReachChoices.RESTRICTED
+    assert child.computed_link_reach == LinkReachChoices.RESTRICTED
+    assert child.get_abilities(AnonymousUser())["retrieve"] is False
+
+
+def test_models_items_link_password_set_and_check():
+    """The link password should be stored hashed and checked against the raw value."""
+    item = factories.ItemFactory()
+
+    item.set_link_password("s3cret")
+    assert item.link_password != "s3cret"
+    assert item.check_link_password("s3cret") is True
+    assert item.check_link_password("wrong") is False
+
+    item.set_link_password("")
+    assert item.link_password is None
+    assert item.check_link_password("") is False
+
+
+def test_models_items_link_password_item_inherited_from_ancestor():
+    """The ancestor providing the link should be the one whose password applies."""
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, link_reach="public")
+    parent.set_link_password("s3cret")
+    parent.save()
+    child = factories.ItemFactory(parent=parent, link_reach=None)
+
+    assert child.computed_link_definition["link_password_item"] == parent.id
+
+
+def test_models_items_link_password_item_closest_link_wins():
+    """A descendant defining its own equivalent link should use its own password setting."""
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, link_reach="public")
+    parent.set_link_password("s3cret")
+    parent.save()
+    child = factories.ItemFactory(parent=parent, link_reach="public")
+
+    assert child.computed_link_definition["link_password_item"] is None
+
+
+@pytest.mark.parametrize("is_authenticated", [True, False])
+def test_models_items_get_abilities_link_password_locked(is_authenticated):
+    """A password protected link should not grant any ability until unlocked."""
+    item = factories.ItemFactory(link_reach="public", link_role="editor")
+    item.set_link_password("s3cret")
+    user = factories.UserFactory() if is_authenticated else AnonymousUser()
+
+    abilities = item.get_abilities(user)
+    assert abilities["retrieve"] is False
+    assert abilities["update"] is False
+    assert abilities["unlock"] is True
+
+    user.unlocked_link_items = {item.link_unlock_key}
+    abilities = item.get_abilities(user)
+    assert abilities["retrieve"] is True
+    assert abilities["update"] is True
+    assert abilities["unlock"] is False
+
+
+def test_models_items_get_abilities_link_password_explicit_access():
+    """Users with an explicit access should not be locked out by the link password."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(link_reach="public", link_role="reader", users=[(user, "editor")])
+    item.set_link_password("s3cret")
+
+    abilities = item.get_abilities(user)
+    assert abilities["update"] is True
+    assert abilities["unlock"] is False
+
+
+def test_models_items_get_abilities_link_password_lower_explicit_access():
+    """Unlocking the link should be offered when it grants more than the explicit access."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(link_reach="public", link_role="editor", users=[(user, "reader")])
+    item.set_link_password("s3cret")
+
+    abilities = item.get_abilities(user)
+    assert abilities["retrieve"] is True
+    assert abilities["update"] is False
+    assert abilities["unlock"] is True
+
+
+def test_models_items_get_abilities_link_password_inherited_from_ancestor():
+    """The password of the ancestor providing the link should protect its descendants."""
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, link_reach="public")
+    parent.set_link_password("s3cret")
+    parent.save()
+    child = factories.ItemFactory(parent=parent, link_reach=None)
+
+    assert child.get_abilities(AnonymousUser())["retrieve"] is False
+
+    user = AnonymousUser()
+    user.unlocked_link_items = {parent.link_unlock_key}
+    assert child.get_abilities(user)["retrieve"] is True

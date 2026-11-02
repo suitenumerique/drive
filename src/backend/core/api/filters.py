@@ -2,7 +2,7 @@
 
 from itertools import chain
 
-from django.db.models import Exists, OuterRef, Q, TextChoices
+from django.db.models import Exists, F, OuterRef, Q, TextChoices
 from django.utils.translation import gettext_lazy as _
 
 import django_filters
@@ -22,6 +22,7 @@ class ItemFilter(django_filters.FilterSet):
     title = django_filters.CharFilter(
         field_name="title", lookup_expr="unaccent__icontains", label=_("Title")
     )
+    type = django_filters.ChoiceFilter(method="filter_type", choices=models.ItemTypeChoices.choices)
     category = django_filters.ChoiceFilter(
         method="filter_category", label=_("File type"), choices=enums.FILE_CATEGORY_CHOICES
     )
@@ -35,6 +36,15 @@ class ItemFilter(django_filters.FilterSet):
     class Meta:
         model = models.Item
         fields = ["title", "type", "category", "contact", "updated_at"]
+
+    @staticmethod
+    def filter_type(queryset, _name, value):
+        """Keep restricted folder entries in folder-only navigation."""
+        if value == models.ItemTypeChoices.FOLDER:
+            return queryset.filter(
+                type__in=[models.ItemTypeChoices.FOLDER, models.ItemTypeChoices.RESTRICTION]
+            )
+        return queryset.filter(type=value)
 
     @staticmethod
     def _extensions_q(extensions):
@@ -58,7 +68,7 @@ class ItemFilter(django_filters.FilterSet):
             - /api/v1.0/items/?category=other
                 → Folders plus files whose extension matches no known category
         """
-        is_folder = Q(type=models.ItemTypeChoices.FOLDER)
+        is_folder = Q(type__in=[models.ItemTypeChoices.FOLDER, models.ItemTypeChoices.RESTRICTION])
         is_file = Q(type=models.ItemTypeChoices.FILE)
 
         if value == "other":
@@ -84,7 +94,7 @@ class ItemFilter(django_filters.FilterSet):
                 → Filters items shared with or by the given user
         """
         contact_access = models.ItemAccess.objects.filter(
-            user_id=value, item__path__ancestors=OuterRef("path")
+            models.IdInPath(F("item_id"), OuterRef("path")), user_id=value
         )
         return queryset.filter(Exists(contact_access) | Q(creator_id=value))
 

@@ -41,12 +41,12 @@ AWS_S3_DOMAIN_REPLACE=http://localhost:4444/upstream
 AWS_S3_ENDPOINT_URL=http://ds-proxy:4444/upstream
 ```
 
-You also have to change the nginx config present in `docker/files/development/etc/nginx/conf.d/default.conf`. In the file comment the minio config and uncomment the DS Proxy config. Present twice in `location /media/` and `location /media/preview` blocks:
+You also have to change the nginx config present in `docker/files/development/etc/nginx/conf.d/default.conf`. In the file comment the RustFS config and uncomment the DS Proxy config. Present twice in `location /media/` and `location /media/preview` blocks:
 
 ```
-# Get resource from Minio
-# proxy_pass http://minio:9000/drive-media-storage/;
-# proxy_set_header Host minio:9000;
+# Get resource from RustFS
+# proxy_pass http://rustfs:9000/drive-media-storage/;
+# proxy_set_header Host rustfs:9000;
 # To use with ds_proxy
 proxy_pass http://ds-proxy:4444/upstream/drive-media-storage/;
 proxy_set_header Host ds-proxy:4444;

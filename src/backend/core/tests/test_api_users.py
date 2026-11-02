@@ -7,6 +7,7 @@ from rest_framework.test import APIClient
 
 from core import factories, models
 from core.api import serializers
+from core.authentication.backends import OIDCAuthenticationBackend
 
 pytestmark = pytest.mark.django_db
 
@@ -243,6 +244,20 @@ def test_api_users_retrieve_me_anonymous():
         ],
         "type": "client_error",
     }
+
+
+def test_api_users_retrieve_me_access_token(monkeypatch):
+    """A valid OIDC access token should not authenticate requests on the main API."""
+    user = factories.UserFactory()
+
+    def get_userinfo_mocked(*args):
+        return {"sub": user.sub, "email": user.email}
+
+    monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
+
+    client = APIClient()
+    response = client.get("/api/v1.0/users/me/", HTTP_AUTHORIZATION="Bearer valid-token")
+    assert response.status_code == 401
 
 
 def test_api_users_retrieve_me_authenticated():

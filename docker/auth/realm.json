@@ -65,6 +65,62 @@
         "realmRoles": ["user"]
       },
       {
+        "username": "paige",
+        "email": "paige.turner@library.book",
+        "firstName": "Paige",
+        "lastName": "Turner",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "pass"
+          }
+        ],
+        "realmRoles": ["user"]
+      },
+      {
+        "username": "miles",
+        "email": "miles.ahead@roadmap.fwd",
+        "firstName": "Miles",
+        "lastName": "Ahead",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "pass"
+          }
+        ],
+        "realmRoles": ["user"]
+      },
+      {
+        "username": "archie",
+        "email": "archie.vist@vaulted.docs",
+        "firstName": "Archie",
+        "lastName": "Vist",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "pass"
+          }
+        ],
+        "realmRoles": ["user"]
+      },
+      {
+        "username": "mark",
+        "email": "mark.down@plain.text",
+        "firstName": "Mark",
+        "lastName": "Down",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "pass"
+          }
+        ],
+        "realmRoles": ["user"]
+      },
+      {
         "username": "user-e2e-chromium",
         "email": "user@chromium.test",
         "firstName": "E2E",

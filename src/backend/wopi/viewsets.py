@@ -19,9 +19,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from sentry_sdk import capture_exception
 
-from core.api.utils import get_item_file_head_object
+from core.api.utils import get_item_file_head_object, is_extension_allowed
 from core.models import Item
 from core.services.item_versions import snapshot_version
+from core.utils.analytics import posthog_capture
 from wopi.authentication import WopiAccessTokenAuthentication, get_access_token
 from wopi.exceptions import WopiRequestSignatureError
 from wopi.permissions import AccessTokenPermission
@@ -72,9 +73,27 @@ class WopiViewSet(viewsets.ViewSet):
         """Get the file id from the URL path."""
         return uuid.UUID(self.kwargs.get("pk"))
 
+    def finalize_response(self, request, response, *args, **kwargs):
+        """Log rejected WOPI requests, as errors for a rejected save."""
+        if response.status_code >= 400:
+            override = request.META.get(HTTP_X_WOPI_OVERRIDE)
+            log_at_level = logger.error if override == "PUT" else logger.warning
+            log_at_level(
+                "WOPI request rejected: method=%s override=%s item=%s user=%s "
+                "status=%s lock_held=%s detail=%s",
+                request.method,
+                override,
+                kwargs.get("pk"),
+                request.user.id,
+                response.status_code,
+                bool(response.get(X_WOPI_LOCK)),
+                getattr(response, "data", None),
+            )
+        return super().finalize_response(request, response, *args, **kwargs)
+
     def _verify_request_signature(self, request):
         """Verify the request signature."""
-        proof_keys = get_wopi_client_proof_keys(request.auth.item, request.user)
+        proof_keys = get_wopi_client_proof_keys(request.auth.item)
 
         if not proof_keys:
             # The proof key is not provided by the wopi client,
@@ -203,10 +222,14 @@ class WopiViewSet(viewsets.ViewSet):
 
         return StreamingHttpResponse(
             streaming_content=file["Body"].iter_chunks(),
-            content_type=item.mimetype,
+            # A null mimetype would fall back to Django's text/html default.
+            content_type=item.mimetype or "application/octet-stream",
             headers={
                 "X-WOPI-ItemVersion": get_wopi_item_version(head_object),
                 "Content-Length": head_object["ContentLength"],
+                # Stored bytes must never render on the application origin.
+                "Content-Disposition": "attachment",
+                "Content-Security-Policy": "default-src 'none'; sandbox",
             },
             status=200,
         )
@@ -251,6 +274,14 @@ class WopiViewSet(viewsets.ViewSet):
         item.save(update_fields=["size", "updated_at"])
 
         malware_detection.analyse_file(item.file_key, item_id=item.id)
+
+        wopi_client_config = get_wopi_client_config(item, request.user)
+        posthog_capture(
+            "item_edited",
+            request.user if request.user.is_authenticated else None,
+            {"wopi_client": wopi_client_config["client"] if wopi_client_config else None},
+            item=item,
+        )
 
         head_response = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)
         return Response(
@@ -411,9 +442,7 @@ class WopiViewSet(viewsets.ViewSet):
             invalid_filename_error = None
             if any(char in new_filename for char in ILLEGAL_FILENAME_CHARS):
                 invalid_filename_error = "Invalid filename"
-            elif settings.RESTRICT_UPLOAD_FILE_TYPE and target_extension.lower() not in {
-                extension.lower() for extension in settings.FILE_EXTENSIONS_ALLOWED
-            }:
+            elif not is_extension_allowed(new_filename_with_extension):
                 logger.info(
                     "rename_file: file extension not allowed %r for filename %r",
                     target_extension,
@@ -482,8 +511,7 @@ class WopiViewSet(viewsets.ViewSet):
                 delete_object_args[S3_VERSION_ID] = version_id
 
             s3_client.delete_object(**delete_object_args)
-        # pylint: disable=broad-exception-caught
-        except Exception as e:  # noqa
+        except Exception as e:  # noqa  # pylint: disable=broad-exception-caught
             capture_exception(e)
             logger.warning("Error deleting old file for item %s in the storage: %s", item.id, e)
 

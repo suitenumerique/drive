@@ -237,7 +237,15 @@ const pathNicefy = (path: string) => {
   return path.replace(/^[./]+/, "");
 };
 
-export const useUploadZone = ({ item }: { item: Item }) => {
+export const useUploadZone = ({
+  item,
+  onSingleFileUploaded,
+}: {
+  item: Item;
+  // Called when a drop containing a single file completes, with the uploaded
+  // item and the folder it was uploaded into.
+  onSingleFileUploaded?: (item: Item, parentId: string | undefined) => void;
+}) => {
   const { t } = useTranslation();
   const { config } = useConfig();
 
@@ -261,6 +269,13 @@ export const useUploadZone = ({ item }: { item: Item }) => {
   const activeUploadsRef = useRef<Map<string, ActiveUpload>>(new Map());
   // Whether the upload processing loop is currently running
   const isProcessingRef = useRef(false);
+  // Path of the file of the last single-file drop: onSingleFileUploaded is
+  // called once this file is uploaded.
+  const singleFileDropPathRef = useRef<string | null>(null);
+  // The upload loop outlives renders: always call the latest callback so the
+  // consumer sees its current state (e.g. the displayed folder).
+  const onSingleFileUploadedRef = useRef(onSingleFileUploaded);
+  onSingleFileUploadedRef.current = onSingleFileUploaded;
 
   const { filesToUpload, handleHierarchy } = useUpload({ item: item! });
 
@@ -528,6 +543,14 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         }));
       }
 
+      const isSingleFileDrop =
+        realFiles.length === 1 &&
+        validFiles.length === 1 &&
+        upload.folder.children.length === 0;
+      if (isSingleFileDrop) {
+        singleFileDropPathRef.current = pathNicefy(validFiles[0].path!);
+      }
+
       // Enqueue valid files in the single source of truth. The materialized
       // path of the drop target is stored once per file so we can later
       // resolve "was an ancestor of this upload deleted?" via isIdInItemTree.
@@ -564,6 +587,11 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
         const [filePath, upload] = nextEntry;
         const file = upload.file;
+        const isSingleFileDropUpload =
+          singleFileDropPathRef.current === filePath;
+        if (isSingleFileDropUpload) {
+          singleFileDropPathRef.current = null;
+        }
 
         const { promise, abort } = driver.createFile({
           filename: file.name,
@@ -595,7 +623,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         upload.abort = abort;
 
         try {
-          await promise;
+          const createdItem = await promise;
           // If the upload was cancelled mid-flight, the entry was removed
           // from the map: skip the success state update.
           if (!activeUploadsRef.current.has(filePath)) {
@@ -604,6 +632,9 @@ export const useUploadZone = ({ item }: { item: Item }) => {
           activeUploadsRef.current.delete(filePath);
           refresh(file.parentId);
           hasUploadedFiles = true;
+          if (isSingleFileDropUpload) {
+            onSingleFileUploadedRef.current?.(createdItem, file.parentId);
+          }
           setUploadingState((prev) => ({
             ...prev,
             filesMeta: {

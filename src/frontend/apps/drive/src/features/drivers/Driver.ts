@@ -18,6 +18,7 @@ import {
   Invitation,
   Item,
   ItemBreadcrumb,
+  ItemDeletionInfo,
   ItemType,
   ItemVersion,
   User,
@@ -118,11 +119,20 @@ export type Entitlements = {
 
 export abstract class Driver {
   abstract getConfig(): Promise<ApiConfig>;
-  abstract getItems(filters?: ItemFilters): Promise<PaginatedChildrenResult>;
+  abstract getItems(
+    filters?: ItemFilters,
+  ): Promise<PaginatedChildrenResult>;
   abstract getTrashItems(filters?: ItemFilters): Promise<Item[]>;
-  abstract getItem(id: string): Promise<Item>;
+  abstract getItem(
+    id: string,
+    options?: { redirectOn40x?: boolean },
+  ): Promise<Item>;
   abstract getItemBreadcrumb(id: string): Promise<ItemBreadcrumb[]>;
   abstract updateItem(item: Partial<Item>): Promise<Item>;
+  abstract updateItemRestriction(payload: {
+    id: string;
+    is_restricted: boolean;
+  }): Promise<Item>;
   abstract restoreItems(ids: string[]): Promise<void>;
   abstract moveItem(id: string, parentId?: string): Promise<void>;
   abstract moveItems(ids: string[], parentId?: string): Promise<void>;
@@ -182,6 +192,11 @@ export abstract class Driver {
     title: string;
   }): Promise<Item>;
   abstract duplicateItem(id: string): Promise<Item>;
+  abstract getItemsDeletionInfo(
+    ids: string[],
+  ): Promise<Record<string, ItemDeletionInfo>>;
+
+  abstract leaveItem(id: string): Promise<void>;
   abstract deleteItems(ids: string[]): Promise<void>;
   abstract hardDeleteItems(ids: string[]): Promise<void>;
   abstract getWopiInfo(itemId: string): Promise<WopiInfo>;

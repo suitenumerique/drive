@@ -8,6 +8,9 @@ from django.core.exceptions import SuspiciousOperation
 from lasuite.oidc_login.backends import (
     OIDCAuthenticationBackend as LaSuiteOIDCAuthenticationBackend,
 )
+from rest_framework.authentication import (
+    SessionAuthentication as BaseSessionAuthentication,
+)
 
 from core.authentication.exceptions import UserCannotAccessApp
 from core.entitlements import get_entitlements_backend
@@ -58,3 +61,11 @@ class OIDCAuthenticationBackend(LaSuiteOIDCAuthenticationBackend):
         if not result["result"]:
             raise UserCannotAccessApp(result.get("message", "User does not have access to the app"))
         return user
+
+
+class SessionAuthentication(BaseSessionAuthentication):
+    """Session authentication answering 401 instead of 403 to anonymous requests."""
+
+    def authenticate_header(self, request):
+        """Return a challenge so DRF responds with 401 rather than 403."""
+        return "Session"

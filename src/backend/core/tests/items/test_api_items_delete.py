@@ -2,6 +2,8 @@
 Tests for items API endpoint in drive's core app: delete
 """
 
+from unittest import mock
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -266,3 +268,21 @@ def test_api_items_delete_suspicious_item_should_work_for_creator():
     # Make sure it is only a soft delete
     suspicious_item.refresh_from_db()
     assert suspicious_item.deleted_at is not None
+
+
+def test_api_items_delete_posthog_event(posthog_capture_mock):
+    """Deleting an item should send an 'item_deleted' event."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(users=[(user, "owner")])
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.delete(f"/api/v1.0/items/{item.id}/")
+
+    assert response.status_code == 204
+    posthog_capture_mock.assert_called_once_with(
+        "item_deleted", distinct_id=user.email, properties=mock.ANY
+    )
+    properties = posthog_capture_mock.call_args.kwargs["properties"]
+    assert properties.items() >= {"item_id": item.id}.items()

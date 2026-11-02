@@ -2,8 +2,10 @@
 # pylint: disable=too-many-lines
 
 import uuid
+from datetime import timedelta
 
 from django.contrib.auth.models import AnonymousUser
+from django.utils import timezone
 
 import pytest
 from rest_framework.test import APIClient
@@ -158,8 +160,12 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "depth": 3,
                 "id": str(level2_1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": level2_1.link_reach,
                 "link_role": level2_1.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "nb_accesses": 0,
                 "numchild": 0,
                 "numchild_folder": 0,
@@ -180,6 +186,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": level2_2.get_abilities(AnonymousUser()),
@@ -197,8 +204,12 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "depth": 3,
                 "id": str(level2_2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": level2_2.link_reach,
                 "link_role": level2_2.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "nb_accesses": 0,
                 "numchild": 0,
                 "numchild_folder": 0,
@@ -219,6 +230,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
         "created_at": level1_2.created_at.isoformat().replace("+00:00", "Z"),
@@ -230,8 +242,12 @@ def test_items_api_anonymous_to_a_public_tree_structure():
         "depth": 2,
         "id": str(level1_2.id),
         "is_favorite": False,
+        "is_restricted": False,
+        "target": None,
         "link_reach": level1_2.link_reach,
         "link_role": level1_2.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 0,
         "numchild": 2,
         "numchild_folder": 2,
@@ -252,6 +268,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -389,8 +406,12 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "depth": 3,
                         "id": str(level2_1.item.id),
                         "is_favorite": False,
+                        "is_restricted": False,
+                        "target": None,
                         "link_reach": level2_1.item.link_reach,
                         "link_role": level2_1.item.link_role,
+                        "link_expires_at": None,
+                        "has_link_password": False,
                         "nb_accesses": 3,
                         "numchild": 0,
                         "numchild_folder": 0,
@@ -411,6 +432,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "deleted_at": None,
                         "hard_delete_at": None,
                         "is_wopi_supported": False,
+                        "quota_excluded": False,
                     },
                     {
                         "abilities": level2_2.item.get_abilities(user),
@@ -437,8 +459,12 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                                 "depth": 4,
                                 "id": str(level3_1.item.id),
                                 "is_favorite": False,
+                                "is_restricted": False,
+                                "target": None,
                                 "link_reach": level3_1.item.link_reach,
                                 "link_role": level3_1.item.link_role,
+                                "link_expires_at": None,
+                                "has_link_password": False,
                                 "nb_accesses": 4,
                                 "numchild": 0,
                                 "numchild_folder": 0,
@@ -464,6 +490,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                                 "deleted_at": None,
                                 "hard_delete_at": None,
                                 "is_wopi_supported": False,
+                                "quota_excluded": False,
                             },
                         ],
                         "created_at": level2_2.item.created_at.isoformat().replace("+00:00", "Z"),
@@ -475,8 +502,12 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "depth": 3,
                         "id": str(level2_2.item.id),
                         "is_favorite": False,
+                        "is_restricted": False,
+                        "target": None,
                         "link_reach": level2_2.item.link_reach,
                         "link_role": level2_2.item.link_role,
+                        "link_expires_at": None,
+                        "has_link_password": False,
                         "nb_accesses": 3,
                         "numchild": 5,
                         "numchild_folder": 1,
@@ -497,6 +528,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "deleted_at": None,
                         "hard_delete_at": None,
                         "is_wopi_supported": False,
+                        "quota_excluded": False,
                     },
                 ],
                 "created_at": level1_1.item.created_at.isoformat().replace("+00:00", "Z"),
@@ -508,8 +540,12 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "depth": 2,
                 "id": str(level1_1.item.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": level1_1.item.link_reach,
                 "link_role": level1_1.item.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "nb_accesses": 2,
                 "numchild": 5,
                 "numchild_folder": 2,
@@ -530,6 +566,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": level1_2.item.get_abilities(user),
@@ -547,8 +584,12 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "depth": 2,
                 "id": str(level1_2.item.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": level1_2.item.link_reach,
                 "link_role": level1_2.item.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "nb_accesses": 2,
                 "numchild": 2,
                 "numchild_folder": 2,
@@ -569,6 +610,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": level1_3.item.get_abilities(user),
@@ -586,8 +628,12 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "depth": 2,
                 "id": str(level1_3.item.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": level1_3.item.link_reach,
                 "link_role": level1_3.item.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "nb_accesses": 2,
                 "numchild": 1,
                 "numchild_folder": 1,
@@ -608,6 +654,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
         "created_at": root.item.created_at.isoformat().replace("+00:00", "Z"),
@@ -619,8 +666,12 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
         "depth": 1,
         "id": str(root.item.id),
         "is_favorite": False,
+        "is_restricted": False,
+        "target": None,
         "link_reach": root.item.link_reach,
         "link_role": root.item.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 1,
         "numchild": 5,
         "numchild_folder": 3,
@@ -641,6 +692,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -735,8 +787,12 @@ def test_api_items_tree_authenticated_with_access_authenticated():
         "depth": 2,
         "id": str(level1_1.id),
         "is_favorite": False,
+        "is_restricted": False,
+        "target": None,
         "link_reach": "authenticated",
         "link_role": level1_1.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 0,
         "numchild": 2,
         "numchild_folder": 2,
@@ -752,6 +808,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
         "user_role": None,
         "main_workspace": False,
         "is_wopi_supported": False,
+        "quota_excluded": False,
         "abilities": level1_1.get_abilities(user),
         "ancestors_link_reach": None,
         "ancestors_link_role": None,
@@ -779,8 +836,12 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "depth": 3,
                 "id": str(level2_1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": "authenticated",
                 "link_role": level2_1.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "nb_accesses": 0,
                 "numchild": 0,
                 "numchild_folder": 0,
@@ -801,6 +862,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": level2_2.get_abilities(user),
@@ -818,8 +880,12 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "depth": 3,
                 "id": str(level2_2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": "authenticated",
                 "link_role": level2_2.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "nb_accesses": 0,
                 "numchild": 4,
                 "numchild_folder": 0,
@@ -840,6 +906,131 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
+
+
+def test_items_api_tree_direct_access_hides_inheriting_ancestors():
+    """Ancestors inheriting a restricted link reach stay hidden above a direct access."""
+    root = factories.ItemFactory(type="folder")
+    middle = factories.ItemFactory(type="folder", parent=root, link_reach=None)
+    factories.ItemFactory(type="folder", parent=root, link_reach=None)
+    item = factories.ItemFactory(type="folder", parent=middle, link_reach=None)
+    factories.ItemFactory(type="folder", parent=middle, link_reach=None)
+    reader = factories.UserFactory()
+    factories.UserItemAccessFactory(item=item, user=reader, role="reader")
+    client = APIClient()
+    client.force_login(reader)
+    response = client.get(f"/api/v1.0/items/{item.pk}/tree/")
+    assert response.status_code == 200
+    assert response.json()["id"] == str(item.pk)
+    assert response.json()["children"] == []
+
+
+def test_items_api_tree_inherited_public_link():
+    """Folders inheriting a public link reach remain visible below the public ancestor."""
+    root = factories.ItemFactory(type="folder", link_reach=models.LinkReachChoices.PUBLIC)
+    middle = factories.ItemFactory(type="folder", parent=root, link_reach=None)
+    item = factories.ItemFactory(type="folder", parent=middle, link_reach=None)
+    response = APIClient().get(f"/api/v1.0/items/{item.pk}/tree/")
+    assert response.status_code == 200
+    tree = response.json()
+    assert tree["id"] == str(root.pk)
+    assert [child["id"] for child in tree["children"]] == [str(middle.pk)]
+    assert [child["id"] for child in tree["children"][0]["children"]] == [str(item.pk)]
+
+
+@pytest.mark.parametrize("target_is_child", [False, True])
+def test_api_items_tree_link_password_locked(target_is_child):
+    """An anonymous visitor must unlock the ancestor before browsing its tree."""
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, link_reach="public")
+    root.set_link_password("s3cret")
+    root.save()
+    child = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER, link_reach=None)
+    target = child if target_is_child else root
+    client = APIClient()
+
+    assert client.get(f"/api/v1.0/items/{target.id}/").status_code == 401
+    assert client.get(f"/api/v1.0/items/{target.id}/tree/").status_code == 401
+
+    response = client.post(
+        f"/api/v1.0/items/{root.id}/unlock/", {"password": "s3cret"}, format="json"
+    )
+    assert response.status_code == 200
+    response = client.get(f"/api/v1.0/items/{target.id}/tree/")
+    assert response.status_code == 200
+    assert response.json()["id"] == str(root.id)
+
+
+def test_api_items_tree_link_password_unlocked_authenticated():
+    """An authenticated user who unlocked the ancestor should browse its tree."""
+    user = factories.UserFactory()
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, link_reach="public")
+    root.set_link_password("s3cret")
+    root.save()
+    child = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER, link_reach=None)
+    client = APIClient()
+    client.force_login(user)
+
+    assert client.get(f"/api/v1.0/items/{child.id}/tree/").status_code == 403
+
+    response = client.post(
+        f"/api/v1.0/items/{root.id}/unlock/", {"password": "s3cret"}, format="json"
+    )
+    assert response.status_code == 200
+    response = client.get(f"/api/v1.0/items/{child.id}/tree/")
+    assert response.status_code == 200
+    assert response.json()["id"] == str(root.id)
+
+
+def test_api_items_tree_link_password_changed():
+    """An unlock made with a former password should not open the tree anymore."""
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, link_reach="public")
+    root.set_link_password("s3cret")
+    root.save()
+    client = APIClient()
+    response = client.post(
+        f"/api/v1.0/items/{root.id}/unlock/", {"password": "s3cret"}, format="json"
+    )
+    assert response.status_code == 200
+    assert client.get(f"/api/v1.0/items/{root.id}/tree/").status_code == 200
+
+    root.set_link_password("changed")
+    root.save()
+
+    assert client.get(f"/api/v1.0/items/{root.id}/tree/").status_code == 401
+
+
+def test_api_items_tree_link_expired_ancestor():
+    """An ancestor whose link has expired should not be the root of the returned tree."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(
+        title="root",
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.PUBLIC,
+        link_expires_at=timezone.now() - timedelta(minutes=1),
+    )
+    child = factories.ItemFactory(
+        title="child",
+        parent=root,
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.PUBLIC,
+    )
+    grandchild = factories.ItemFactory(
+        title="grandchild",
+        parent=child,
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=None,
+    )
+
+    response = client.get(f"/api/v1.0/items/{grandchild.id}/tree/")
+    assert response.status_code == 200
+    tree = response.json()
+    assert tree["title"] == "child"
+    assert tree["abilities"]["retrieve"] is True
+    assert [item["title"] for item in tree["children"]] == ["grandchild"]

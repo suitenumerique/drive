@@ -1,0 +1,18 @@
+{% load i18n %}
+<p>{% for top in choices %}{% if not forloop.first %} · {% endif %}<a href="?top={{ top }}">{{ top }}</a>{% endfor %}</p>
+<table>
+  <tr>
+    <th>{% translate "title" %}</th>
+    <th>{% translate "size" %}</th>
+    <th>{% translate "created on" %}</th>
+    <th></th>
+  </tr>
+  {% for file in files %}
+  <tr>
+    <td><a href="{% url 'admin:core_item_change' file.item.pk %}">{{ file.item.title }}</a></td>
+    <td>{{ file.size }}</td>
+    <td>{{ file.item.created_at|date:"Y-m-d" }}</td>
+    <td>{{ file.flags }}</td>
+  </tr>
+  {% endfor %}
+</table>

@@ -17,7 +17,7 @@ import {
   TreeViewDataType,
   TreeViewNodeTypeEnum,
   useTreeContext,
-} from "@gouvfr-lasuite/ui-kit";
+} from "@gouvfr-lasuite/ui-components";
 import { ExplorerDndProvider } from "./ExplorerDndProvider";
 import { useFirstLevelItems } from "../hooks/useQueries";
 import { useTranslation } from "react-i18next";
@@ -179,6 +179,13 @@ export const GlobalExplorerProvider = ({
 
   const { dropZone, cancelUploadsForDeletedItems } = useUploadZone({
     item: item!,
+    onSingleFileUploaded: (uploadedItem, parentId) => {
+      // Only select it if the user is still looking at the folder it was
+      // uploaded into, otherwise the selection bar would show a hidden item.
+      if (parentId === item?.id) {
+        selectionStore.setSelectedItems([uploadedItem]);
+      }
+    },
   });
 
   /**

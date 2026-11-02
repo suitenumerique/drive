@@ -161,7 +161,7 @@ def test_api_items_recents_mixing_explicit_and_inherited_accesses(
     client = APIClient()
     client.force_login(user)
 
-    with django_assert_num_queries(7):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/recents/")
     assert response.status_code == 200
     content = response.json()
@@ -228,7 +228,7 @@ def test_api_items_recents_filtering(django_assert_num_queries):
     client = APIClient()
     client.force_login(user)
 
-    with django_assert_num_queries(7):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/recents/?type=folder")
 
     assert response.status_code == 200
@@ -237,7 +237,7 @@ def test_api_items_recents_filtering(django_assert_num_queries):
     assert content["results"][0]["id"] == str(parent.id)
     assert content["results"][1]["id"] == str(other_parent.id)
 
-    with django_assert_num_queries(7):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/recents/?type=file")
 
     assert response.status_code == 200
@@ -348,7 +348,7 @@ def test_api_item_recents_ordering_by_fields(ordering, django_assert_num_queries
     is_descending = ordering.startswith("-")
     querystring = f"?ordering={ordering}"
 
-    with django_assert_num_queries(7):
+    with django_assert_num_queries(6):
         response = client.get(f"/api/v1.0/items/recents/{querystring:s}")
     assert response.status_code == 200
     results = response.json()["results"]
@@ -433,7 +433,7 @@ def test_api_item_recents_ordering_by_size(ordering, django_assert_num_queries):
     is_descending = ordering.startswith("-")
     querystring = f"?ordering={ordering}"
 
-    with django_assert_num_queries(7):
+    with django_assert_num_queries(6):
         response = client.get(f"/api/v1.0/items/recents/{querystring:s}")
     assert response.status_code == 200
     results = response.json()["results"]
@@ -518,7 +518,7 @@ def test_api_item_recents_ordering_by_creator_full_name(ordering, django_assert_
     is_descending = ordering.startswith("-")
     querystring = f"?ordering={ordering}"
 
-    with django_assert_num_queries(7):
+    with django_assert_num_queries(6):
         response = client.get(f"/api/v1.0/items/recents/{querystring:s}")
     assert response.status_code == 200
     results = response.json()["results"]

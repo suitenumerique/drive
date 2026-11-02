@@ -4,6 +4,7 @@ Tests for the recursive folder export endpoint.
 
 import io
 import zipfile
+from unittest import mock
 
 from django.core.files.storage import default_storage
 
@@ -260,6 +261,32 @@ def test_api_items_export_file_missing_from_storage():
         assert archive.read("gone.txt") == b""
 
 
+def test_api_items_export_skips_restrictions():
+    """Restrictions leave no entry in the exported archive."""
+    user = factories.UserFactory()
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        upload_bytes=b"kept",
+        upload_bytes__filename="kept.txt",
+    )
+    restricted = factories.ItemFactory(parent=folder, type=models.ItemTypeChoices.FOLDER)
+    restricted.restrict(user)
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.get(f"/api/v1.0/items/{folder.pk}/export/")
+
+    assert response.status_code == 200
+    assert _zip_names(response) == ["kept.txt"]
+
+
 def test_api_items_export_empty_folder():
     """Exporting an empty folder returns an empty zip archive."""
     user = factories.UserFactory()
@@ -314,3 +341,35 @@ def test_api_items_export_filename_with_unicode():
     assert response.status_code == 200
     disposition = response["Content-Disposition"]
     assert disposition == "attachment; filename*=UTF-8''%C3%A9t%C3%A9%202026.zip"
+
+
+def test_api_items_export_posthog_event(posthog_capture_mock):
+    """Exporting a folder should send an 'item_exported' event."""
+    user = factories.UserFactory()
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.get(f"/api/v1.0/items/{folder.pk}/export/")
+
+    assert response.status_code == 200
+    posthog_capture_mock.assert_called_once_with(
+        "item_exported", distinct_id=user.email, properties=mock.ANY
+    )
+    properties = posthog_capture_mock.call_args.kwargs["properties"]
+    assert properties.items() >= {"item_id": folder.id}.items()
+
+
+def test_api_items_export_posthog_event_anonymous(posthog_capture_mock):
+    """Exporting a public folder anonymously should send an event without distinct id."""
+    folder = factories.ItemFactory(link_reach="public", type=models.ItemTypeChoices.FOLDER)
+
+    response = APIClient().get(f"/api/v1.0/items/{folder.pk}/export/")
+
+    assert response.status_code == 200
+    posthog_capture_mock.assert_called_once()
+    assert posthog_capture_mock.call_args.kwargs["distinct_id"] is None

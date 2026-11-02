@@ -1,9 +1,13 @@
-import { FooterProps, TreeViewDataType } from "@gouvfr-lasuite/ui-kit";
+import {
+  FooterProps,
+  TreeViewDataType,
+} from "@gouvfr-lasuite/ui-components";
 import { ColumnPreferences } from "../explorer/types/columns";
 
 export enum ItemType {
   FILE = "file",
   FOLDER = "folder",
+  RESTRICTION = "restriction",
 }
 
 export enum LinkReach {
@@ -61,6 +65,16 @@ export type Item = {
     short_name: string;
   };
   type: ItemType;
+  is_restricted?: boolean;
+  target?: {
+    id: string;
+    title: string;
+    is_restricted: boolean;
+    deleted: boolean;
+    can_access: boolean;
+    path: string;
+    abilities: Item["abilities"];
+  } | null;
   ancestors_link_reach: LinkReach | null;
   ancestors_link_role: LinkRole | null;
   computed_link_reach: LinkReach | null;
@@ -112,6 +126,8 @@ export type Item = {
     versions_view?: boolean;
     versions_restore?: boolean;
     versions_destroy?: boolean;
+    restrict?: boolean;
+    leave?: boolean;
   };
   policy?: string;
 };
@@ -207,7 +223,7 @@ export type User = {
   column_preferences?: ColumnPreferences | null;
 };
 
-export type UserLight = Pick<User, "id" | "full_name" | "short_name">
+export type UserLight = Pick<User, "id" | "full_name" | "short_name">;
 
 export type LocalizedThemeCustomization<T> = {
   default: T;
@@ -249,13 +265,14 @@ export type ApiConfig = {
   FRONTEND_EXTERNAL_HOME_URL?: string;
   FRONTEND_RELEASE_NOTE_ENABLED?: boolean;
   FRONTEND_ENTITLEMENTS_DISCLAIMERS?: {
-    "cannot_upload"?: {
+    cannot_upload?: {
       enabled: boolean;
       showPotentialOperators: boolean;
     };
   };
   FRONTEND_STORAGE_GAUGE_INFORMATION_LINK?: string;
   FRONTEND_CSS_URL?: string;
+  SDK_ENABLED?: boolean;
   FRONTEND_JS_URL?: string;
   theme_customization?: ThemeCustomization;
 };
@@ -272,3 +289,7 @@ export enum WorkspaceType {
   PUBLIC = "public",
   SHARED = "shared",
 }
+
+export type ItemDeletionInfo = {
+  hasRestrictedDescendent: boolean;
+};

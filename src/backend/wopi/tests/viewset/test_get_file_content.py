@@ -48,6 +48,42 @@ def test_get_file_content_connected_user_with_access():
     assert response.headers["Content-Length"] == "8"
 
 
+@pytest.mark.parametrize(
+    "mimetype, expected_content_type",
+    [(None, "application/octet-stream"), ("text/plain", "text/plain")],
+)
+def test_get_file_content_served_as_sandboxed_download(mimetype, expected_content_type):
+    """File content should be served as a sandboxed download, never as HTML."""
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    item = factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test.txt",
+        mimetype=mimetype,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.EDITOR,
+    )
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
+
+    default_storage.save(item.file_key, BytesIO(b"<script>alert(1)</script>"))
+
+    service = AccessUserItemService()
+    access_token, _ = service.insert_new_access(item, user)
+
+    client = APIClient()
+    response = client.get(
+        f"/api/v1.0/wopi/files/{item.id}/contents/?access_token={access_token}",
+    )
+    assert response.status_code == 200
+    assert response.headers["Content-Type"] == expected_content_type
+    assert response.headers["Content-Disposition"] == "attachment"
+    assert response.headers["Content-Security-Policy"] == "default-src 'none'; sandbox"
+
+
 def test_get_file_content_connected_user_not_linked_to_item():
     """
     User trying to get the file content of an item not linked to the access token should get a 403.

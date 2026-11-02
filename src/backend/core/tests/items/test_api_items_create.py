@@ -3,6 +3,7 @@ Tests for items API endpoint in drive's core app: create
 """
 
 from concurrent.futures import ThreadPoolExecutor
+from unittest import mock
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 
@@ -125,6 +126,7 @@ def test_api_items_create_file_authenticated_success():
         response = client.post(
             "/api/v1.0/items/",
             {
+                "size": 8,
                 "type": ItemTypeChoices.FILE,
                 "filename": "file.txt",
             },
@@ -155,7 +157,7 @@ def test_api_items_create_file_authenticated_success():
     ]
     assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
     assert query_params.pop("X-Amz-Expires") == ["60"]
-    assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
+    assert query_params.pop("X-Amz-SignedHeaders") == ["content-length;host;x-amz-acl"]
     assert query_params.pop("X-Amz-Signature") is not None
 
     assert len(query_params) == 0
@@ -172,6 +174,7 @@ def test_api_items_create_file_authenticated_success_without_upload_acl():
     response = client.post(
         "/api/v1.0/items/",
         {
+            "size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file.txt",
         },
@@ -182,7 +185,7 @@ def test_api_items_create_file_authenticated_success_without_upload_acl():
     policy_parsed = urlparse(response.json()["policy"])
     query_params = parse_qs(policy_parsed.query)
 
-    assert query_params["X-Amz-SignedHeaders"] == ["host"]
+    assert query_params["X-Amz-SignedHeaders"] == ["content-length;host"]
 
 
 def test_api_items_create_file_authenticated_extension_not_allowed():
@@ -195,6 +198,7 @@ def test_api_items_create_file_authenticated_extension_not_allowed():
     response = client.post(
         "/api/v1.0/items/",
         {
+            "size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file.notallowed",
         },
@@ -223,6 +227,7 @@ def test_api_items_create_file_authenticated_extension_case_insensitive():
     response = client.post(
         "/api/v1.0/items/",
         {
+            "size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file.JPG",
         },
@@ -233,17 +238,39 @@ def test_api_items_create_file_authenticated_extension_case_insensitive():
     assert item.title == "file.JPG"
 
 
-def test_api_items_create_file_authenticated_not_checking_extension(settings):
+def test_api_items_create_file_authenticated_allowed_extension_with_uppercase():
     """
-    Creating a file item with an extension not allowed should fail.
+    Creating a file item with an allowed extension declared with uppercase letters should work.
     """
-    settings.RESTRICT_UPLOAD_FILE_TYPE = False
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
     response = client.post(
         "/api/v1.0/items/",
         {
+            "size": 8,
+            "type": ItemTypeChoices.FILE,
+            "filename": "model.step",
+        },
+        format="json",
+    )
+    assert response.status_code == 201
+    item = Item.objects.get()
+    assert item.title == "model.step"
+
+
+def test_api_items_create_file_authenticated_not_checking_extension(settings):
+    """
+    Creating a file item with an extension not allowed should fail.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "off"
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file.notallowed",
         },
@@ -260,13 +287,14 @@ def test_api_items_create_file_authenticated_no_extension_but_checking_it_should
     """
     Creating a file without an extension but checking the extension should fail.
     """
-    settings.RESTRICT_UPLOAD_FILE_TYPE = True
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "allowlist"
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
     response = client.post(
         "/api/v1.0/items/",
         {
+            "size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file",
         },
@@ -291,13 +319,14 @@ def test_api_items_create_file_authenticated_hidden_file_but_checking_extension_
     """
     Creating a hidden file (starting with a dot) but checking the extension should fail.
     """
-    settings.RESTRICT_UPLOAD_FILE_TYPE = True
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "allowlist"
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
     response = client.post(
         "/api/v1.0/items/",
         {
+            "size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": ".file",
         },
@@ -314,6 +343,64 @@ def test_api_items_create_file_authenticated_hidden_file_but_checking_extension_
         ],
         "type": "validation_error",
     }
+
+
+@pytest.mark.parametrize(
+    "filename", ["file.exe", "file.EXE", "file.exe ", "file.exe.", ".exe", "file.exé."]
+)
+def test_api_items_create_file_authenticated_denied_extension_should_fail(settings, filename):
+    """
+    Creating a file with a denied extension should fail in denylist mode.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "denylist"
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "size": 8,
+            "type": ItemTypeChoices.FILE,
+            "filename": filename,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "filename",
+                "code": "item_create_file_extension_not_allowed",
+                "detail": "This file extension is not allowed.",
+            },
+        ],
+        "type": "validation_error",
+    }
+
+
+@pytest.mark.parametrize("filename", ["file.notallowed", "file.pdf", "file"])
+def test_api_items_create_file_authenticated_not_denied_extension(settings, filename):
+    """
+    Creating a file with an extension that is not denied should work in denylist mode.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "denylist"
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "size": 8,
+            "type": ItemTypeChoices.FILE,
+            "filename": filename,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+    item = Item.objects.get()
+    assert item.title == filename
 
 
 def test_api_items_create_authenticated_title_null():
@@ -441,6 +528,7 @@ def test_api_items_create_file_authenticated_success_invalid_filename():
         response = client.post(
             "/api/v1.0/items/",
             {
+                "size": 8,
                 "type": ItemTypeChoices.FILE,
                 "filename": "><img src=x onerror=alert()>␊.txt",
             },
@@ -471,7 +559,140 @@ def test_api_items_create_file_authenticated_success_invalid_filename():
     ]
     assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
     assert query_params.pop("X-Amz-Expires") == ["60"]
-    assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
+    assert query_params.pop("X-Amz-SignedHeaders") == ["content-length;host;x-amz-acl"]
     assert query_params.pop("X-Amz-Signature") is not None
 
     assert len(query_params) == 0
+
+
+@pytest.mark.parametrize("reason", [None, "user_quota_exceeded"])
+@pytest.mark.parametrize("message", [None, "Hello World"])
+@mock.patch("core.api.viewsets.get_entitlements_backend")
+def test_api_items_create_file_entitlements_backend_returns_falsy(
+    mock_get_entitlements_backend, message, reason
+):
+    """
+    Creating a file at the root is gated on the upload entitlement, just like
+    creating one in a folder: an over quota user must not grow their storage
+    from anywhere in the tree.
+    """
+    mock_entitlement_backend = mock.Mock()
+    return_value = {"result": False}
+    if message:
+        return_value["message"] = message
+    if reason:
+        return_value["reason"] = reason
+    mock_entitlement_backend.can_upload.return_value = return_value
+    mock_get_entitlements_backend.return_value = mock_entitlement_backend
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "type": ItemTypeChoices.FILE,
+            "filename": "file.txt",
+            "size": 8,
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "type": "client_error",
+        "errors": [
+            {
+                "code": reason or "permission_denied",
+                "detail": message or "You do not have permission to upload files.",
+                "attr": None,
+            }
+        ],
+    }
+    assert not Item.objects.exists()
+
+
+@mock.patch("core.api.viewsets.get_entitlements_backend")
+def test_api_items_create_file_from_template_entitlements_backend_returns_falsy(
+    mock_get_entitlements_backend,
+):
+    """
+    Template based creation finalizes the item itself, so it never goes through
+    the upload-ended gate: the entitlement must be checked upfront or the file
+    is created and its bytes stored for free.
+    """
+    mock_entitlement_backend = mock.Mock()
+    mock_entitlement_backend.can_upload.return_value = {
+        "result": False,
+        "reason": "user_quota_exceeded",
+    }
+    mock_get_entitlements_backend.return_value = mock_entitlement_backend
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "type": ItemTypeChoices.FILE,
+            "title": "my document",
+            "extension": "odt",
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json()["errors"][0]["code"] == "user_quota_exceeded"
+    assert not Item.objects.exists()
+
+
+@mock.patch("core.api.viewsets.get_entitlements_backend")
+def test_api_items_create_folder_entitlements_backend_returns_falsy(
+    mock_get_entitlements_backend,
+):
+    """Folders hold no bytes: they stay creatable when the upload entitlement is falsy."""
+    mock_entitlement_backend = mock.Mock()
+    mock_entitlement_backend.can_upload.return_value = {
+        "result": False,
+        "reason": "user_quota_exceeded",
+    }
+    mock_get_entitlements_backend.return_value = mock_entitlement_backend
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "type": ItemTypeChoices.FOLDER,
+            "title": "my folder",
+        },
+    )
+
+    assert response.status_code == 201
+    assert Item.objects.get().type == ItemTypeChoices.FOLDER
+
+
+def test_api_items_create_file_from_template_posthog_event(posthog_capture_mock):
+    """Creating a file from a template should send an 'item_created_from_template' event."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "type": ItemTypeChoices.FILE,
+            "title": "my document",
+            "extension": "odt",
+        },
+    )
+
+    assert response.status_code == 201
+    item = Item.objects.get(id=response.json()["id"])
+    posthog_capture_mock.assert_called_once_with(
+        "item_created_from_template", distinct_id=user.email, properties=mock.ANY
+    )
+    properties = posthog_capture_mock.call_args.kwargs["properties"]
+    assert properties.items() >= {"extension": "odt", "item_id": item.id}.items()

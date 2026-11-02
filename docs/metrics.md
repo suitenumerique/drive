@@ -2,6 +2,8 @@
 
 Drive provides a route to export metrics to external tools. At the moment, only the `storage_used` metric is exposed.
 
+For monitoring with Prometheus and Grafana, see [prometheus.md](prometheus.md).
+
 The route is:
 
 `GET /external_api/v1.0/metrics/usage/`

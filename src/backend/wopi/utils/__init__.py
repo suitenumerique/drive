@@ -15,29 +15,15 @@ from wopi.tasks.configure_wopi import (
 LAUNCH_URL_PLACEHOLDER_REGEX = r"(<(?P<name>[a-z]+)=(?P<placeholder>[a-zA-Z0-9_]+)&?>)"
 
 
-def is_item_wopi_supported(item, user):
+def is_item_wopi_supported(item, user, wopi_configuration=None):
     """
     Check if an item is supported by WOPI.
     """
-    return bool(get_wopi_client_config(item, user))
+    return bool(get_wopi_client_config(item, user, wopi_configuration=wopi_configuration))
 
 
-def get_wopi_client_config(item, user):
-    """
-    Get the WOPI client configuration for an item.
-    """
-    if (
-        item.type != models.ItemTypeChoices.FILE
-        or item.upload_state == models.ItemUploadStateChoices.SUSPICIOUS
-        or (item.creator != user and item.upload_state != models.ItemUploadStateChoices.READY)
-    ):
-        return None
-
-    wopi_configuration = get_wopi_configuration()
-
-    if not wopi_configuration:
-        return None
-
+def _find_wopi_client_config(item, wopi_configuration):
+    """Find the WOPI client configuration matching the item extension or mimetype."""
     result = None
     # Extension must always be checked first. Filenames preserve case (REPORT.DOC),
     # while the discovery stores extensions in lowercase, so normalize the lookup.
@@ -50,14 +36,36 @@ def get_wopi_client_config(item, user):
     return result
 
 
-def get_wopi_client_proof_keys(item, user):
-    """get the wopi proof keys for an item"""
-    wopi_client_config = get_wopi_client_config(item, user)
-
-    if not wopi_client_config:
+def get_wopi_client_config(item, user, wopi_configuration=None):
+    """
+    Get the WOPI client configuration for an item. The WOPI configuration can be
+    passed when checking many items, to fetch it from the cache only once.
+    """
+    if (
+        item.type != models.ItemTypeChoices.FILE
+        or item.upload_state == models.ItemUploadStateChoices.SUSPICIOUS
+        or (item.creator != user and item.upload_state != models.ItemUploadStateChoices.READY)
+    ):
         return None
 
+    if wopi_configuration is None:
+        wopi_configuration = get_wopi_configuration()
+
+    if not wopi_configuration:
+        return None
+
+    return _find_wopi_client_config(item, wopi_configuration)
+
+
+def get_wopi_client_proof_keys(item):
+    """Get the proof keys of the WOPI client handling the item, whatever its upload state."""
     wopi_configuration = get_wopi_configuration()
+    if not wopi_configuration:
+        return None
+
+    wopi_client_config = _find_wopi_client_config(item, wopi_configuration)
+    if not wopi_client_config:
+        return None
 
     return wopi_configuration[wopi_client_config["client"]]["proof_keys"]
 

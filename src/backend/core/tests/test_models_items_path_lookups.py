@@ -1,0 +1,260 @@
+"""
+Unit tests for the lookups relying on item paths being made of item ids
+"""
+
+from unittest import mock
+
+from django.core.cache import cache
+from django.db.models import F, Value
+
+import pytest
+from rest_framework.test import APIRequestFactory
+
+from core import factories, models
+from core.api.serializers import ListItemSerializer
+
+pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture(name="tree")
+def fixture_tree():
+    """
+    Build two trees:
+        root > parent > child
+             > sibling > nephew
+        other_root
+    """
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+    child = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    sibling = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+    nephew = factories.ItemFactory(parent=sibling, type=models.ItemTypeChoices.FOLDER)
+    other_root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    return {
+        "root": root,
+        "parent": parent,
+        "child": child,
+        "sibling": sibling,
+        "nephew": nephew,
+        "other_root": other_root,
+    }
+
+
+def test_models_items_id_in_path(tree):
+    """IdInPath should match the item at a path and its ancestors only."""
+    accesses = {name: factories.UserItemAccessFactory(item=item) for name, item in tree.items()}
+
+    matched = models.ItemAccess.objects.filter(
+        models.IdInPath(F("item_id"), Value(str(tree["child"].path)))
+    )
+
+    assert set(matched) == {accesses["root"], accesses["parent"], accesses["child"]}
+
+
+def test_models_items_id_in_subtrees(tree):
+    """IdInSubtrees should match the same items as OR-ing descendants lookups."""
+    paths = [tree["parent"].path, tree["other_root"].path]
+
+    matched = models.Item.objects.filter(models.IdInSubtrees(F("id"), paths))
+
+    assert set(matched) == {tree["parent"], tree["child"], tree["other_root"]}
+    assert set(matched) == set(
+        models.Item.objects.filter(path__descendants=paths[0])
+        | models.Item.objects.filter(path__descendants=paths[1])
+    )
+
+
+def test_models_items_id_in_subtrees_trashed(tree):
+    """With trashed=True, IdInSubtrees should only match the soft-deleted items."""
+    tree["child"].soft_delete()
+    tree["sibling"].soft_delete()
+    tree["other_root"].soft_delete()
+    paths = [tree["parent"].path, tree["other_root"].path]
+
+    matched = models.Item.objects.filter(models.IdInSubtrees(F("id"), paths, trashed=True))
+
+    # "sibling" is out of the subtrees, "nephew" is only deleted through its ancestor
+    assert set(matched) == {tree["child"], tree["other_root"]}
+
+    matched = models.Item.objects.filter(
+        models.IdInSubtrees(F("id"), [tree["root"].path], trashed=True)
+    )
+
+    assert set(matched) == {tree["child"], tree["sibling"]}
+
+
+def test_models_items_trashed_owned_by(tree, mock_user_teams):
+    """
+    trashed_owned_by should match the soft-deleted items the user owns, directly,
+    through an ancestor or through a team: the same items as owned_by.
+    """
+    user = factories.UserFactory()
+    mock_user_teams.return_value = ["team"]
+    # Owner of "parent" directly and of "child" below it: "child" is owned twice
+    factories.UserItemAccessFactory(item=tree["parent"], user=user, role="owner")
+    factories.UserItemAccessFactory(item=tree["child"], user=user, role="owner")
+    # Owner of "other_root" through a team
+    factories.TeamItemAccessFactory(item=tree["other_root"], team="team", role="owner")
+    # Administrator only of "sibling"
+    factories.UserItemAccessFactory(item=tree["sibling"], user=user, role="administrator")
+    # Another user owns everything
+    factories.UserItemAccessFactory(item=tree["root"], role="owner")
+    factories.UserItemAccessFactory(item=tree["other_root"], role="owner")
+
+    for name in ("child", "nephew", "other_root"):
+        tree[name].soft_delete()
+
+    matched = models.Item.objects.trashed_owned_by(user)
+
+    assert sorted(item.pk for item in matched) == sorted([tree["child"].pk, tree["other_root"].pk])
+    assert set(matched) == set(models.Item.objects.filter(deleted_at__isnull=False).owned_by(user))
+
+
+def test_models_items_trashed_owned_by_parent_deleted(tree):
+    """A soft-deleted item should be matched when the access is on the item itself."""
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=tree["parent"], user=user, role="owner")
+    tree["parent"].soft_delete()
+
+    matched = models.Item.objects.trashed_owned_by(user)
+
+    # "child" is deleted through "parent", it is not in the trashbin on its own
+    assert list(matched) == [tree["parent"]]
+
+
+def test_models_items_trashed_owned_by_no_owner_access(tree, django_assert_num_queries):
+    """A user owning nothing should get no item, without querying the items."""
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=tree["root"], user=user, role="editor")
+    tree["child"].soft_delete()
+
+    with django_assert_num_queries(1):
+        assert not list(models.Item.objects.trashed_owned_by(user))
+
+
+def test_models_items_path_in_subtree_lookup(tree):
+    """The in_subtree lookup should match the same items as the descendants lookup."""
+    matched = models.Item.objects.filter(path__in_subtree=tree["parent"].path)
+
+    assert set(matched) == {tree["parent"], tree["child"]}
+    assert set(matched) == set(models.Item.objects.filter(path__descendants=tree["parent"].path))
+
+    matched = models.Item.objects.filter(path__in_subtree=tree["root"].path)
+
+    assert set(matched) == {
+        tree["root"],
+        tree["parent"],
+        tree["child"],
+        tree["sibling"],
+        tree["nephew"],
+    }
+
+
+def test_models_items_parent_path(tree):
+    """ParentPath should return the path of the parent, an empty path for a root."""
+    parent_paths = dict(
+        models.Item.objects.annotate(parent_path=models.ParentPath("path")).values_list(
+            "id", "parent_path"
+        )
+    )
+
+    assert str(parent_paths[tree["root"].id]) == ""
+    assert str(parent_paths[tree["parent"].id]) == str(tree["root"].path)
+    assert str(parent_paths[tree["child"].id]) == str(tree["parent"].path)
+
+
+def test_models_items_children(tree):
+    """children() should return the descendants one level down, using the parent path."""
+    for item in tree.values():
+        expected = models.Item.objects.filter(
+            path__descendants=item.path, path__depth=len(item.path) + 1
+        )
+        assert set(item.children()) == set(expected)
+
+    assert set(tree["root"].children()) == {tree["parent"], tree["sibling"]}
+    assert "subpath(" in str(tree["root"].children().query)
+
+
+def test_models_items_numchild_annotation_ignores_siblings_subtrees(tree):
+    """The children of a sibling or of a child should not be counted."""
+    item = models.Item.objects.annotate_with_numchild().get(pk=tree["parent"].pk)
+    assert item.numchild == 1
+    assert item.numchild_folder == 1
+
+    item = models.Item.objects.annotate_with_numchild().get(pk=tree["root"].pk)
+    assert item.numchild == 2
+    assert item.numchild_folder == 2
+
+
+def test_models_items_compute_items_ancestors_links_paths_mapping(tree, django_assert_num_queries):
+    """
+    The mapping computed at once for several items should match, at the parent path of
+    each item, the mapping computed on each item.
+    """
+    tree["root"].link_reach = models.LinkReachChoices.AUTHENTICATED
+    tree["root"].save()
+    tree["sibling"].link_reach = models.LinkReachChoices.PUBLIC
+    tree["sibling"].save()
+    items = [tree["child"], tree["nephew"], tree["parent"], tree["other_root"]]
+
+    with django_assert_num_queries(1):
+        mapping = models.Item.compute_items_ancestors_links_paths_mapping(items)
+
+    for item in items:
+        parent_path = str(item.path[:-1])
+        expected = item.compute_ancestors_links_paths_mapping().get(parent_path, [])
+        assert mapping.get(parent_path, []) == expected
+
+
+def test_models_items_compute_items_ancestors_links_paths_mapping_roots(
+    tree, django_assert_num_queries
+):
+    """No query should be needed when all the items are roots."""
+    with django_assert_num_queries(0):
+        mapping = models.Item.compute_items_ancestors_links_paths_mapping(
+            [tree["root"], tree["other_root"]]
+        )
+
+    assert not mapping
+
+
+def test_models_items_prefetch_nb_accesses(tree, django_assert_num_queries):
+    """The cached number of accesses of many items should be read at once."""
+    cache.set(tree["parent"].get_nb_accesses_cache_key(), 7)
+    items = [tree["parent"], tree["child"]]
+
+    with mock.patch.object(cache, "get_many", wraps=cache.get_many) as cache_get_many:
+        models.Item.prefetch_nb_accesses(items)
+
+    cache_get_many.assert_called_once()
+    with django_assert_num_queries(0):
+        assert items[0].nb_accesses == 7
+    # Items missing from the cache still compute their number of accesses
+    factories.UserItemAccessFactory(item=tree["root"])
+    assert items[1].nb_accesses == 1
+
+
+def test_models_items_serializer_fetches_wopi_configuration_once():
+    """The WOPI configuration should be fetched once for all the serialized items."""
+    user = factories.UserFactory()
+    items = factories.ItemFactory.create_batch(
+        3,
+        type=models.ItemTypeChoices.FILE,
+        creator=user,
+        users=[user],
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    request = APIRequestFactory().get("/")
+    request.user = user
+
+    with mock.patch(
+        "wopi.utils.get_wopi_configuration", return_value={"extensions": {}, "mimetypes": {}}
+    ) as get_wopi_configuration:
+        data = ListItemSerializer(
+            models.Item.objects.annotate_user_roles(user).filter(pk__in=[i.pk for i in items]),
+            many=True,
+            context={"request": request},
+        ).data
+
+    assert len(data) == 3
+    get_wopi_configuration.assert_called_once()

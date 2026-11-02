@@ -8,8 +8,12 @@ import {
 } from "@/features/explorer/hooks/useMutations";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { DropdownMenu } from "@gouvfr-lasuite/ui-kit";
-import { Button, Decision, useModal } from "@gouvfr-lasuite/cunningham-react";
+import {
+  DropdownMenu,
+  Button,
+  Decision,
+  useModal,
+} from "@gouvfr-lasuite/ui-components";
 import undoIcon from "@/assets/icons/undo.svg";
 import cancelIcon from "@/assets/icons/cancel.svg";
 
@@ -17,7 +21,7 @@ import { EmbeddedExplorerGridActionsCellProps } from "@/features/explorer/compon
 import { HardDeleteConfirmationModal } from "@/features/explorer/components/modals/HardDeleteConfirmationModal";
 
 export const ExplorerGridTrashActionsCell = (
-  params: EmbeddedExplorerGridActionsCellProps
+  params: EmbeddedExplorerGridActionsCellProps,
 ) => {
   const item = params.row.original;
   const [isOpen, setIsOpen] = useState(false);
@@ -31,7 +35,7 @@ export const ExplorerGridTrashActionsCell = (
       <ToasterItem>
         <span className="material-icons">delete</span>
         <span>{t("explorer.actions.restore.toast", { count: 1 })}</span>
-      </ToasterItem>
+      </ToasterItem>,
     );
     await restoreItem.mutateAsync([item.id]);
   };
@@ -44,7 +48,7 @@ export const ExplorerGridTrashActionsCell = (
       <ToasterItem>
         <span className="material-icons">delete</span>
         <span>{t("explorer.actions.hard_delete.toast", { count: 1 })}</span>
-      </ToasterItem>
+      </ToasterItem>,
     );
     await hardDeleteItem.mutateAsync([item.id]);
   };

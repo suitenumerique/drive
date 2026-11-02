@@ -1,15 +1,28 @@
 """Admin classes and registrations for core app."""
 
+from decimal import Decimal
 from functools import partial
 
+from django import forms
+from django.conf import settings
 from django.contrib import admin, messages
+from django.contrib.admin import helpers
+from django.contrib.admin.widgets import AutocompleteSelect
 from django.contrib.auth import admin as auth_admin
+from django.contrib.auth import forms as auth_forms
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Subquery, UUIDField
 from django.db.models.fields.json import KeyTextTransform
-from django.db.models.functions import Cast
+from django.db.models.functions import Cast, Coalesce, Lower
+from django.http import Http404
 from django.shortcuts import redirect
-from django.template.defaultfilters import filesizeformat
+from django.template.loader import render_to_string
+from django.template.response import TemplateResponse
+from django.templatetags.static import static
+from django.urls import path
+from django.utils.html import format_html
+from django.utils.text import format_lazy
 from django.utils.translation import gettext_lazy as _
 
 from lasuite.malware_detection import malware_detection
@@ -17,12 +30,82 @@ from lasuite.malware_detection.admin import MalwareDetectionAdmin as BaseMalware
 from lasuite.malware_detection.models import MalwareDetection
 
 from core import models
+from core.entitlements import get_entitlements_backend
+from core.storage import get_storage_compute_backend
+from core.storage.cache import invalidate_storage_used_cache
 from core.tasks.user_reconciliation import user_reconciliation_csv_import_job
+from core.utils.quota import quota_to_str
+from core.utils.sizes import format_size
+
+BYTES_PER_GB = 1000**3
+
+admin.site.site_header = format_lazy("{} {}", admin.site.site_header, settings.RELEASE)
+
+
+class UserChangeForm(auth_forms.UserChangeForm):
+    """User change form setting the storage limit override in GB."""
+
+    storage_limit_override = forms.DecimalField(
+        label=_("storage limit override (GB)"),
+        help_text=_(
+            "Leave empty to use the configured default limit. Set to 0 for unlimited storage."
+        ),
+        required=False,
+        min_value=0,
+    )
+
+    def __init__(self, *args, **kwargs):
+        """Show the storage limit override stored in bytes in GB."""
+        super().__init__(*args, **kwargs)
+        if self.instance.storage_limit_override is not None:
+            self.initial["storage_limit_override"] = (
+                Decimal(self.instance.storage_limit_override) / BYTES_PER_GB
+            )
+
+    def clean_storage_limit_override(self):
+        """Convert the storage limit override from GB to bytes."""
+        value = self.cleaned_data["storage_limit_override"]
+        return None if value is None else int(value * BYTES_PER_GB)
+
+
+class DuplicateEmailFilter(admin.SimpleListFilter):
+    """Filter the users whose email is shared with another user, case ignored."""
+
+    title = _("duplicate email")
+    parameter_name = "duplicate_email"
+
+    def lookups(self, request, model_admin):
+        """Return the filter options."""
+        return [("yes", _("Yes"))]
+
+    def queryset(self, request, queryset):
+        """Keep the users sharing their email with another user."""
+        if self.value() != "yes":
+            return queryset
+        others = models.User.objects.filter(email__iexact=OuterRef("email")).exclude(
+            pk=OuterRef("pk")
+        )
+        return queryset.filter(Exists(others))
+
+
+class MergeUsersForm(forms.Form):
+    """Form choosing the user the selected users are merged into."""
+
+    user = forms.ModelChoiceField(
+        label=_("merge into"),
+        queryset=models.User.objects.filter(is_active=True),
+        widget=AutocompleteSelect(
+            models.UserReconciliation._meta.get_field("active_user"),  # noqa: SLF001
+            admin.site,
+        ),
+    )
 
 
 @admin.register(models.User)
 class UserAdmin(auth_admin.UserAdmin):
     """Admin class for the User model"""
+
+    form = UserChangeForm
 
     fieldsets = (
         (
@@ -49,6 +132,18 @@ class UserAdmin(auth_admin.UserAdmin):
             },
         ),
         (
+            _("Entitlements"),
+            {
+                "fields": (
+                    "storage_limit_override",
+                    "quota_display",
+                    "top_files",
+                )
+            },
+        ),
+        (_("Items"), {"fields": ("root_items",)}),
+        (_("Important dates"), {"fields": ("created_at", "updated_at", "last_login")}),
+        (
             _("Permissions"),
             {
                 "fields": (
@@ -61,8 +156,6 @@ class UserAdmin(auth_admin.UserAdmin):
                 ),
             },
         ),
-        (_("Entitlements"), {"fields": ("storage_limit_override",)}),
-        (_("Important dates"), {"fields": ("created_at", "updated_at")}),
     )
     add_fieldsets = (
         (
@@ -83,11 +176,14 @@ class UserAdmin(auth_admin.UserAdmin):
         "is_staff",
         "is_superuser",
         "is_device",
-        "storage_limit_override",
+        "storage_used_display",
+        "storage_limit_display",
         "created_at",
+        "last_login",
         "updated_at",
     )
-    list_filter = ("is_staff", "is_superuser", "is_device", "is_active")
+    list_filter = ("is_staff", "is_superuser", "is_device", "is_active", DuplicateEmailFilter)
+    actions = ("merge_users", "deactivate_duplicates")
     ordering = (
         "is_active",
         "-is_superuser",
@@ -104,8 +200,175 @@ class UserAdmin(auth_admin.UserAdmin):
         "short_name",
         "created_at",
         "updated_at",
+        "last_login",
+        "quota_display",
+        "top_files",
+        "root_items",
     )
     search_fields = ("id", "sub", "admin_email", "email", "full_name")
+    top_files_choices = (5, 20, 50, 100)
+    top_files_max = 500
+
+    def get_queryset(self, request):
+        """Annotate the users with the storage counted in their quota."""
+        return (
+            super()
+            .get_queryset(request)
+            .annotate(storage_used=get_storage_compute_backend().storage_used_expression())
+        )
+
+    def get_object(self, request, object_id, from_field=None):
+        """Load the user with the number of biggest files to show, from the top parameter."""
+        obj = super().get_object(request, object_id, from_field)
+        if obj is not None:
+            try:
+                top = int(request.GET.get("top", self.top_files_choices[0]))
+            except ValueError:
+                top = self.top_files_choices[0]
+            obj.top_files_limit = min(max(top, 1), self.top_files_max)
+        return obj
+
+    def get_ordering(self, request):
+        """Group the users sharing an email when filtering on duplicates."""
+        if DuplicateEmailFilter.parameter_name in request.GET:
+            return (Lower("email"), "created_at")
+        return super().get_ordering(request)
+
+    @admin.action(description=_("Merge into another user"))
+    def merge_users(self, request, queryset):
+        """Merge the selected users into the chosen user, then deactivate them."""
+        form = MergeUsersForm(request.POST if "apply" in request.POST else None)
+        if not form.is_valid():
+            return TemplateResponse(
+                request,
+                "core/admin/merge_users.html",
+                {
+                    **self.admin_site.each_context(request),
+                    "title": _("Merge users"),
+                    "form": form,
+                    "users": queryset,
+                    "action_checkbox_name": helpers.ACTION_CHECKBOX_NAME,
+                },
+            )
+
+        target = form.cleaned_data["user"]
+        merged = queryset.exclude(pk=target.pk)
+        if not target.email or any(not user.email for user in merged):
+            self.message_user(request, _("Users without email cannot be merged."), messages.ERROR)
+            return None
+        with transaction.atomic():
+            for user in merged:
+                # Created ready with both users set, so its save does not look them up by email
+                models.UserReconciliation.objects.create(
+                    active_email=target.email,
+                    inactive_email=user.email,
+                    active_user=target,
+                    inactive_user=user,
+                    active_email_checked=True,
+                    inactive_email_checked=True,
+                    status="ready",
+                ).process_reconciliation_request()
+        self.message_user(request, f"{len(merged)} users merged into {target}.")
+        return None
+
+    @admin.action(description=_("Deactivate the least recently used duplicates"))
+    def deactivate_duplicates(self, request, queryset):
+        """Keep the most recently used user of each shared email, deactivate the others."""
+        kept = {}
+        deactivated = []
+        for user in queryset.order_by(Coalesce("last_login", "created_at").desc()):
+            if not user.email:
+                continue
+            if kept.setdefault(user.email.lower(), user) is not user:
+                deactivated.append(user.pk)
+        models.User.objects.filter(pk__in=deactivated).update(is_active=False)
+        self.message_user(request, f"{len(deactivated)} users deactivated.")
+
+    @staticmethod
+    def _storage_limit(obj):
+        """Return the effective storage limit of the user, or None when unlimited or unknown."""
+        backend = get_entitlements_backend()
+        if not hasattr(backend, "get_storage_limit"):
+            return None
+        return backend.get_storage_limit(obj)
+
+    @admin.display(description=_("storage used"), ordering="storage_used")
+    def storage_used_display(self, obj):
+        """Return the human readable storage counted in the user quota."""
+        limit = self._storage_limit(obj)
+        if not limit:
+            return format_size(obj.storage_used)
+        return f"{format_size(obj.storage_used)} ({obj.storage_used * 100 / limit:.0f} %)"
+
+    @admin.display(description=_("storage limit"))
+    def storage_limit_display(self, obj):
+        """Return the human readable effective storage limit, empty if the backend has none."""
+        backend = get_entitlements_backend()
+        if not hasattr(backend, "get_storage_limit"):
+            return None
+        limit = backend.get_storage_limit(obj)
+        if limit:
+            return format_size(limit)
+        # Same icon as the admin boolean fields
+        return format_html('<img src="{}" alt="False">', static("admin/img/icon-no.svg"))
+
+    @admin.display(description=_("quota"))
+    def quota_display(self, obj):
+        """Return the quota of the entitlements backend, with the storage counted by Drive."""
+        # get_quota may call an external service, so it is kept out of the list
+        quota = get_entitlements_backend().get_quota(obj)
+        lines = [quota_to_str(quota)]
+        # Only when it differs from the usage of the backend, a stale cache or metric
+        if quota.get("usage") != obj.storage_used:
+            lines.append(f"{_('Counted by Drive')}: {format_size(obj.storage_used)}")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _file_flags(item):
+        """Return the trash and quota exclusion flags of a file."""
+        flags = []
+        if item.deleted_at or item.ancestors_deleted_at:
+            flags.append(str(_("in trash")))
+        if item.quota_excluded:
+            flags.append(str(_("excluded from quota")))
+        return ", ".join(flags)
+
+    @admin.display(description=_("biggest files"))
+    def top_files(self, obj):
+        """Return the biggest files created by the user, with links to change their count."""
+        limit = getattr(obj, "top_files_limit", self.top_files_choices[0])
+        files = models.Item.objects.filter(
+            creator=obj,
+            type=models.ItemTypeChoices.FILE,
+            hard_deleted_at__isnull=True,
+            size__isnull=False,
+        ).order_by("-size")[:limit]
+        return render_to_string(
+            "core/admin/user_top_files.html",
+            {
+                "choices": self.top_files_choices,
+                "files": [
+                    {
+                        "item": item,
+                        "size": format_size(item.size),
+                        "flags": self._file_flags(item),
+                    }
+                    for item in files
+                ],
+            },
+        )
+
+    @admin.display(description=_("root items"))
+    def root_items(self, obj):
+        """Return the root items the user has a direct access to, with their role."""
+        accesses = (
+            models.ItemAccess.objects.filter(
+                user=obj, item__path__depth=1, item__hard_deleted_at__isnull=True
+            )
+            .select_related("item")
+            .order_by("item__title")
+        )
+        return render_to_string("core/admin/user_root_items.html", {"accesses": accesses})
 
 
 @admin.register(models.UserReconciliationCsvImport)
@@ -155,6 +418,37 @@ class ItemAccessInline(admin.TabularInline):
     extra = 0
 
 
+class TransferItemsForm(forms.Form):
+    """Form choosing the users the selected items are transferred between."""
+
+    source = forms.ModelChoiceField(
+        label=_("from"),
+        queryset=models.User.objects.all(),
+        widget=AutocompleteSelect(
+            models.ItemAccess._meta.get_field("user"),  # noqa: SLF001
+            admin.site,
+        ),
+    )
+    target = forms.ModelChoiceField(
+        label=_("to"),
+        queryset=models.User.objects.all(),
+        widget=AutocompleteSelect(
+            models.ItemAccess._meta.get_field("user"),  # noqa: SLF001
+            admin.site,
+        ),
+    )
+    keep_source_accesses = forms.BooleanField(
+        label=_("keep the accesses of the source user"), required=False
+    )
+
+    def clean(self):
+        """Refuse a transfer from a user to the same user."""
+        cleaned_data = super().clean()
+        if cleaned_data.get("source") and cleaned_data.get("source") == cleaned_data.get("target"):
+            raise forms.ValidationError(_("The source and target users must differ."))
+        return cleaned_data
+
+
 @admin.register(models.Item)
 class ItemAdmin(admin.ModelAdmin):
     """item admin interface declaration."""
@@ -168,6 +462,7 @@ class ItemAdmin(admin.ModelAdmin):
                     "title",
                     "filename",
                     "size_display",
+                    "quota_excluded",
                     "deleted_at",
                     "ancestors_deleted_at",
                     "malware_detection_info",
@@ -195,6 +490,7 @@ class ItemAdmin(admin.ModelAdmin):
                     "path",
                     "depth",
                     "numchild",
+                    "tree",
                 )
             },
         ),
@@ -204,6 +500,8 @@ class ItemAdmin(admin.ModelAdmin):
         "id",
         "title",
         "type",
+        "size_display",
+        "quota_excluded",
         "link_reach",
         "link_role",
         "upload_state",
@@ -221,14 +519,18 @@ class ItemAdmin(admin.ModelAdmin):
         "deleted_at",
         "ancestors_deleted_at",
         "malware_detection_info",
+        "tree",
     )
     search_fields = ("id", "title", "creator__email")
-    list_filter = ("upload_state", "link_reach", "link_role")
+    list_filter = ("upload_state", "link_reach", "link_role", "quota_excluded")
     show_facets = admin.ShowFacets.ALWAYS
     actions = (
         "trigger_file_analysis",
         "mark_items_ready",
         "mark_items_file_too_large",
+        "exclude_from_quota",
+        "include_in_quota",
+        "transfer_items",
     )
 
     def get_queryset(self, request):
@@ -237,12 +539,12 @@ class ItemAdmin(admin.ModelAdmin):
 
         return queryset
 
-    @admin.display(description=_("size"))
+    @admin.display(description=_("size"), ordering="size")
     def size_display(self, obj):
         """Return the human readable size of the item file."""
         if obj.size is None:
             return None
-        return filesizeformat(obj.size)
+        return format_size(obj.size)
 
     def trigger_file_analysis(self, request, queryset):
         """Reanalyse the file of the items."""
@@ -275,6 +577,137 @@ class ItemAdmin(admin.ModelAdmin):
         self._force_upload_state(
             request, queryset, models.ItemUploadStateChoices.FILE_TOO_LARGE_TO_ANALYZE
         )
+
+    def _set_quota_excluded(self, request, queryset, value):
+        """Apply quota_excluded to the selected items and their descendants."""
+        updated = sum(item.set_quota_excluded(value) for item in queryset)
+        self.message_user(request, f"{updated} items updated.")
+
+    @admin.action(description=_("Exclude from storage quota"))
+    def exclude_from_quota(self, request, queryset):
+        """Exclude the selected items and their descendants from the storage quota."""
+        self._set_quota_excluded(request, queryset, True)
+
+    @admin.action(description=_("Include in storage quota"))
+    def include_in_quota(self, request, queryset):
+        """Count the selected items and their descendants in the storage quota."""
+        self._set_quota_excluded(request, queryset, False)
+
+    @staticmethod
+    def _transfer_access(access, target, target_access, keep_source_access):
+        """Give the role of a source access to the target, moving or copying it."""
+        if target_access:
+            role = models.RoleChoices.max(access.role, target_access.role)
+            if role != target_access.role:
+                target_access.role = role
+                target_access.save()
+            if not keep_source_access:
+                access.delete()
+        elif keep_source_access:
+            models.ItemAccess.objects.create(item=access.item, user=target, role=access.role)
+        else:
+            access.user = target
+            access.save()
+
+    @admin.action(description=_("Transfer to another user"))
+    def transfer_items(self, request, queryset):
+        """Transfer the selected items and their descendants from a user to another."""
+        form = TransferItemsForm(request.POST if "apply" in request.POST else None)
+        if not form.is_valid():
+            return TemplateResponse(
+                request,
+                "core/admin/transfer_items.html",
+                {
+                    **self.admin_site.each_context(request),
+                    "title": _("Transfer items"),
+                    "form": form,
+                    "items": queryset,
+                    "action_checkbox_name": helpers.ACTION_CHECKBOX_NAME,
+                },
+            )
+
+        source = form.cleaned_data["source"]
+        target = form.cleaned_data["target"]
+        subtree = models.Item.objects.filter(
+            models.IdInSubtrees("id", [item.path for item in queryset])
+        )
+        accesses = list(
+            models.ItemAccess.objects.filter(user=source, item__in=subtree).select_related("item")
+        )
+        target_accesses = {
+            access.item_id: access
+            for access in models.ItemAccess.objects.filter(user=target, item__in=subtree)
+        }
+        # The source reaches the selected items it has no direct access to through
+        # their ancestors, which it keeps: the target gets the same role on them.
+        direct = {access.item_id for access in accesses}
+        inherited = [
+            models.ItemAccess(item=item, user=source, role=role)
+            for item in queryset
+            if item.pk not in direct and (role := item.get_role(source))
+        ]
+        with transaction.atomic():
+            # The update bypasses Item.save, which invalidates the storage used cache
+            items = subtree.filter(creator=source).update(creator=target)
+            transaction.on_commit(lambda: invalidate_storage_used_cache([source.pk, target.pk]))
+            for access in accesses:
+                self._transfer_access(
+                    access,
+                    target,
+                    target_accesses.get(access.item_id),
+                    form.cleaned_data["keep_source_accesses"],
+                )
+            for access in inherited:
+                self._transfer_access(access, target, target_accesses.get(access.item_id), True)
+        self.message_user(
+            request,
+            f"{items} items and {len(accesses) + len(inherited)} accesses transferred "
+            f"from {source} to {target}.",
+        )
+        return None
+
+    def save_model(self, request, obj, form, change):
+        """Propagate a quota_excluded change to the descendants of the item."""
+        super().save_model(request, obj, form, change)
+        if "quota_excluded" in form.changed_data:
+            obj.set_quota_excluded(obj.quota_excluded)
+
+    @admin.display(description=_("tree"))
+    def tree(self, obj):
+        """Return the ancestors and the item as tree nodes loaded when opened."""
+        if not obj.path:
+            return ""
+        return render_to_string(
+            "core/admin/item_tree.html",
+            {"items": [*obj.ancestors().order_by("path"), obj], "current": obj},
+        )
+
+    def tree_node_view(self, request, object_id):
+        """Return the accesses and the children of an item, for its opened tree node."""
+        item = self.get_object(request, object_id)
+        if item is None:
+            raise Http404
+        if not self.has_view_permission(request, item):
+            raise PermissionDenied
+        return TemplateResponse(
+            request,
+            "core/admin/item_tree_node.html",
+            {
+                "accesses": item.accesses.select_related("user").order_by("user__email", "team"),
+                "children": item.children().order_by("-type", "title"),
+            },
+        )
+
+    def get_urls(self):
+        """Add the view loading a node of the item tree."""
+        return [
+            path(
+                "<uuid:object_id>/tree/",
+                self.admin_site.admin_view(self.tree_node_view),
+                name="core_item_tree_node",
+            ),
+            *super().get_urls(),
+        ]
 
 
 @admin.register(models.Invitation)
@@ -389,4 +822,4 @@ class MalwareDetectionAdmin(BaseMalwareDetectionAdmin):
         """Return the human readable size of the item file."""
         if obj.item_size is None:
             return None
-        return filesizeformat(obj.item_size)
+        return format_size(obj.item_size)

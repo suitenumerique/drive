@@ -14,7 +14,7 @@ jobs:
     if: github.event_name == 'pull_request' # Makes sense only for pull requests
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: show
@@ -41,7 +41,7 @@ jobs:
       github.event_name == 'pull_request'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 50
       - name: Check that the CHANGELOG has been modified in the current branch
@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Check CHANGELOG max line length
         run: |
           max_line_length=$(cat CHANGELOG.md | grep -Ev "^\[.*\]: https://github.com" | wc -L)
@@ -70,9 +70,9 @@ jobs:
         working-directory: src/backend
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: "Set up Python"
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version-file: "src/backend/pyproject.toml"
       - name: Install uv
@@ -127,7 +127,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Create writable /data
         run: |
@@ -135,46 +135,26 @@ jobs:
           sudo mkdir -p /data/static
 
       - name: Restore the mail templates
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         id: mail-templates
         with:
           path: "src/backend/core/templates/mail"
           key: mail-templates-${{ hashFiles('src/mail/mjml') }}
 
-      - name: Start MinIO
+      - name: Start and configure RustFS
+        working-directory: .
         run: |
-          docker pull minio/minio
-          docker run -d --name minio \
-            -p 9000:9000 \
-            -e "MINIO_ACCESS_KEY=drive" \
-            -e "MINIO_SECRET_KEY=password" \
-            -v /data/media:/data \
-            minio/minio server --console-address :9001 /data
-
-      # Tool to wait for a service to be ready
-      - name: Install Dockerize
-        run: |
-          curl -sSL https://github.com/jwilder/dockerize/releases/download/v0.8.0/dockerize-linux-amd64-v0.8.0.tar.gz | sudo tar -C /usr/local/bin -xzv
-
-      - name: Wait for MinIO to be ready
-        run: |
-          dockerize -wait tcp://localhost:9000 -timeout 10s
-
-      - name: Configure MinIO
-        run: |
-          MINIO=$(docker ps | grep minio/minio | sed -E 's/.*\s+([a-zA-Z0-9_-]+)$/\1/')
-          docker exec ${MINIO} sh -c \
-            "mc alias set drive http://localhost:9000 drive password && \
-            mc alias ls && \
-            mc mb drive/drive-media-storage && \
-            mc version enable drive/drive-media-storage"
+          bin/compose up -d --wait rustfs-ci
+          bin/compose run createbuckets-ci
 
       - name: "Set up Python"
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version-file: "src/backend/pyproject.toml"
+
       - name: Install uv
         uses: astral-sh/setup-uv@v6
+
       - name: Install the dependencies
         run: uv sync --locked --all-extras
 

@@ -3,8 +3,16 @@ import {
   TreeDataItem,
   TreeViewDataType,
   TreeViewNodeTypeEnum,
-} from "@gouvfr-lasuite/ui-kit";
-import { TreeItem, TreeItemData } from "@/features/drivers/types";
+} from "@gouvfr-lasuite/ui-components";
+import {
+  ItemType,
+  TreeItem,
+  TreeItemData,
+} from "@/features/drivers/types";
+
+import { getDriver } from "@/features/config/Config";
+import { DefaultRoute } from "@/utils/defaultRoutes";
+import { itemToTreeItem } from "../components/GlobalExplorerContext";
 
 /**
  * Hook providing utility functions for tree operations.
@@ -77,7 +85,21 @@ export const useTreeUtils = () => {
     }
   };
 
+  const refreshFavorites = async () => {
+    if (!treeContext) return;
+    const favorites = await getDriver().getFavoriteItems({
+      type: ItemType.FOLDER,
+    });
+    treeContext.treeData.updateNode(DefaultRoute.FAVORITES, {
+      children: favorites.children.map((item) =>
+        itemToTreeItem(item, DefaultRoute.FAVORITES, true),
+      ),
+      pagination: favorites.pagination,
+    });
+  };
+
   return {
+    refreshFavorites,
     findAllTreeIdsByOriginalId,
     deleteAllByOriginalId,
     updateNodeByOriginalId,

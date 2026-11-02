@@ -43,6 +43,10 @@ def export_descendants(folder):
 
     relative_paths = {str(folder.path): ""}
     for descendant in descendants:
+        # Restrictions are tree entries: their target lives in another subtree
+        if descendant.type == models.ItemTypeChoices.RESTRICTION:
+            continue
+
         parent_key = str(descendant.path).rsplit(".", 1)[0]
         parent_relative = relative_paths.get(parent_key)
         if parent_relative is None:

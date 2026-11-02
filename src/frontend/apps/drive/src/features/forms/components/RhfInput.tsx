@@ -4,7 +4,7 @@ import {
   TextArea,
   TextAreaProps,
   InputProps,
-} from "@gouvfr-lasuite/cunningham-react";
+} from "@gouvfr-lasuite/ui-components";
 
 export const RhfInput = (props: InputProps & { name: string }) => {
   const { control, setValue } = useFormContext();

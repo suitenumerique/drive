@@ -2,10 +2,14 @@ import { CellContext } from "@tanstack/react-table";
 import { Item, LinkReach } from "@/features/drivers/types";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Draggable } from "@/features/explorer/components/Draggable";
-import { Tooltip } from "@gouvfr-lasuite/cunningham-react";
+import {
+  Tooltip,
+  Icon,
+  IconSize,
+  removeFileExtension,
+} from "@gouvfr-lasuite/ui-components";
 import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { useDisableDragGridItem } from "@/features/explorer/components/embedded-explorer/hooks";
-import { Icon, IconSize, removeFileExtension } from "@gouvfr-lasuite/ui-kit";
 import { LoadingRing } from "@/features/ui/components/loading-ring/LoadingRing";
 import { useEmbeddedExplorerGirdContext } from "./EmbeddedExplorerGrid";
 import { useIsItemSelected } from "@/features/explorer/stores/selectionStore";
@@ -104,7 +108,13 @@ const EmbeddedExplorerGridNameCellComponent = (
           <ItemIcon key={item.id} item={item} size={IconSize.LARGE} />
         )}
         {isOverflown ? (
-          <Tooltip content={item.title}>{renderTitle()}</Tooltip>
+          <Tooltip content={item.title}>
+            {/* Tooltip injects its ref and hover handlers into its direct
+                child, which Draggable would drop: a plain div receives them. */}
+            <div className="explorer__grid__item__name__title-wrapper">
+              {renderTitle()}
+            </div>
+          </Tooltip>
         ) : (
           renderTitle()
         )}

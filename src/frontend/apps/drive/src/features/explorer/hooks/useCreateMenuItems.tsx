@@ -1,4 +1,4 @@
-import { MenuItem, IconSize } from "@gouvfr-lasuite/ui-kit";
+import { MenuItem, IconSize, useModal } from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import createFolderSvg from "@/assets/icons/create_folder.svg";
@@ -11,10 +11,11 @@ import {
   ExplorerCreateFileType,
 } from "../components/modals/ExplorerCreateFileModal";
 import { ExplorerCreateFolderModal } from "../components/modals/ExplorerCreateFolderModal";
-import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { isMyFilesRoute } from "@/utils/defaultRoutes";
+import { useEntitlements } from "@/features/entitlement-disclaimers/hooks/useEntitlements";
+import { getCannotUploadReasonDescription } from "@/features/entitlement-disclaimers/disclaimers/CannotUploadDisclaimer";
 
 type UseCreateMenuItemsProps = {
   includeImport?: boolean;
@@ -47,6 +48,18 @@ export const useCreateMenuItems = ({
   // On "My files", the item is created without a parent, which already puts
   // it in the current view — no redirect needed.
   const shouldRedirectToCreated = !canCreateHere && !isOnMyFiles;
+
+  // Creating a document writes a real file to storage, so it is gated on the
+  // same entitlement as an upload. Assume it is allowed while the query is in
+  // flight: the backend rejects the creation anyway, and greying the entries
+  // out on every page load would be worse than a rare late disable.
+  const { data: entitlements } = useEntitlements();
+  const canUpload = entitlements?.can_upload.result ?? true;
+  const cannotUploadReason = canUpload
+    ? undefined
+    : (entitlements?.can_upload.message ??
+      getCannotUploadReasonDescription(entitlements?.can_upload.reason) ??
+      t("entitlements.can_upload.cannot_upload"));
 
   const createFolderModal = useModal();
   const [createFileModalType, setCreateFileModalType] =
@@ -98,6 +111,8 @@ export const useCreateMenuItems = ({
         }),
         label: t("explorer.tree.create.file.doc"),
         callback: () => openCreateFileModal(ExplorerCreateFileType.DOC),
+        isDisabled: !canUpload,
+        subText: cannotUploadReason,
       },
       {
         icon: renderFileIcon({
@@ -108,6 +123,8 @@ export const useCreateMenuItems = ({
         }),
         label: t("explorer.tree.create.file.powerpoint"),
         callback: () => openCreateFileModal(ExplorerCreateFileType.POWERPOINT),
+        isDisabled: !canUpload,
+        subText: cannotUploadReason,
       },
       {
         icon: renderFileIcon({
@@ -118,6 +135,8 @@ export const useCreateMenuItems = ({
         }),
         label: t("explorer.tree.create.file.calc"),
         callback: () => openCreateFileModal(ExplorerCreateFileType.CALC),
+        isDisabled: !canUpload,
+        subText: cannotUploadReason,
       },
     );
   }

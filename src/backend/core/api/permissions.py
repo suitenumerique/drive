@@ -12,6 +12,8 @@ ACTION_FOR_METHOD_TO_PERMISSION = {
     "versions_detail": {"DELETE": "versions_destroy", "GET": "versions_retrieve"},
     "children": {"GET": "children_list", "POST": "children_create"},
     "batch_share": {"POST": "accesses_manage"},
+    "deletion_info": {"POST": "destroy"},
+    "unlock": {"POST": "unlock"},
 }
 
 
@@ -150,6 +152,7 @@ class ItemPermission(permissions.BasePermission):
             "create",
             "trashbin",
             "search",
+            "deletion_info",
         ]
 
     def has_object_permission(self, request, view, obj):

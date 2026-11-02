@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { ExplorerTreeNavItem } from "./ExplorerTreeNavItem";
-import { HorizontalSeparator, IconSize } from "@gouvfr-lasuite/ui-kit";
+import { HorizontalSeparator, IconSize } from "@gouvfr-lasuite/ui-components";
 import { TrashIcon } from "@/features/ui/components/icon/TrashIcon";
 
 export const ExplorerTreeNav = () => {

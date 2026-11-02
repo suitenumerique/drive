@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Button, Tooltip } from "@gouvfr-lasuite/cunningham-react";
-import { IconSize } from "@gouvfr-lasuite/ui-kit";
+import { Button, Tooltip, IconSize } from "@gouvfr-lasuite/ui-components";
 import { SortState } from "@/features/explorer/types/columns";
 import { SortAscIcon } from "@/features/ui/components/icon/sorting/sort-asc";
 import { SortDescIcon } from "@/features/ui/components/icon/sorting/sort-desc";

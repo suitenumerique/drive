@@ -25,6 +25,7 @@ import {
   Invitation,
   Item,
   ItemBreadcrumb,
+  ItemDeletionInfo,
   ItemType,
   ItemVersion,
   User,
@@ -33,6 +34,9 @@ import {
 } from "../types";
 import { DTODeleteAccess } from "../DTOs/AccessesDTO";
 import { convertFiltersToQueryParams } from "@/features/explorer/components/filters/filterUtils";
+
+// Keep in sync with DELETION_INFO_MAX_IDS in the backend.
+const DELETION_INFO_MAX_IDS = 100;
 
 export class StandardDriver extends Driver {
   async getConfig(): Promise<ApiConfig> {
@@ -83,8 +87,11 @@ export class StandardDriver extends Driver {
     return jsonToItems(data.results);
   }
 
-  async getItem(id: string): Promise<Item> {
-    const response = await fetchAPI(`items/${id}/`);
+  async getItem(
+    id: string,
+    options?: { redirectOn40x?: boolean },
+  ): Promise<Item> {
+    const response = await fetchAPI(`items/${id}/`, undefined, options);
     const data = await response.json();
     return jsonToItem(data);
   }
@@ -94,6 +101,20 @@ export class StandardDriver extends Driver {
       method: "PATCH",
       body: JSON.stringify(item),
     });
+    const data = await response.json();
+    return jsonToItem(data);
+  }
+
+  async updateItemRestriction(payload: {
+    id: string;
+    is_restricted: boolean;
+  }): Promise<Item> {
+    const response = await fetchAPI(
+      `items/${payload.id}/restrict/`,
+      { method: payload.is_restricted ? "POST" : "DELETE" },
+      // A rejected restriction should leave the share modal open for retry.
+      { redirectOn40x: false },
+    );
     const data = await response.json();
     return jsonToItem(data);
   }
@@ -398,6 +419,7 @@ export class StandardDriver extends Driver {
           body: JSON.stringify({
             type: ItemType.FILE,
             ...rest,
+            size: file.size,
           }),
         },
         {
@@ -441,7 +463,7 @@ export class StandardDriver extends Driver {
         throw new DOMException("Upload cancelled", "AbortError");
       }
 
-      await fetchAPI(
+      const uploadEndedResponse = await fetchAPI(
         `items/${item.id}/upload-ended/`,
         {
           method: "POST",
@@ -454,7 +476,9 @@ export class StandardDriver extends Driver {
 
       progressHandler?.(100);
 
-      return item;
+      // Return the item as finalized by upload-ended (url, mimetype, upload
+      // state...) rather than the pending one returned at creation.
+      return jsonToItem(await uploadEndedResponse.json());
     })();
 
     return { promise, abort };
@@ -502,6 +526,12 @@ export class StandardDriver extends Driver {
     return jsonToItem(await response.json());
   }
 
+  async leaveItem(id: string): Promise<void> {
+    await fetchAPI(`items/${id}/leave/`, {
+      method: "POST",
+    });
+  }
+
   async convertItem(itemId: string): Promise<Item> {
     const response = await fetchAPI(`items/${itemId}/convert/`, {
       method: "POST",
@@ -543,11 +573,34 @@ export class StandardDriver extends Driver {
     });
   }
 
+  async getItemsDeletionInfo(
+    ids: string[],
+  ): Promise<Record<string, ItemDeletionInfo>> {
+    // The API bounds the number of ids per request, so split large selections.
+    const metadata: Record<string, ItemDeletionInfo> = {};
+    for (let i = 0; i < ids.length; i += DELETION_INFO_MAX_IDS) {
+      const response = await fetchAPI(
+        "items/deletion-info/",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            ids: ids.slice(i, i + DELETION_INFO_MAX_IDS),
+          }),
+        },
+        { redirectOn40x: false },
+      );
+      Object.assign(metadata, await response.json());
+    }
+    return metadata;
+  }
+
   async deleteItems(ids: string[]): Promise<void> {
     for (const id of ids) {
-      await fetchAPI(`items/${id}/`, {
-        method: "DELETE",
-      });
+      await fetchAPI(
+        `items/${id}/`,
+        { method: "DELETE" },
+        { redirectOn40x: false },
+      );
     }
   }
 
@@ -588,6 +641,10 @@ const jsonToItems = (data: any[]): Item[] => {
 const jsonToItem = (data: any): Item => {
   const item = {
     ...data,
+    title:
+      data.type === ItemType.RESTRICTION
+        ? (data.target?.title ?? data.title)
+        : data.title,
     updated_at: new Date(data.updated_at),
   };
   if (data.children) {

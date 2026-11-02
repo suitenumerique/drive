@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 """
 
 import os
+import stat
+import tempfile
 import tomllib
 from socket import gethostbyname, gethostname
 
@@ -23,6 +25,8 @@ from boto3.s3.transfer import TransferConfig
 from configurations import Configuration, values
 from lasuite.configuration.values import SecretFileValue
 from sentry_sdk.integrations.django import DjangoIntegration
+
+from core.enums import UploadScreeningMode
 
 # pylint: disable=too-many-lines
 
@@ -68,6 +72,10 @@ class Base(Configuration):
     """
 
     DEBUG = False
+    # Deliberately a plain literal, not a values.Value: this setting exposes
+    # unauthenticated login endpoints and must never be switchable from the
+    # environment. Enable it only by deploying an allowlisted configuration
+    # (see the guard in post_setup).
     LOAD_E2E_URLS = False
     USE_SWAGGER = False
 
@@ -75,6 +83,9 @@ class Base(Configuration):
 
     # Security
     ALLOWED_HOSTS = values.ListValue([])
+    # Django's default, made explicit because setup_prometheus_metrics may add
+    # to it in place: Production redefines it with the probes
+    SECURE_REDIRECT_EXEMPT = []
     SECRET_KEY = SecretFileValue(None)
 
     # Application definition
@@ -132,6 +143,19 @@ class Base(Configuration):
     SEARCH_INDEXER_ALLOWED_MIMETYPES = values.ListValue(
         ["text/"],
         environ_name="SEARCH_INDEXER_ALLOWED_MIMETYPES",
+        environ_prefix=None,
+    )
+
+    # Item permissions
+    PERMISSIONS_BACKEND = values.Value(
+        "core.permissions.backends.role.RolePermissionsBackend",
+        environ_name="PERMISSIONS_BACKEND",
+        environ_prefix=None,
+    )
+
+    PERMISSIONS_BACKEND_PARAMETERS = values.DictValue(
+        {},
+        environ_name="PERMISSIONS_BACKEND_PARAMETERS",
         environ_prefix=None,
     )
 
@@ -239,8 +263,8 @@ class Base(Configuration):
         environ_name="DATA_UPLOAD_MAX_MEMORY_SIZE",
         environ_prefix=None,
     )
-    RESTRICT_UPLOAD_FILE_TYPE = values.BooleanValue(
-        default=True,
+    RESTRICT_UPLOAD_FILE_TYPE = values.Value(
+        default=UploadScreeningMode.ALLOWLIST,
         environ_name="RESTRICT_UPLOAD_FILE_TYPE",
         environ_prefix=None,
     )
@@ -587,6 +611,109 @@ class Base(Configuration):
         environ_name="FILE_EXTENSIONS_ALLOWED",
         environ_prefix=None,
     )
+    FILE_EXTENSIONS_DENIED = values.ListValue(
+        [
+            # Windows executables and libraries
+            ".exe",
+            ".dll",
+            ".sys",
+            ".drv",
+            ".ocx",
+            ".scr",
+            ".com",
+            ".cpl",
+            ".pif",
+            # Windows installers and app packages
+            ".msi",
+            ".msp",
+            ".mst",
+            ".msu",
+            ".msix",
+            ".msixbundle",
+            ".appx",
+            ".appxbundle",
+            ".appinstaller",
+            ".application",
+            ".appref-ms",
+            ".gadget",
+            ".diagcab",
+            # Windows scripts
+            ".bat",
+            ".cmd",
+            ".ps1",
+            ".psm1",
+            ".psd1",
+            ".ps1xml",
+            ".psc1",
+            ".vbs",
+            ".vbe",
+            ".js",
+            ".jse",
+            ".mjs",
+            ".wsf",
+            ".wsh",
+            ".wsc",
+            ".sct",
+            ".hta",
+            ".reg",
+            ".inf",
+            # Shortcuts and shell handlers
+            ".lnk",
+            ".url",
+            ".website",
+            ".scf",
+            ".library-ms",
+            ".search-ms",
+            ".settingcontent-ms",
+            ".msc",
+            ".rdp",
+            # Help files
+            ".chm",
+            ".hlp",
+            # Java
+            ".jar",
+            ".jnlp",
+            ".class",
+            # Active web content
+            ".html",
+            ".htm",
+            ".xhtml",
+            ".xht",
+            ".shtml",
+            ".mht",
+            ".mhtml",
+            ".swf",
+            # Office add-ins and compiled Access
+            ".xll",
+            ".xlam",
+            ".ppam",
+            ".wll",
+            ".ade",
+            ".adp",
+            ".mde",
+            ".accde",
+            ".iqy",
+            # macOS
+            ".app",
+            ".command",
+            ".scpt",
+            ".workflow",
+            ".action",
+            ".pkg",
+            # Linux
+            ".appimage",
+            ".run",
+            ".elf",
+            ".so",
+            ".desktop",
+            ".rpm",
+            # Browser extensions
+            ".crx",
+            ".xpi",
+        ],
+        environ_name="FILE_EXTENSIONS_DENIED",
+        environ_prefix=None,
+    )
 
     FILE_MIMETYPE_ALLOWED = values.ListValue(
         [
@@ -678,7 +805,8 @@ class Base(Configuration):
             "application/x-msaccess",
             "application/x-msmetafile",
             "application/x-mspublisher",
-            "application/x-python-bytecodeapplication/x-shellscript",
+            "application/x-python-bytecode",
+            "application/x-shellscript",
             "application/x-python-code",
             "application/x-rar",
             "application/x-rar-compressed",
@@ -750,7 +878,63 @@ class Base(Configuration):
             "application/octet-stream",
         ],
         environ_name="FILE_MIMETYPE_ALLOWED",
-        environt_prefix=None,
+        environ_prefix=None,
+    )
+    FILE_MIMETYPE_DENIED = values.ListValue(
+        [
+            # Windows executables, libraries, installers
+            "application/x-dosexec",
+            "application/vnd.microsoft.portable-executable",
+            "application/x-msdownload",
+            "application/x-msdos-program",
+            "application/x-ms-dos-executable",
+            "application/x-msi",
+            "application/x-ms-installer",
+            "application/x-ms-application",
+            "application/x-ms-manifest",
+            "application/appx",
+            "application/msix",
+            "application/appinstaller",
+            # Linux / macOS native binaries
+            "application/x-executable",
+            "application/x-pie-executable",
+            "application/x-sharedlib",
+            "application/x-object",
+            "application/x-mach-binary",
+            "application/vnd.appimage",
+            # Java
+            "application/java-archive",
+            "application/x-java-archive",
+            "application/x-java-applet",
+            "application/java-vm",
+            "application/x-java-jnlp-file",
+            # Windows script hosts
+            "text/x-msdos-batch",
+            "application/x-bat",
+            "application/x-powershell",
+            "text/vbscript",
+            "application/x-vbs",
+            "text/javascript",
+            "application/javascript",
+            "application/x-javascript",
+            "application/hta",
+            "text/x-ms-regedit",
+            # Shortcuts and help files
+            "application/x-ms-shortcut",
+            "application/x-mswinurl",
+            "application/internet-shortcut",
+            "application/vnd.ms-htmlhelp",
+            # Active web content
+            "text/html",
+            "application/xhtml+xml",
+            "application/x-shockwave-flash",
+            "application/vnd.adobe.flash.movie",
+            # Browser extensions
+            "application/x-chrome-extension",
+            "application/x-xpinstall",
+        ],
+        environ_name="FILE_MIMETYPE_DENIED",
+        environ_prefix=None,
     )
 
     ITEM_PREVIEWABLE_MIME_TYPES = values.ListValue(
@@ -908,10 +1092,7 @@ class Base(Configuration):
     }
 
     REST_FRAMEWORK = {
-        "DEFAULT_AUTHENTICATION_CLASSES": (
-            "mozilla_django_oidc.contrib.drf.OIDCAuthentication",
-            "rest_framework.authentication.SessionAuthentication",
-        ),
+        "DEFAULT_AUTHENTICATION_CLASSES": ("core.authentication.backends.SessionAuthentication",),
         "DEFAULT_PARSER_CLASSES": [
             "rest_framework.parsers.JSONParser",
             "nested_multipart_parser.drf.DrfNestedParser",
@@ -944,6 +1125,21 @@ class Base(Configuration):
                 environ_name="API_SDK_EVENT_RELAY_THROTTLE_RATE",
                 environ_prefix=None,
             ),
+            "item_create_sustained": values.Value(
+                default="5000/hour",
+                environ_name="API_ITEMS_CREATE_THROTTLE_RATE_SUSTAINED",
+                environ_prefix=None,
+            ),
+            "item_create_burst": values.Value(
+                default="300/minute",
+                environ_name="API_ITEMS_CREATE_THROTTLE_RATE_BURST",
+                environ_prefix=None,
+            ),
+            "items_unlock": values.Value(
+                default="10/minute",
+                environ_name="API_ITEMS_UNLOCK_THROTTLE_RATE",
+                environ_prefix=None,
+            ),
         },
     }
 
@@ -971,6 +1167,16 @@ class Base(Configuration):
         30, environ_name="TRASHBIN_CUTOFF_DAYS", environ_prefix=None
     )
     PURGE_GRACE_DAYS = values.Value(7, environ_name="PURGE_GRACE_DAYS", environ_prefix=None)
+
+    # Management commands scheduled by celery beat, as an alternative to external
+    # cron jobs. A crontab line followed by the command arguments, e.g.
+    # "30 0 * * * --hours=48". Empty: not scheduled.
+    CLEAN_PENDING_ITEMS_SCHEDULE = values.Value(
+        None, environ_name="CLEAN_PENDING_ITEMS_SCHEDULE", environ_prefix=None
+    )
+    PURGE_DELETED_ITEMS_SCHEDULE = values.Value(
+        None, environ_name="PURGE_DELETED_ITEMS_SCHEDULE", environ_prefix=None
+    )
 
     # Mail
     EMAIL_BACKEND = values.Value("django.core.mail.backends.smtp.EmailBackend")
@@ -1326,6 +1532,9 @@ class Base(Configuration):
     )
 
     # SDK Relay
+    SDK_ENABLED = values.BooleanValue(
+        default=False, environ_name="SDK_ENABLED", environ_prefix=None
+    )
     SDK_RELAY_CACHE_TIMEOUT = values.PositiveIntegerValue(
         600,  # 10 minutes
         environ_name="SDK_RELAY_CACHE_TIMEOUT",
@@ -1516,6 +1725,66 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    # Prometheus metrics (django-prometheus), opt-in and OFF by default. When
+    # enabled, `django_prometheus` is added to INSTALLED_APPS and its two
+    # middlewares wrap MIDDLEWARE (see setup_prometheus_metrics) to count and
+    # time every request, labelled by view name, method and status, never by
+    # path or user.
+    #
+    # The metrics are served on /metrics, outside of /api/ so that the ingress
+    # of the application does not publish them. Whoever reaches it still has to
+    # present PROMETHEUS_API_KEY as a bearer token
+    # (core.middleware.PrometheusAuthMiddleware), and the application refuses
+    # to start with the metrics enabled and no key.
+    PROMETHEUS_METRICS_ENABLED = values.BooleanValue(
+        False, environ_name="PROMETHEUS_METRICS_ENABLED", environ_prefix=None
+    )
+    PROMETHEUS_API_KEY = SecretFileValue(
+        None, environ_name="PROMETHEUS_API_KEY", environ_prefix=None
+    )
+    # Let /metrics be scraped over plain http where SECURE_SSL_REDIRECT is on,
+    # for a scraper reaching the pods past the proxy terminating TLS. Leave it
+    # off when the application is reached directly: the redirect is then what
+    # keeps the bearer token off the wire in clear.
+    PROMETHEUS_METRICS_SSL_REDIRECT_EXEMPT = values.BooleanValue(
+        False,
+        environ_name="PROMETHEUS_METRICS_SSL_REDIRECT_EXEMPT",
+        environ_prefix=None,
+    )
+    # Also count and time the SQL queries, by swapping the database engine for
+    # django-prometheus' instrumented subclass of it.
+    PROMETHEUS_DB_METRICS_ENABLED = values.BooleanValue(
+        True, environ_name="PROMETHEUS_DB_METRICS_ENABLED", environ_prefix=None
+    )
+    # Report the length of the Celery queue on /metrics. It is asked to the
+    # broker at every scrape, by whichever replica answers it.
+    PROMETHEUS_CELERY_QUEUE_METRICS_ENABLED = values.BooleanValue(
+        True,
+        environ_name="PROMETHEUS_CELERY_QUEUE_METRICS_ENABLED",
+        environ_prefix=None,
+    )
+    # Report the business metrics of Drive (items, users, accesses, storage) on
+    # /metrics. They are computed from the database and kept in the shared cache
+    # for PROMETHEUS_BUSINESS_METRICS_CACHE_TTL seconds, so that the replicas
+    # and the scrapes share one set of queries.
+    PROMETHEUS_BUSINESS_METRICS_ENABLED = values.BooleanValue(
+        True,
+        environ_name="PROMETHEUS_BUSINESS_METRICS_ENABLED",
+        environ_prefix=None,
+    )
+    PROMETHEUS_BUSINESS_METRICS_CACHE_TTL = values.PositiveIntegerValue(
+        300,
+        environ_name="PROMETHEUS_BUSINESS_METRICS_CACHE_TTL",
+        environ_prefix=None,
+    )
+    # gunicorn runs several worker processes, and a scrape is answered by one of
+    # them: they all write their numbers to this directory so that whichever
+    # answers can add them up. Defaults to a directory of the system's temporary
+    # directory, named after the user running the application.
+    PROMETHEUS_MULTIPROC_DIR = values.Value(
+        None, environ_name="PROMETHEUS_MULTIPROC_DIR", environ_prefix=None
+    )
+
     # Storage compute
     STORAGE_COMPUTE_BACKEND = values.Value(
         "core.storage.creator_storage_compute_backend.CreatorStorageComputeBackend",
@@ -1567,6 +1836,67 @@ class Base(Configuration):
         }
 
     @classmethod
+    def setup_prometheus_metrics(cls):
+        """Wire django-prometheus into the settings (PROMETHEUS_METRICS_ENABLED)."""
+        if not cls.PROMETHEUS_API_KEY:
+            # fail closed: without a key the endpoint would answer to anybody
+            raise ValueError("PROMETHEUS_METRICS_ENABLED requires PROMETHEUS_API_KEY to be set.")
+
+        # prometheus_client decides whether the workers share their numbers
+        # when it is first imported, by looking for this variable in the
+        # environment of the process: a setting alone would come too late.
+        multiproc_dir = cls.PROMETHEUS_MULTIPROC_DIR or os.path.join(
+            tempfile.gettempdir(), f"drive-prometheus-{os.getuid()}"
+        )
+        try:
+            os.makedirs(multiproc_dir, mode=0o700, exist_ok=True)
+            stat_result = os.lstat(multiproc_dir)
+        except OSError as error:
+            raise ValueError(
+                f"PROMETHEUS_MULTIPROC_DIR ({multiproc_dir}) cannot be created: {error}"
+            ) from error
+        # A shared temporary directory is writable by every local user: refuse a
+        # directory somebody else prepared, or a link to somewhere else.
+        if not stat.S_ISDIR(stat_result.st_mode) or stat_result.st_uid != os.getuid():
+            raise ValueError(
+                f"PROMETHEUS_MULTIPROC_DIR ({multiproc_dir}) must be a directory "
+                "owned by the user running the application."
+            )
+        cls.PROMETHEUS_MULTIPROC_DIR = multiproc_dir
+        os.environ["PROMETHEUS_MULTIPROC_DIR"] = multiproc_dir
+
+        # Edited in place: post_setup runs once the settings have been handed to
+        # Django, which only sees the objects it already holds.
+        if "django_prometheus" not in cls.INSTALLED_APPS:
+            cls.INSTALLED_APPS.append("django_prometheus")
+        # The measuring middlewares go first and last, so that the time spent in
+        # every other middleware is measured. The authentication goes before
+        # them all: a refused scrape touches neither the session nor the database.
+        auth = "core.middleware.PrometheusAuthMiddleware"
+        before = "django_prometheus.middleware.PrometheusBeforeMiddleware"
+        after = "django_prometheus.middleware.PrometheusAfterMiddleware"
+        if before not in cls.MIDDLEWARE:
+            cls.MIDDLEWARE.insert(0, before)
+            cls.MIDDLEWARE.insert(0, auth)
+            cls.MIDDLEWARE.append(after)
+
+        default_database = cls.DATABASES["default"]
+        if (
+            cls.PROMETHEUS_DB_METRICS_ENABLED
+            and default_database.get("ENGINE") == "django.db.backends.postgresql"
+        ):
+            default_database["ENGINE"] = "django_prometheus.db.backends.postgresql"
+
+        # The path is core.middleware.METRICS_PATH, not imported here: the
+        # settings are read before the applications are.
+        metrics_pattern = "^metrics$"
+        if (
+            cls.PROMETHEUS_METRICS_SSL_REDIRECT_EXEMPT
+            and metrics_pattern not in cls.SECURE_REDIRECT_EXEMPT
+        ):
+            cls.SECURE_REDIRECT_EXEMPT.append(metrics_pattern)
+
+    @classmethod
     def post_setup(cls):
         """Post setup configuration.
         This is the place where you can configure settings that require other
@@ -1591,6 +1921,40 @@ class Base(Configuration):
                 "OIDC_ALLOW_DUPLICATE_EMAILS cannot be set to True simultaneously. "
             )
 
+        if cls.RESTRICT_UPLOAD_FILE_TYPE not in UploadScreeningMode:
+            raise ValueError(
+                "RESTRICT_UPLOAD_FILE_TYPE must be one of off, allowlist or denylist, "
+                f"got {cls.RESTRICT_UPLOAD_FILE_TYPE!r}."
+            )
+
+        # The e2e auth endpoints allow logging in as anyone without credentials.
+        # They may only be exposed by configurations explicitly allowlisted
+        # here; adding one must be a deliberate, reviewed act.
+        if cls.LOAD_E2E_URLS and cls.__name__ not in (
+            "Development",
+            "Test",
+            "ContinuousIntegration",
+            "LoadTest",
+        ):
+            raise ValueError(
+                f"LOAD_E2E_URLS must never be enabled on the {cls.__name__} configuration."
+            )
+
+        # Mutated in place: settings module globals are already set at this point.
+        if values.BooleanValue(False, environ_name="DB_PSYCOPG_POOL_ENABLED", environ_prefix=None):
+            # https://www.psycopg.org/psycopg3/docs/api/pool.html#psycopg_pool.ConnectionPool
+            cls.DATABASES["default"].setdefault("OPTIONS", {})["pool"] = {
+                "min_size": values.IntegerValue(
+                    4, environ_name="DB_PSYCOPG_POOL_MIN_SIZE", environ_prefix=None
+                ),
+                "max_size": values.IntegerValue(
+                    None, environ_name="DB_PSYCOPG_POOL_MAX_SIZE", environ_prefix=None
+                ),
+                "timeout": values.IntegerValue(
+                    3, environ_name="DB_PSYCOPG_POOL_TIMEOUT", environ_prefix=None
+                ),
+            }
+
         if cls.POSTHOG_KEY is not None:
             posthog.api_key = cls.POSTHOG_KEY
             posthog.host = cls.POSTHOG_HOST
@@ -1614,6 +1978,9 @@ class Base(Configuration):
                         environ_prefix=None,
                     ),
                 }
+
+        if cls.PROMETHEUS_METRICS_ENABLED:
+            cls.setup_prometheus_metrics()
 
 
 class Build(Base):
@@ -1752,6 +2119,8 @@ class Production(Base):
     SECURE_HSTS_PRELOAD = True
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_SSL_REDIRECT = True
+    # /metrics joins the probes only with PROMETHEUS_METRICS_SSL_REDIRECT_EXEMPT,
+    # see setup_prometheus_metrics
     SECURE_REDIRECT_EXEMPT = [
         "^__lbheartbeat__",
         "^__heartbeat__",
@@ -1787,3 +2156,16 @@ class PreProduction(Production):
 
     nota bene: it should inherit from the Production environment.
     """
+
+
+class LoadTest(Production):
+    """
+    Load-testing environment settings
+
+    Identical to Production except it exposes the e2e authentication
+    endpoints used by the load-test scenarios (see load-tests/ at the
+    repository root). Never deploy this configuration on an environment
+    holding real user data.
+    """
+
+    LOAD_E2E_URLS = True

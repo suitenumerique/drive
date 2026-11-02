@@ -1,0 +1,19 @@
+# Per-injector JMeter properties for distributed runs.
+#
+# Copy this file to `user.properties` on each injector machine and give each
+# one a distinct USER_OFFSET so virtual users get globally unique emails
+# (load-user-<USER_OFFSET + threadNum>@test.test).
+#
+# Example for 3 injectors running 1000 users each:
+#   injector 1: USER_OFFSET=0     -> load-user-1..1000
+#   injector 2: USER_OFFSET=1000  -> load-user-1001..2000
+#   injector 3: USER_OFFSET=2000  -> load-user-2001..3000
+
+USER_OFFSET=0
+
+# Any other property from the README can also be pinned here instead of
+# being passed with -J on the command line, e.g.:
+# BASE_URL=https://drive-load.example.com
+# USERS=1000
+# RAMP_UP=600
+# DURATION=1800

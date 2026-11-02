@@ -2,7 +2,7 @@ import { Item } from "@/features/drivers/types";
 import { getFormatTranslationKey } from "@/features/explorer/utils/mimeTypes";
 import { formatSize } from "@/features/explorer/utils/utils";
 import { InfoRow } from "@/features/ui/components/info/InfoRow";
-import { UserRow } from "@gouvfr-lasuite/ui-kit";
+import { UserRow } from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 
 export type ItemInfoProps = {

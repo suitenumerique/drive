@@ -297,6 +297,7 @@ def test_api_entitlements_local_upload_blocked_via_items_api():
     response = client.post(
         f"/api/v1.0/items/{access.item.id!s}/children/",
         {
+            "size": 8,
             "type": models.ItemTypeChoices.FILE,
             "filename": "file.txt",
         },
