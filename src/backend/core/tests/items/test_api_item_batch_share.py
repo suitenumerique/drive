@@ -158,6 +158,51 @@ def test_api_item_batch_share_user_email_case_insensitive():
 
 
 @override_settings(ALLOW_SHARE_IMPORT_FILE=True)
+def test_api_item_batch_share_user_email_non_ascii():
+    """An email differing from an existing user's by a non-ASCII letter should be invited."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(users=[(user, "owner")])
+    factories.UserFactory(email="alice@example.com")
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        batch_share_url(item),
+        {"rows": [{"email": "alıce@example.com", "role": "editor"}]},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert response.json()["accesses_created"] == 0
+    assert response.json()["invitations_created"] == 1
+    assert models.Invitation.objects.filter(email="alıce@example.com", item=item).exists()
+
+
+@override_settings(ALLOW_SHARE_IMPORT_FILE=True)
+def test_api_item_batch_share_user_email_shared_with_inactive_user():
+    """The active user should get the access when an inactive user shares the email."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(users=[(user, "owner")])
+    active_user = factories.UserFactory(email="alice@example.com")
+    inactive_user = factories.UserFactory(email="alice@example.com", is_active=False)
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        batch_share_url(item),
+        {"rows": [{"email": "alice@example.com", "role": "editor"}]},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert response.json()["accesses_created"] == 1
+    assert models.ItemAccess.objects.filter(item=item, user=active_user).exists()
+    assert not models.ItemAccess.objects.filter(item=item, user=inactive_user).exists()
+
+
+@override_settings(ALLOW_SHARE_IMPORT_FILE=True)
 def test_api_item_batch_share_already_shared():
     """Users already having an access with an equal or higher role should be skipped."""
     user = factories.UserFactory()

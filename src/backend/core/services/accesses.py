@@ -2,7 +2,6 @@
 
 from django.db import models as db
 from django.db import transaction
-from django.db.models.functions import Lower
 
 from core import models
 
@@ -16,12 +15,12 @@ def batch_share_process_rows(item, issuer, rows):
     an invitation unless one already exists. Return the created shares and the
     skipped emails.
     """
-    users_by_email = {}
-    users_queryset = models.User.objects.annotate(email_lower=Lower("email")).filter(
-        email_lower__in=rows.keys()
-    )
-    for user in users_queryset:
-        users_by_email.setdefault(user.email.lower(), user)
+    # Emails are normalized by the serializer, like the stored ones.
+    # Active users come last, so they win over inactive ones sharing their email.
+    users_by_email = {
+        user.email: user
+        for user in models.User.objects.filter(email__in=rows.keys()).order_by("is_active")
+    }
 
     # Compute the max role each matched user already holds on the item or one
     # of its ancestors, mirroring the single access creation checks. Users with

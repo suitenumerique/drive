@@ -1035,7 +1035,7 @@ class InvitationSerializer(serializers.ModelSerializer):
         attrs["item_id"] = self.context["resource_id"]
 
         if attrs.get("email"):
-            attrs["email"] = attrs["email"].lower()
+            attrs["email"] = models.normalize_email(attrs["email"])
 
         # Only set the issuer if the instance is being created
         if self.instance is None:
@@ -1078,8 +1078,8 @@ class BatchShareRowSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=models.RoleChoices.choices)
 
     def validate_email(self, value):
-        """Normalize emails to lower case like invitations do."""
-        return value.lower()
+        """Normalize emails like invitations do."""
+        return models.normalize_email(value)
 
 
 class BatchShareSerializer(serializers.Serializer):

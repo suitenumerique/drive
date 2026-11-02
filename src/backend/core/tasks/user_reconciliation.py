@@ -11,7 +11,7 @@ from django.db import IntegrityError
 
 from botocore.exceptions import ClientError
 
-from core.models import UserReconciliation, UserReconciliationCsvImport
+from core.models import UserReconciliation, UserReconciliationCsvImport, normalize_email
 
 from drive.celery_app import app
 
@@ -54,7 +54,7 @@ def _process_row(row, job, counters):
             counters["rows_with_errors"] += 1
             continue
 
-        if inactive_email == active_email:
+        if normalize_email(inactive_email) == normalize_email(active_email):
             job.send_reconciliation_error_email(
                 recipient_email=active_email, other_email=inactive_email
             )
