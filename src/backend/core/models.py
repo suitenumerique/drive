@@ -491,7 +491,7 @@ class UserReconciliation(BaseModel):
 
             if self.active_user and self.active_user == self.inactive_user:
                 self.status = "error"
-                self.logs = "Error: Active and inactive emails belong to the same user."
+                self.logs = "Error: Active and inactive emails are the same address."
             elif self.active_user and self.inactive_user:
                 if not self.active_email_checked:
                     self.send_reconciliation_confirm_email(
