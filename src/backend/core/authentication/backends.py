@@ -19,6 +19,14 @@ from core.models import DuplicateEmailError
 logger = logging.getLogger(__name__)
 
 
+def check_user_can_access(user):
+    """Refuse a user if the entitlements backend does not grant access to the app."""
+
+    result = get_entitlements_backend().can_access(user)
+    if not result["result"]:
+        raise UserCannotAccessApp(result.get("message", "User does not have access to the app"))
+
+
 class OIDCAuthenticationBackend(LaSuiteOIDCAuthenticationBackend):
     """Custom OpenID Connect (OIDC) Authentication Backend.
 
@@ -56,10 +64,7 @@ class OIDCAuthenticationBackend(LaSuiteOIDCAuthenticationBackend):
 
     def get_or_create_user(self, access_token, id_token, payload):
         user = super().get_or_create_user(access_token, id_token, payload)
-        entitlement_backend = get_entitlements_backend()
-        result = entitlement_backend.can_access(user)
-        if not result["result"]:
-            raise UserCannotAccessApp(result.get("message", "User does not have access to the app"))
+        check_user_can_access(user)
         return user
 
 
