@@ -33,14 +33,14 @@ export const VersionHistoryModal = ({
   const { data: versions, isLoading } = useItemVersions(item.id);
 
   const invalidate = () => {
-    queryClient.invalidateQueries({
+    void queryClient.invalidateQueries({
       queryKey: ["itemVersions", item.id],
     });
-    refreshItemCache(item.id);
+    void refreshItemCache(item.id);
   };
 
   const handleDownload = (version: ItemVersion) => {
-    getDriver().downloadItemVersion(item.id, version.id);
+    void getDriver().downloadItemVersion(item.id, version.id);
   };
 
   const handleRestore = async (version: ItemVersion) => {
@@ -131,7 +131,9 @@ export const VersionHistoryModal = ({
                 <Button
                   variant="quaternary"
                   size="small"
-                  onClick={() => handleRestore(version)}
+                  onClick={() => {
+                    void handleRestore(version);
+                  }}
                 >
                   <Restore />
                 </Button>
@@ -140,7 +142,9 @@ export const VersionHistoryModal = ({
                 <Button
                   variant="quaternary"
                   size="small"
-                  onClick={() => handleDelete(version)}
+                  onClick={() => {
+                    void handleDelete(version);
+                  }}
                 >
                   <Trash />
                 </Button>
