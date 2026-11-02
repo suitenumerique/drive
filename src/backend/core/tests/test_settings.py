@@ -48,6 +48,44 @@ def test_invalid_settings_restrict_upload_file_type(value):
     )
 
 
+@pytest.mark.parametrize(
+    "missing", ["MENSHEN_SERVER_URL", "MENSHEN_CLIENT_ID", "MENSHEN_CLIENT_SECRET"]
+)
+def test_invalid_settings_menshen_without_its_credentials(missing):
+    """Enabling Menshen without its server url and client credentials should be refused."""
+
+    class TestSettings(Base):
+        """Fake test settings."""
+
+        MENSHEN_ENABLED = True
+        MENSHEN_SERVER_URL = "https://menshen.example.com"
+        MENSHEN_CLIENT_ID = "drive"
+        MENSHEN_CLIENT_SECRET = "some_client_secret"
+
+    setattr(TestSettings, missing, None)
+
+    with pytest.raises(ValueError) as excinfo:
+        TestSettings().post_setup()
+
+    assert str(excinfo.value) == (
+        "MENSHEN_ENABLED requires values for MENSHEN_CLIENT_ID, "
+        "MENSHEN_CLIENT_SECRET and MENSHEN_SERVER_URL"
+    )
+
+
+def test_valid_settings_menshen_disabled_needs_no_credentials():
+    """Menshen being disabled should not demand any of its settings."""
+
+    class TestSettings(Base):
+        """Fake test settings."""
+
+        MENSHEN_ENABLED = False
+
+    TestSettings().post_setup()
+
+    assert TestSettings.MENSHEN_REQUIRED_SCOPES == {}
+
+
 def test_load_e2e_urls_is_not_environment_configurable():
     """
     LOAD_E2E_URLS exposes credential-less login endpoints: it must be a plain

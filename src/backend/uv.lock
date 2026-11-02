@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = "==3.13.*"
 
 [manifest]
@@ -708,6 +708,7 @@ dependencies = [
     { name = "gunicorn" },
     { name = "jsonschema" },
     { name = "markdown" },
+    { name = "menshen-client" },
     { name = "mozilla-django-oidc" },
     { name = "nested-multipart-parser" },
     { name = "posthog" },
@@ -781,6 +782,7 @@ requires-dist = [
     { name = "ipython", marker = "extra == 'dev'", specifier = "==9.12.0" },
     { name = "jsonschema", specifier = "==4.26.0" },
     { name = "markdown", specifier = "==3.10.2" },
+    { name = "menshen-client", specifier = "==0.2.0" },
     { name = "mozilla-django-oidc", specifier = "<5.0.0" },
     { name = "nested-multipart-parser", specifier = "==1.6.0" },
     { name = "posthog", specifier = "==7.12.0" },
@@ -1099,6 +1101,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e7/ff/0ffefdcac38932a54d2b5eed4e0ba8a408f215002cd178ad1df0f2806ff8/mccabe-0.7.0.tar.gz", hash = "sha256:348e0240c33b60bbdf4e523192ef919f28cb2c3d7d5c7794f74009290f236325", size = 9658, upload-time = "2022-01-24T01:14:51.113Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/27/1a/1f68f9ba0c207934b35b86a8ca3aad8395a3d6dd7921c0686e23853ff5a9/mccabe-0.7.0-py2.py3-none-any.whl", hash = "sha256:6c2d30ab6be0e4a46919781807b4f0d834ebdd6c6e3dca0bda5a15f863427b6e", size = 7350, upload-time = "2022-01-24T01:14:49.62Z" },
+]
+
+[[package]]
+name = "menshen-client"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/57/a2/5862b0a39d5f96301e1daff146445f591b1980412c20417162f5cfd6aa34/menshen_client-0.2.0.tar.gz", hash = "sha256:548c4224c38b2c844a76325b5a4b65da520ea9eba23aafb004da0f430a7e4fcf", size = 6326, upload-time = "2026-10-13T10:19:34.344Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/53/4d/932efd81c340d12d07b1c33633c6e7a4a2d0c9086ac0da7ffe9a1ce17068/menshen_client-0.2.0-py3-none-any.whl", hash = "sha256:415eaba30184452bc393b528c6088ed6e37cbd00ce60716aef9e2d9bd0697221", size = 7149, upload-time = "2026-10-13T10:19:33.272Z" },
 ]
 
 [[package]]
