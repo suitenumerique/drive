@@ -4,7 +4,7 @@ import {
   ModalProps,
   ModalSize,
   useModals,
-} from "@gouvfr-lasuite/cunningham-react";
+} from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { Item, ItemVersion } from "@/features/drivers/types";
@@ -16,7 +16,7 @@ import {
   ToasterItem,
 } from "@/features/ui/components/toaster/Toaster";
 import { useRefreshItemCache } from "../../hooks/useRefreshItems";
-import { Download, Restore, Trash } from "@gouvfr-lasuite/ui-kit/icons";
+import { Download, Restore, Trash } from "@gouvfr-lasuite/ui-components/icons";
 
 type VersionHistoryModalProps = Pick<ModalProps, "isOpen" | "onClose"> & {
   item: Item;
