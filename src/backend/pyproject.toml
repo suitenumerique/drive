@@ -53,6 +53,7 @@ dependencies = [
     "gunicorn==26.2.0",
     "jsonschema==4.26.0",
     "markdown==3.11.1",
+    "menshen-client==0.2.0",
     "mozilla-django-oidc<5.0.0",
     "nested-multipart-parser==1.6.0",
     "posthog==7.71.0",
