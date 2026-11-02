@@ -10,9 +10,17 @@ scope it demands. An action left out of that mapping is never reachable.
 from types import SimpleNamespace
 
 import pytest
+import responses
+from rest_framework.test import APIClient
 
+from core import factories, models
 from core.external_api.authentication import MenshenAuthentication
 from core.external_api.permissions import MenshenPermission
+from core.tests.utils.menshen import (
+    MENSHEN_INTROSPECTION_URL,
+    MENSHEN_TOKEN,
+    menshen_introspection_response,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -43,6 +51,20 @@ def build_view(action, resource="items", actions=EXTERNAL_API_ACTIONS):
         view.resource_server_actions = actions
 
     return view
+
+
+def menshen_client(rsps, scope):
+    """Build an API client whose exchanged token carries the given scopes."""
+    rsps.add(
+        responses.POST,
+        MENSHEN_INTROSPECTION_URL,
+        json=menshen_introspection_response(scope=scope),
+    )
+
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {MENSHEN_TOKEN}")
+
+    return client
 
 
 # The permission class
@@ -179,3 +201,119 @@ def test_permission_skips_the_action_check_for_an_unrestricted_view(settings):
     request = build_request(["drive:item:list"])
 
     assert MenshenPermission().has_permission(request, build_view("list", actions=None)) is True
+
+
+# Through the API
+
+
+def test_api_items_list_with_the_required_scope(menshen_backend_conf, user_specific_sub):
+    """A token carrying the list scope should be allowed to list items."""
+    item = factories.ItemFactory(link_reach=models.LinkReachChoices.RESTRICTED)
+    factories.UserItemAccessFactory(
+        item=item, user=user_specific_sub, role=models.RoleChoices.READER
+    )
+
+    with responses.RequestsMock() as rsps:
+        response = menshen_client(rsps, "drive:item:list").get("/external_api/v1.0/items/")
+
+    assert response.status_code == 200
+    # The token speaks for a user, the listing is that user's own.
+    assert str(item.id) in [result["id"] for result in response.json()["results"]]
+
+
+def test_api_items_list_without_the_required_scope(menshen_backend_conf, user_specific_sub):
+    """A token that does not carry the list scope should be refused."""
+    item = factories.ItemFactory(link_reach=models.LinkReachChoices.RESTRICTED)
+    factories.UserItemAccessFactory(
+        item=item, user=user_specific_sub, role=models.RoleChoices.READER
+    )
+
+    with responses.RequestsMock() as rsps:
+        response = menshen_client(rsps, "drive:item:retrieve").get("/external_api/v1.0/items/")
+
+    assert response.status_code == 403
+
+
+def test_api_items_retrieve_with_the_required_scope(menshen_backend_conf, user_specific_sub):
+    """A token carrying the retrieve scope should be allowed to retrieve an item."""
+    item = factories.ItemFactory(link_reach=models.LinkReachChoices.RESTRICTED)
+    factories.UserItemAccessFactory(
+        item=item, user=user_specific_sub, role=models.RoleChoices.READER
+    )
+
+    with responses.RequestsMock() as rsps:
+        response = menshen_client(rsps, "drive:item:retrieve").get(
+            f"/external_api/v1.0/items/{item.id!s}/"
+        )
+
+    assert response.status_code == 200
+
+
+def test_api_items_retrieve_an_item_the_user_cannot_access(menshen_backend_conf, user_specific_sub):
+    """The scope should not stand in for the end user's own access to the item.
+
+    The token speaks for a user, the item permissions still apply to that user.
+    """
+    item = factories.ItemFactory(link_reach=models.LinkReachChoices.RESTRICTED)
+
+    with responses.RequestsMock() as rsps:
+        response = menshen_client(rsps, "drive:item:retrieve").get(
+            f"/external_api/v1.0/items/{item.id!s}/"
+        )
+
+    assert response.status_code == 403
+
+
+def test_api_items_destroy_is_not_reachable(menshen_backend_conf, user_specific_sub):
+    """An action the external API does not open should be refused."""
+    item = factories.ItemFactory(link_reach=models.LinkReachChoices.RESTRICTED)
+    factories.UserItemAccessFactory(
+        item=item, user=user_specific_sub, role=models.RoleChoices.OWNER
+    )
+
+    with responses.RequestsMock() as rsps:
+        response = menshen_client(rsps, "drive:item:destroy").delete(
+            f"/external_api/v1.0/items/{item.id!s}/"
+        )
+
+    assert response.status_code == 403
+
+
+def test_api_items_create_children_with_the_required_scope(menshen_backend_conf, user_specific_sub):
+    """A token carrying the create-children scope should be allowed to create a child."""
+    item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    factories.UserItemAccessFactory(
+        item=item, user=user_specific_sub, role=models.RoleChoices.OWNER
+    )
+
+    with responses.RequestsMock() as rsps:
+        response = menshen_client(rsps, "drive:item:create-children").post(
+            f"/external_api/v1.0/items/{item.id!s}/children/",
+            {"size": 8, "type": models.ItemTypeChoices.FILE, "filename": "file.txt"},
+        )
+
+    assert response.status_code == 201
+
+
+def test_api_items_list_children_scope_does_not_create_children(
+    menshen_backend_conf, user_specific_sub
+):
+    """The scope that lists children should not create any."""
+    item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    factories.UserItemAccessFactory(
+        item=item, user=user_specific_sub, role=models.RoleChoices.OWNER
+    )
+
+    with responses.RequestsMock() as rsps:
+        response = menshen_client(rsps, "drive:item:list-children").post(
+            f"/external_api/v1.0/items/{item.id!s}/children/",
+            {"size": 8, "type": models.ItemTypeChoices.FILE, "filename": "file.txt"},
+        )
+
+    assert response.status_code == 403

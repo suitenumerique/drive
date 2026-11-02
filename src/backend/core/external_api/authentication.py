@@ -9,6 +9,9 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import SuspiciousOperation, ValidationError
 
 import requests
+from lasuite.oidc_resource_server.authentication import (
+    ResourceServerAuthentication as LaSuiteResourceServerAuthentication,
+)
 from menshen_client import Configuration, IntrospectionRequest, TokenExchangeClient
 from menshen_client.exceptions import ResponseParsingError
 from rest_framework import authentication, exceptions
@@ -208,3 +211,15 @@ class MenshenAuthentication(authentication.BaseAuthentication):
     def authenticate_header(self, request):
         """Return authentication scheme for WWW-Authenticate header."""
         return "bearer"
+
+
+class ResourceServerAuthentication(LaSuiteResourceServerAuthentication):
+    """Authentication for tokens introspected with the OIDC provider."""
+
+    def authenticate(self, request):
+        """Defer to the next authentication backend when the resource server is off."""
+
+        if not settings.OIDC_RESOURCE_SERVER_ENABLED:
+            return None
+
+        return super().authenticate(request)
