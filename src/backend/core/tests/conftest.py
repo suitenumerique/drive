@@ -10,6 +10,7 @@ import responses
 from cryptography.fernet import Fernet
 
 from core import factories
+from core.tests.utils.menshen import menshen_backend_setup
 from core.tests.utils.urls import reload_urls
 
 USER = "user"
@@ -23,16 +24,15 @@ def clear_cache():
     yield
     cache.clear()
     # Clear functools.cache for functions decorated with @functools.cache
+    # pylint:disable=import-outside-toplevel
 
-    from core.entitlements import (  # pylint:disable=import-outside-toplevel # noqa: PLC0415
-        get_entitlements_backend,
-    )
-    from core.storage import (  # pylint:disable=import-outside-toplevel # noqa: PLC0415
-        get_storage_compute_backend,
-    )
+    from core.entitlements import get_entitlements_backend  # noqa: PLC0415
+    from core.external_api.authentication import _get_token_exchange_client  # noqa: PLC0415
+    from core.storage import get_storage_compute_backend  # noqa: PLC0415
 
     get_entitlements_backend.cache_clear()
     get_storage_compute_backend.cache_clear()
+    _get_token_exchange_client.cache_clear()
 
 
 @pytest.fixture(autouse=True)
@@ -142,6 +142,22 @@ def user_token():
     A fixture to create a user token for testing.
     """
     return build_authorization_bearer("some_token")
+
+
+@pytest.fixture
+def menshen_backend_conf(settings):
+    """
+    A fixture enabling the Menshen token exchange backend, resource server off.
+    Register the external API routes, and unregisters them again afterwards.
+    """
+    menshen_backend_setup(settings)
+    reload_urls()
+
+    yield settings
+
+    settings.MENSHEN_ENABLED = False
+    settings.OIDC_RESOURCE_SERVER_ENABLED = False
+    reload_urls()
 
 
 @pytest.fixture(name="indexer_settings")
