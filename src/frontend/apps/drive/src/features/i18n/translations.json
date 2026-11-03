@@ -657,6 +657,14 @@
           "confirm_restore": {
             "title": "Restore this version?",
             "description": "The current content will be saved as a new version, and this version will become the current content."
+          },
+          "name_conflict": {
+            "title": "A file with this name already exists",
+            "description": "\"{{name}}\" is already in this folder. Add a new version of that file, or create \"{{copyName}}\" so the names stay distinct.",
+            "description_multiple": "{{count}} files are already named \"{{name}}\". Choose which one receives the new version, or create \"{{copyName}}\".",
+            "version": "New version",
+            "copy": "Another file",
+            "cancel": "Cancel"
           }
         }
       },
@@ -1408,6 +1416,14 @@
           "confirm_restore": {
             "title": "Restaurer cette version ?",
             "description": "Le contenu actuel sera enregistré comme nouvelle version, et cette version deviendra le contenu actuel."
+          },
+          "name_conflict": {
+            "title": "Un fichier porte déjà ce nom",
+            "description": "« {{name}} » existe déjà dans ce dossier. Ajoutez une nouvelle version de ce fichier, ou créez « {{copyName}} » pour garder des noms distincts.",
+            "description_multiple": "{{count}} fichiers portent déjà le nom « {{name}} ». Choisissez celui qui reçoit la nouvelle version, ou créez « {{copyName}} ».",
+            "version": "Nouvelle version",
+            "copy": "Autre fichier",
+            "cancel": "Annuler"
           }
         }
       },
@@ -2159,6 +2175,14 @@
           "confirm_restore": {
             "title": "Deze versie herstellen?",
             "description": "De huidige inhoud wordt opgeslagen als een nieuwe versie, en deze versie wordt de huidige inhoud."
+          },
+          "name_conflict": {
+            "title": "Er bestaat al een bestand met deze naam",
+            "description": "\"{{name}}\" staat al in deze map. Maak een nieuwe versie van dat bestand, of maak \"{{copyName}}\" zodat de namen verschillend blijven.",
+            "description_multiple": "{{count}} bestanden heten al \"{{name}}\". Kies welk bestand de nieuwe versie krijgt, of maak \"{{copyName}}\".",
+            "version": "Nieuwe versie",
+            "copy": "Ander bestand",
+            "cancel": "Annuleren"
           }
         }
       },

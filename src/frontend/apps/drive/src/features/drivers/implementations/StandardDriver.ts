@@ -484,6 +484,98 @@ export class StandardDriver extends Driver {
     return { promise, abort };
   }
 
+  replaceFile(data: {
+    itemId: string;
+    file: File;
+    uploadAcl?: string;
+    progressHandler?: (progress: number) => void;
+  }): { promise: Promise<Item>; abort: () => Promise<void> } {
+    let abortUpload: (() => void) | undefined;
+    let aborted = false;
+    let finalizing = false;
+    let createdItemId: string | undefined;
+    const abortController = new AbortController();
+
+    const abort = async () => {
+      aborted = true;
+      abortUpload?.();
+      abortController.abort();
+      if (createdItemId && !finalizing) {
+        await fetchAPI(
+          `items/${createdItemId}/cancel-new-version/`,
+          { method: "POST" },
+          { redirectOn40x: false },
+        ).catch(() => undefined);
+      }
+    };
+
+    const promise = (async () => {
+      const { itemId, file, uploadAcl, progressHandler } = data;
+      const response = await fetchAPI(
+        `items/${itemId}/new-version/`,
+        {
+          method: "POST",
+          body: JSON.stringify({ size: file.size }),
+        },
+        { redirectOn40x: false },
+      );
+      const item = jsonToItem(await response.json());
+      createdItemId = item.id;
+      if (!item.policy) {
+        throw new Error("No policy found");
+      }
+
+      if (aborted) {
+        await fetchAPI(
+          `items/${item.id}/cancel-new-version/`,
+          { method: "POST" },
+          { redirectOn40x: false },
+        ).catch(() => undefined);
+        throw new DOMException("Upload cancelled", "AbortError");
+      }
+
+      const progressHandlerProxy = (progress: number) => {
+        const proxyScale = 90;
+        const proxiedProgress = (progress * proxyScale) / 100;
+        progressHandler?.(proxiedProgress);
+      };
+
+      const upload = uploadFile(
+        item.policy,
+        file,
+        uploadAcl,
+        progressHandlerProxy,
+      );
+      abortUpload = upload.abort;
+
+      if (aborted) {
+        upload.abort();
+        throw new DOMException("Upload cancelled", "AbortError");
+      }
+
+      await upload.promise;
+
+      if (aborted) {
+        throw new DOMException("Upload cancelled", "AbortError");
+      }
+
+      finalizing = true;
+      const uploadEndedResponse = await fetchAPI(
+        `items/${item.id}/upload-ended/`,
+        {
+          method: "POST",
+          signal: abortController.signal,
+        },
+        { redirectOn40x: false },
+      );
+
+      progressHandler?.(100);
+      return jsonToItem(await uploadEndedResponse.json());
+    })();
+
+    return { promise, abort };
+  }
+
   async createFileFromTemplate(data: {
     parentId?: string;
     extension: string;

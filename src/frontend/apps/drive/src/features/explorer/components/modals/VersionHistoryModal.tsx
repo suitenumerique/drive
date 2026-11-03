@@ -95,63 +95,74 @@ export const VersionHistoryModal = ({
         </Button>
       }
     >
-      {isLoading && <p className="mb-s">{t("explorer.versions.modal.loading")}</p>}
+      {isLoading && <p>{t("explorer.versions.modal.loading")}</p>}
       {!isLoading && (!versions || versions.length === 0) && (
-        <p className="mb-s">{t("explorer.versions.modal.empty")}</p>
+        <p>{t("explorer.versions.modal.empty")}</p>
       )}
-      {!isLoading &&
-        versions?.map((version) => (
-          <div
-            key={version.id}
-            className="d-flex align-center justify-space-between p-s"
-            style={{ borderBottom: "1px solid var(--c--theme--colors--greyscale-200)" }}
-          >
-            <div>
-              <p className="mb-0">
-                <strong>{t("explorer.versions.modal.version", { n: version.version_number })}</strong>
-              </p>
-              <p className="mb-0" style={{ color: "var(--c--theme--colors--greyscale-500)" }}>
-                {version.created_at.toLocaleString()}
-              </p>
-              {typeof version.size === "number" && (
-                <p className="mb-0" style={{ color: "var(--c--theme--colors--greyscale-500)" }}>
-                  {formatSize(version.size, t)}
-                </p>
-              )}
-            </div>
-            <div className="d-flex">
-              <Button
-                variant="quaternary"
-                size="small"
-                onClick={() => handleDownload(version)}
-              >
-                <Download />
-              </Button>
-              {hasRestore && (
-                <Button
-                  variant="quaternary"
-                  size="small"
-                  onClick={() => {
-                    void handleRestore(version);
-                  }}
-                >
-                  <Restore />
-                </Button>
-              )}
-              {hasDelete && (
-                <Button
-                  variant="quaternary"
-                  size="small"
-                  onClick={() => {
-                    void handleDelete(version);
-                  }}
-                >
-                  <Trash />
-                </Button>
-              )}
-            </div>
-          </div>
-        ))}
+      {!isLoading && versions && versions.length > 0 && (
+        <ul className="version-history">
+          {versions.map((version) => {
+            const author =
+              version.created_by?.full_name || version.created_by?.short_name;
+            return (
+              <li key={version.id} className="version-history__row">
+                <div className="version-history__meta">
+                  <span className="version-history__name">
+                    {t("explorer.versions.modal.version", {
+                      n: version.version_number,
+                    })}
+                  </span>
+                  <span className="version-history__detail">
+                    {version.created_at.toLocaleString()}
+                  </span>
+                  {typeof version.size === "number" && (
+                    <span className="version-history__detail">
+                      {formatSize(version.size, t)}
+                    </span>
+                  )}
+                  {author && (
+                    <span className="version-history__detail">{author}</span>
+                  )}
+                </div>
+                <div className="version-history__actions">
+                  <Button
+                    variant="quaternary"
+                    size="small"
+                    aria-label={t("explorer.versions.modal.download")}
+                    onClick={() => handleDownload(version)}
+                  >
+                    <Download />
+                  </Button>
+                  {hasRestore && (
+                    <Button
+                      variant="quaternary"
+                      size="small"
+                      aria-label={t("explorer.versions.modal.restore")}
+                      onClick={() => {
+                        void handleRestore(version);
+                      }}
+                    >
+                      <Restore />
+                    </Button>
+                  )}
+                  {hasDelete && (
+                    <Button
+                      variant="quaternary"
+                      size="small"
+                      aria-label={t("explorer.versions.modal.delete")}
+                      onClick={() => {
+                        void handleDelete(version);
+                      }}
+                    >
+                      <Trash />
+                    </Button>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </Modal>
   );
 };

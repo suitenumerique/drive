@@ -52,7 +52,15 @@ from core.services.accesses import (
     synchronize_descendants_accesses,
 )
 from core.services.item_exports import build_zip_stream, export_descendants
-from core.services.item_versions import delete_version, restore_version
+from core.services.item_versions import (
+    VERSIONABLE_UPLOAD_STATES,
+    abort_replacement,
+    clear_replacement,
+    delete_version,
+    mark_replacement,
+    restore_version,
+    snapshot_version,
+)
 from core.services.sdk_relay import SDKRelayManager
 from core.services.search_indexers import (
     get_file_indexer,
@@ -441,6 +449,7 @@ class ItemViewSet(
     trashbin_serializer_class = serializers.ListItemSerializer
     children_serializer_class = serializers.ListItemSerializer
     create_serializer_class = serializers.CreateItemSerializer
+    new_version_serializer_class = serializers.CreateItemSerializer
     tree_serializer_class = serializers.ListItemSerializer
     search_serializer_class = serializers.SearchItemSerializer
     breadcrumb_serializer_class = serializers.BreadcrumbItemSerializer
@@ -906,7 +915,7 @@ class ItemViewSet(
         if item.size is None:
             can_upload = get_entitlements_backend().can_upload(item.creator)
             if not can_upload["result"]:
-                self._complete_item_deletion(item)
+                self._fail_upload(item)
                 raise drf.exceptions.PermissionDenied(
                     detail=can_upload.get("message", "You do not have permission to upload files."),
                     code=can_upload.get("reason"),
@@ -936,7 +945,7 @@ class ItemViewSet(
         mimetype = utils.detect_mimetype(file_head, filename=item.filename)
 
         if not utils.is_mimetype_allowed(mimetype):
-            self._complete_item_deletion(item)
+            self._fail_upload(item)
             logger.info(
                 "upload_ended: mimetype not allowed %s for filename %s",
                 mimetype,
@@ -989,6 +998,7 @@ class ItemViewSet(
             item.mimetype = mimetype
             item.size = file_size
             item.save(update_fields=["upload_state", "mimetype", "size"])
+            transaction.on_commit(lambda: clear_replacement(item))
             transaction.on_commit(
                 lambda: malware_detection.analyse_file(item.file_key, item_id=item.id)
             )
@@ -1011,14 +1021,14 @@ class ItemViewSet(
     def _validate_uploaded_size(self, item, file_size):
         """Verify storage metadata even though the PUT has a signed length."""
         if item.size is not None and file_size != item.size:
-            self._complete_item_deletion(item)
+            self._fail_upload(item)
             raise drf.exceptions.ValidationError(
                 detail="The uploaded file size does not match the reserved size.",
                 code="file_size_mismatch",
             )
 
         if file_size > settings.DATA_UPLOAD_MAX_MEMORY_SIZE:
-            self._complete_item_deletion(item)
+            self._fail_upload(item)
             logger.info(
                 "upload_ended: file size (%s) for file %s higher than the allowed max size",
                 file_size,
@@ -1029,11 +1039,88 @@ class ItemViewSet(
                 code="file_size_exceeded",
             )
 
+    def _fail_upload(self, item):
+        """Drop a failed upload.
+
+        A replacement keeps the item and puts the snapshotted content back.
+        A first upload is deleted, as before.
+        """
+        if not abort_replacement(item):
+            self._complete_item_deletion(item)
+
     def _complete_item_deletion(self, item):
         """Completely delete an item."""
         item.soft_delete()
         item.hard_delete()
         process_item_purge.delay(item.id)
+
+    def _declared_upload_size(self, raw_size):
+        """Validate the size a client declares before an upload."""
+        if isinstance(raw_size, bool) or raw_size is None:
+            raise drf.exceptions.ValidationError(
+                {"size": "This field is required."},
+                code="required",
+            )
+        try:
+            size = int(raw_size)
+        except (TypeError, ValueError) as error:
+            raise drf.exceptions.ValidationError(
+                {"size": "A valid integer is required."},
+                code="invalid",
+            ) from error
+        if size < 0 or size > settings.DATA_UPLOAD_MAX_MEMORY_SIZE:
+            raise drf.exceptions.ValidationError(
+                {"size": "The file size is higher than the allowed max size."},
+                code="file_size_exceeded",
+            )
+        return size
+
+    @drf.decorators.action(detail=True, methods=["post"], url_path="new-version")
+    def new_version(self, request, *args, **kwargs):
+        """Snapshot the current file, then authorize an upload that replaces it."""
+        item = self.get_object()
+        size = self._declared_upload_size(request.data.get("size"))
+        if (
+            item.type != models.ItemTypeChoices.FILE
+            or item.upload_state not in VERSIONABLE_UPLOAD_STATES
+        ):
+            raise drf.exceptions.ValidationError(
+                {"item": "A new version can only replace a file that is ready."},
+                code="item_new_version_unavailable",
+            )
+
+        version = None
+        try:
+            with reserve_upload(request.user, get_entitlements_backend()):
+                item = models.Item.objects.select_for_update().get(pk=item.pk)
+                if (
+                    item.type != models.ItemTypeChoices.FILE
+                    or item.upload_state not in VERSIONABLE_UPLOAD_STATES
+                ):
+                    raise drf.exceptions.ValidationError(
+                        {"item": "A new version can only replace a file that is ready."},
+                        code="item_new_version_unavailable",
+                    )
+                version = snapshot_version(item, created_by=request.user)
+                item.size = size
+                item.upload_state = models.ItemUploadStateChoices.PENDING
+                item.save(update_fields=["size", "upload_state", "updated_at"])
+                transaction.on_commit(lambda: mark_replacement(item, version))
+        except drf.exceptions.PermissionDenied:
+            if version is not None:
+                delete_version(version)
+            raise
+
+        serializer = self.get_serializer(item)
+        return drf_response.Response(serializer.data, status=status.HTTP_200_OK)
+
+    @drf.decorators.action(detail=True, methods=["post"], url_path="cancel-new-version")
+    def cancel_new_version(self, request, *args, **kwargs):
+        """Put the previous content back when the client aborts a replacement."""
+        item = self.get_object()
+        if item.upload_state == models.ItemUploadStateChoices.PENDING:
+            abort_replacement(item)
+        return drf_response.Response(status=status.HTTP_204_NO_CONTENT)
 
     @drf.decorators.action(
         detail=False,

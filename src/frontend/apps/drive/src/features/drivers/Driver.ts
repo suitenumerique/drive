@@ -186,6 +186,12 @@ export abstract class Driver {
     uploadAcl?: string;
     progressHandler?: (progress: number) => void;
   }): { promise: Promise<Item>; abort: () => Promise<void> };
+  abstract replaceFile(data: {
+    itemId: string;
+    file: File;
+    uploadAcl?: string;
+    progressHandler?: (progress: number) => void;
+  }): { promise: Promise<Item>; abort: () => Promise<void> };
   abstract createFileFromTemplate(data: {
     parentId: string;
     extension: string;

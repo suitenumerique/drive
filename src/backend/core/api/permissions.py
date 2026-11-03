@@ -14,6 +14,8 @@ ACTION_FOR_METHOD_TO_PERMISSION = {
     "batch_share": {"POST": "accesses_manage"},
     "deletion_info": {"POST": "destroy"},
     "unlock": {"POST": "unlock"},
+    "new_version": {"POST": "versions_restore"},
+    "cancel_new_version": {"POST": "versions_restore"},
 }
 
 

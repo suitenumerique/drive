@@ -177,7 +177,8 @@ export const GlobalExplorerProvider = ({
     }
   }, [rightPanelOpen]);
 
-  const { dropZone, cancelUploadsForDeletedItems } = useUploadZone({
+  const { dropZone, cancelUploadsForDeletedItems, nameConflictModal } =
+    useUploadZone({
     item: item!,
     onSingleFileUploaded: (uploadedItem, parentId) => {
       // Only select it if the user is still looking at the folder it was
@@ -292,6 +293,7 @@ export const GlobalExplorerProvider = ({
         />
 
         <Toaster />
+        {nameConflictModal}
         <CustomFilesPreview
           currentItem={previewItem}
           items={previewItems}

@@ -6,6 +6,7 @@ deleting and enforcing the maximum number of stored versions per item.
 """
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.files.storage import default_storage
 from django.db.models import Max
 
@@ -70,7 +71,7 @@ def enforce_max_versions(item):
     if max_versions < 1:
         raise ValueError("MAX_ITEM_VERSIONS must be greater than or equal to 1")
     versions = list(item.versions.order_by("version_number"))
-    for version in versions[: -max_versions]:
+    for version in versions[:-max_versions]:
         delete_version(version)
 
 
@@ -102,3 +103,53 @@ def delete_version(version, keep_storage=False):
     if not keep_storage:
         _s3().delete_object(Bucket=_bucket(), Key=version.file_key)
     version.delete()
+
+
+def replacement_cache_key(item_id):
+    """Cache key remembering the snapshot to restore if a replacement fails."""
+    return f"item-replace-upload:{item_id}"
+
+
+def mark_replacement(item, version):
+    """Remember which snapshot to restore if this replacement upload fails."""
+    cache.set(
+        replacement_cache_key(item.pk),
+        "" if version is None else str(version.pk),
+        timeout=settings.AWS_S3_UPLOAD_POLICY_EXPIRATION,
+    )
+
+
+def clear_replacement(item):
+    """Forget a replacement marker once the new content is accepted."""
+    cache.delete(replacement_cache_key(item.pk))
+
+
+def abort_replacement(item):
+    """Restore the snapshotted content of a failed replacement.
+
+    Returns True when this pending upload was a replacement, so the item is
+    kept. Returns False when there is no marker, so the caller can delete a
+    brand-new upload instead.
+    """
+    marker = cache.get(replacement_cache_key(item.pk))
+    if marker is None:
+        return False
+
+    cache.delete(replacement_cache_key(item.pk))
+    version = models.ItemVersion.objects.filter(pk=marker, item=item).first() if marker else None
+    if version is None:
+        item.upload_state = models.ItemUploadStateChoices.READY
+        item.save(update_fields=["upload_state", "updated_at"])
+        return True
+
+    _s3().copy_object(
+        Bucket=_bucket(),
+        Key=item.file_key,
+        CopySource={"Bucket": _bucket(), "Key": version.file_key},
+    )
+    item.size = version.size
+    item.mimetype = version.mimetype
+    item.upload_state = models.ItemUploadStateChoices.READY
+    item.save(update_fields=["size", "mimetype", "upload_state", "updated_at"])
+    delete_version(version)
+    return True
