@@ -76,7 +76,7 @@
                         <img
                             src="{{ suite_logo_img }}"
                             width="87"
-                            alt="{{ brandname }}"
+                            alt="{{ brandname|default:'' }}"
                             style="display: block"
                         />
                         {% if suite_url %}</a>{% endif %}
@@ -91,11 +91,8 @@
         <mj-text align="right" font-size="12px" line-height="18px" css-class="footer-links">
             {% if newsletter_url %}
             <p>
-                <a href="{{ newsletter_url }}">
-                    {% blocktrans trimmed %}
-                        Subscribe to the {{ brandname }} newsletter
-                    {% endblocktrans %}
-                </a>
+                <!-- On one line, otherwise the plain text version gets extra spaces -->
+                <a href="{{ newsletter_url }}">{% if brandname %}{% blocktrans trimmed %}Subscribe to the {{ brandname }} newsletter{% endblocktrans %}{% else %}{% trans "Subscribe to the newsletter" %}{% endif %}</a>
             </p>
             {% endif %}
             {% if support_url %}

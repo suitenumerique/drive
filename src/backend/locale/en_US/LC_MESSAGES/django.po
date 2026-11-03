@@ -283,6 +283,10 @@ msgid "Subscribe to the %(brandname)s newsletter"
 msgstr ""
 
 #: core/templates/mail/html/invitation.html
+msgid "Subscribe to the newsletter"
+msgstr ""
+
+#: core/templates/mail/html/invitation.html
 msgid "Contact support"
 msgstr ""
 

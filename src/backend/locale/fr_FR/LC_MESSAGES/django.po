@@ -287,6 +287,10 @@ msgid "Subscribe to the %(brandname)s newsletter"
 msgstr "S'inscrire à la newsletter %(brandname)s"
 
 #: core/templates/mail/html/invitation.html
+msgid "Subscribe to the newsletter"
+msgstr "S'inscrire à la newsletter"
+
+#: core/templates/mail/html/invitation.html
 msgid "Contact support"
 msgstr "Contacter le service support"
 

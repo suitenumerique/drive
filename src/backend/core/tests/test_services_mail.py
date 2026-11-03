@@ -253,6 +253,24 @@ def test_services_mail_send_templated_email_no_branding():
     assert "My message" in email.body
 
 
+@pytest.mark.usefixtures("no_branding")
+def test_services_mail_send_templated_email_no_brand_name(settings):
+    """Without a brand name, the footer never shows "None" in place of it."""
+    settings.EMAIL_BRAND_NAME = None
+    settings.EMAIL_NEWSLETTER_URL = "https://example.com/newsletter"
+    settings.EMAIL_SUITE_LOGO_IMG = "https://cdn.example.com/suite.png"
+
+    send_templated_email("my subject", ["a@example.com"], "reconciliation", CONTEXT, "en")
+
+    # pylint: disable-next=no-member
+    email = mail.outbox[0]
+    html = email.alternatives[0][0]
+    assert "None" not in html
+    assert "None" not in email.body
+    assert 'alt=""' in html
+    assert "Subscribe to the newsletter [https://example.com/newsletter]" in email.body
+
+
 @mock.patch("core.services.mail.send_mail")
 def test_services_mail_send_templated_email_no_host(mock_send_mail, settings):
     """Nothing is sent when no SMTP host is configured."""
