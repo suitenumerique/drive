@@ -1042,6 +1042,29 @@ def test_models_items__email_invitation__success_fr():
     assert f"items/{item.id}/" in email_content
 
 
+def test_models_items__email_invitation__escapes_html():
+    """
+    The sender name and the item title are escaped in the html version, so that they
+    cannot inject markup in the email, and shown as typed in the plain text version.
+    """
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, title='<img src="x">Report')
+    sender = factories.UserFactory(full_name="<b>Eve</b>", email="eve@example.com")
+
+    item.send_invitation_email("guest@example.com", models.RoleChoices.EDITOR, sender, "en")
+
+    # pylint: disable-next=no-member
+    email = mail.outbox[0]
+    email_html = email.alternatives[0][0]
+    assert "<strong>&lt;b&gt;Eve&lt;/b&gt;</strong> (eve@example.com)" in email_html
+    assert "<strong>&lt;img src=&quot;x&quot;&gt;Report</strong>" in email_html
+    assert "<b>Eve</b>" not in email_html
+    assert '<img src="x">' not in email_html
+    assert (
+        '<b>Eve</b> (eve@example.com) shared the following item with you: <img src="x">Report'
+        in " ".join(email.body.split())
+    )
+
+
 def test_models_items__email_invitation__link_for_folder():
     """
     The invitation email link for a folder item points to the folder explorer route.
