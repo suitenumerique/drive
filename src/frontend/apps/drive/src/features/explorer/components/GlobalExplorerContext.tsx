@@ -284,11 +284,19 @@ export const GlobalExplorerProvider = ({
           {...dropZone.getInputProps({
             webkitdirectory: "true",
             id: "import-folders",
+            // The browser skips a second change event when the same path is
+            // chosen again. Clear first so the next import still starts.
+            onClick: (event: React.MouseEvent<HTMLInputElement>) => {
+              event.currentTarget.value = "";
+            },
           })}
         />
         <input
           {...dropZone.getInputProps({
             id: "import-files",
+            onClick: (event: React.MouseEvent<HTMLInputElement>) => {
+              event.currentTarget.value = "";
+            },
           })}
         />
 

@@ -833,12 +833,14 @@ export const useUploadZone = ({
       const activeFiles = Object.values(uploadingState.filesMeta).filter(
         (meta) => meta.status !== FileUploadStatus.CANCELLED,
       );
-      // Dismiss toast if no active files remain during upload
-      if (
-        (uploadingState.step === UploadingStep.UPLOAD_FILES &&
-          activeFiles.length === 0) ||
-        uploadingState.step === UploadingStep.NONE
-      ) {
+      // Dismiss the toast when the queue is empty or every file was
+      // cancelled. A finished batch of cancellations would otherwise leave
+      // the collapsed bar up with no label.
+      const queueFinishedEmpty =
+        activeFiles.length === 0 &&
+        (uploadingState.step === UploadingStep.UPLOAD_FILES ||
+          uploadingState.step === UploadingStep.DONE);
+      if (queueFinishedEmpty || uploadingState.step === UploadingStep.NONE) {
         toast.dismiss(fileUploadsToastId.current);
         fileUploadsToastId.current = null;
       } else {
