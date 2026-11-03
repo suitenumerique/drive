@@ -21,6 +21,7 @@ and this project adheres to
 
 - ⬆️(ci) bump GitHub Actions to latest versions
 - ✨(backend) screen uploads with a denylist
+- ⬆️(backend) upgrade joserfc to 1.7.7
 
 ### Fixed
 
