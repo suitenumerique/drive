@@ -44,6 +44,34 @@ def test_models_user_reconciliation_save_resolves_users_and_sends_emails():
     }
 
 
+def test_models_user_reconciliation_confirmation_email_uses_app_name(settings):
+    """The confirmation email names the application as configured for the instance."""
+    settings.EMAIL_APP_NAME = "Fichiers"
+    active = factories.UserFactory(email="active@example.com")
+    inactive = factories.UserFactory(email="inactive@example.com")
+
+    models.UserReconciliation.objects.create(
+        active_email=active.email, inactive_email=inactive.email
+    )
+
+    # pylint: disable-next=no-member
+    email_content = " ".join(mail.outbox[0].body.split())
+    assert "reconciliation of your user accounts on Fichiers." in email_content
+    assert "Drive" not in email_content
+
+
+def test_models_user_reconciliation_error_email_uses_app_name(settings):
+    """The error email names the application as configured for the instance."""
+    settings.EMAIL_APP_NAME = "Fichiers"
+
+    models.UserReconciliationCsvImport().send_reconciliation_error_email(
+        "a@example.com", "b@example.com", "en-us"
+    )
+
+    # pylint: disable-next=no-member
+    assert mail.outbox[0].subject == "Reconciliation of your Fichiers accounts not completed"
+
+
 def test_models_user_reconciliation_save_missing_user_sets_error():
     """Saving fails into error status when one of the users does not exist."""
     active = factories.UserFactory(email="active@example.com")

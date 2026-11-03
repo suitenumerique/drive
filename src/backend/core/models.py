@@ -630,7 +630,7 @@ class UserReconciliation(BaseModel):
         domain = get_email_base_url()
 
         message = _(
-            """You have requested a reconciliation of your user accounts on Drive.
+            """You have requested a reconciliation of your user accounts on {app_name}.
             To confirm that you are the one who initiated the request
             and that this email belongs to you:"""
         )
@@ -639,7 +639,7 @@ class UserReconciliation(BaseModel):
             subject = _("Confirm by clicking the link to start the reconciliation")
             context = {
                 "title": subject,
-                "message": message,
+                "message": message.format(app_name=settings.EMAIL_APP_NAME),
                 "link": f"{domain}/user-reconciliations/{user_type}/{confirmation_id}/",
                 "link_label": str(_("Click here")),
                 "button_label": str(_("Confirm")),
@@ -713,7 +713,9 @@ class UserReconciliationCsvImport(BaseModel):
         ).format(recipient_email=recipient_email, other_email=other_email)
 
         with override(language):
-            subject = _("Reconciliation of your Drive accounts not completed")
+            subject = _("Reconciliation of your {app_name} accounts not completed").format(
+                app_name=settings.EMAIL_APP_NAME
+            )
             context = {
                 "title": subject,
                 "message": message,
