@@ -245,14 +245,14 @@ msgstr "Dokumente"
 
 #: core/models.py
 msgid "A new item has been shared with you."
-msgstr ""
+msgstr "Ein neues Dokument wurde mit Ihnen geteilt."
 
 #: core/models.py
 #, python-brace-format
 msgid ""
 "{sender} shared the following item with you: <strong>{title}</strong>, and "
 "gave you the role \"{role}\"."
-msgstr ""
+msgstr "{sender} hat das folgende Dokument mit Ihnen geteilt: <strong>{title}</strong>, und Ihnen die Rolle \"{role}\" zugewiesen."
 
 #: core/templates/mail/html/invitation.html
 msgid "Open the item"
