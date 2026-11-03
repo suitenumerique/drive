@@ -637,18 +637,25 @@
         },
         "versions": {
           "modal": {
-            "title": "Version history",
+            "title": "History",
+            "subtitle": "Browse all versions of this document.",
             "loading": "Loading versions…",
             "current": "Current version",
             "version": "Version {{n}}",
             "empty": "No versions are available for this file.",
             "restore": "Restore",
             "download": "Download",
-            "delete": "Delete"
+            "delete": "Delete",
+            "actions": "Actions",
+            "import": "Import a new version",
+            "importing": "Importing…",
+            "close": "Close"
           },
           "toast": {
             "restored": "The version has been restored.",
-            "deleted": "The version has been deleted."
+            "deleted": "The version has been deleted.",
+            "imported": "The new version has been imported.",
+            "import_error": "The new version could not be imported."
           },
           "confirm_delete": {
             "title": "Delete this version?",
@@ -1396,18 +1403,25 @@
         },
         "versions": {
           "modal": {
-            "title": "Historique des versions",
+            "title": "Historique",
+            "subtitle": "Parcourez toutes les versions de ce document.",
             "loading": "Chargement des versions…",
             "current": "Version actuelle",
             "version": "Version {{n}}",
             "empty": "Aucune version n'est disponible pour ce fichier.",
             "restore": "Restaurer",
             "download": "Télécharger",
-            "delete": "Supprimer"
+            "delete": "Supprimer",
+            "actions": "Actions",
+            "import": "Importer une nouvelle version",
+            "importing": "Import en cours…",
+            "close": "Fermer"
           },
           "toast": {
             "restored": "La version a été restaurée.",
-            "deleted": "La version a été supprimée."
+            "deleted": "La version a été supprimée.",
+            "imported": "La nouvelle version a été importée.",
+            "import_error": "L'import de la nouvelle version a échoué."
           },
           "confirm_delete": {
             "title": "Supprimer cette version ?",
@@ -2155,18 +2169,25 @@
         },
         "versions": {
           "modal": {
-            "title": "Versiegeschiedenis",
+            "title": "Geschiedenis",
+            "subtitle": "Bekijk alle versies van dit document.",
             "loading": "Versies laden…",
             "current": "Huidige versie",
             "version": "Versie {{n}}",
             "empty": "Er zijn geen versies beschikbaar voor dit bestand.",
             "restore": "Herstellen",
             "download": "Downloaden",
-            "delete": "Verwijderen"
+            "delete": "Verwijderen",
+            "actions": "Acties",
+            "import": "Importeer een nieuwe versie",
+            "importing": "Importeren…",
+            "close": "Sluiten"
           },
           "toast": {
             "restored": "De versie is hersteld.",
-            "deleted": "De versie is verwijderd."
+            "deleted": "De versie is verwijderd.",
+            "imported": "De nieuwe versie is geïmporteerd.",
+            "import_error": "De nieuwe versie kon niet worden geïmporteerd."
           },
           "confirm_delete": {
             "title": "Deze versie verwijderen?",
