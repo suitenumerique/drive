@@ -665,6 +665,12 @@ export class StandardDriver extends Driver {
     });
   }
 
+  async discardCurrentVersion(itemId: string): Promise<void> {
+    await fetchAPI(`items/${itemId}/versions/discard-current/`, {
+      method: "POST",
+    });
+  }
+
   async getItemsDeletionInfo(
     ids: string[],
   ): Promise<Record<string, ItemDeletionInfo>> {

@@ -208,37 +208,6 @@ export const useItemActionMenuItems = ({
         },
       },
       {
-        icon: <Copy />,
-        label: t("explorer.item.actions.duplicate"),
-        isHidden: !item.abilities?.duplicate || item.type === ItemType.FOLDER,
-        callback: async () => {
-          try {
-            await duplicateItem(effectiveItemId);
-          } catch (err) {
-            addToast(
-              <ToasterItem type="error">
-                <span className="material-icons">content_copy</span>
-                <span>
-                  {getCanUploadErrorDescription(err) ??
-                    t("explorer.item.actions.duplicate_error")}
-                </span>
-              </ToasterItem>,
-            );
-          }
-        },
-      },
-
-      {
-        icon: <History />,
-        label: t("explorer.item.actions.versions"),
-        isHidden: !item.abilities?.versions_view || item.type === ItemType.FOLDER,
-        callback: () => {
-          setCurrentItem(effectiveItem);
-          versionsModal.open();
-        },
-      },
-
-      {
         icon: <Star />,
         label: item.is_favorite
           ? t("explorer.item.actions.unfavorite")
@@ -266,6 +235,35 @@ export const useItemActionMenuItems = ({
         callback: () => {
           setCurrentItem(effectiveItem);
           moveModal.open();
+        },
+      },
+      {
+        icon: <Copy />,
+        label: t("explorer.item.actions.duplicate"),
+        isHidden: !item.abilities?.duplicate || item.type === ItemType.FOLDER,
+        callback: async () => {
+          try {
+            await duplicateItem(effectiveItemId);
+          } catch (err) {
+            addToast(
+              <ToasterItem type="error">
+                <span className="material-icons">content_copy</span>
+                <span>
+                  {getCanUploadErrorDescription(err) ??
+                    t("explorer.item.actions.duplicate_error")}
+                </span>
+              </ToasterItem>,
+            );
+          }
+        },
+      },
+      {
+        icon: <History />,
+        label: t("explorer.item.actions.versions"),
+        isHidden: !item.abilities?.versions_view || item.type === ItemType.FOLDER,
+        callback: () => {
+          setCurrentItem(effectiveItem);
+          versionsModal.open();
         },
       },
       { type: "separator" },

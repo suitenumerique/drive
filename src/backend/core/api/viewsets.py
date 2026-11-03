@@ -57,6 +57,7 @@ from core.services.item_versions import (
     abort_replacement,
     clear_replacement,
     delete_version,
+    discard_current_version,
     mark_replacement,
     restore_version,
     snapshot_version,
@@ -2659,6 +2660,26 @@ class ItemVersionViewSet(
         """Delete a stored version."""
         version = self.get_object()
         delete_version(version)
+        return drf.response.Response(status=status.HTTP_204_NO_CONTENT)
+
+    @drf.decorators.action(detail=False, methods=["post"], url_path="discard-current")
+    def discard_current(self, request, *args, **kwargs):
+        """Delete the live content and promote the newest stored version."""
+        item = self.item
+        if (
+            item.type != models.ItemTypeChoices.FILE
+            or item.upload_state not in VERSIONABLE_UPLOAD_STATES
+        ):
+            raise drf.exceptions.ValidationError(
+                {"item": "Only a ready file can drop its current version."},
+                code="item_discard_current_unavailable",
+            )
+        promoted = discard_current_version(item)
+        if promoted is None:
+            raise drf.exceptions.ValidationError(
+                {"item": "There is no previous version to promote."},
+                code="item_no_previous_version",
+            )
         return drf.response.Response(status=status.HTTP_204_NO_CONTENT)
 
 

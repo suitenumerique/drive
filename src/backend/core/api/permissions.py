@@ -141,7 +141,7 @@ class ItemVersionPermission(IsAuthenticated):
             return abilities.get("versions_view", False)
         if view.action == "restore":
             return abilities.get("versions_restore", False)
-        if view.action == "destroy":
+        if view.action in ("destroy", "discard_current"):
             return abilities.get("versions_destroy", False)
         return False
 

@@ -213,6 +213,7 @@ export abstract class Driver {
   abstract downloadItemVersion(itemId: string, versionId: string): Promise<void>;
   abstract restoreItemVersion(itemId: string, versionId: string): Promise<void>;
   abstract deleteItemVersion(itemId: string, versionId: string): Promise<void>;
+  abstract discardCurrentVersion(itemId: string): Promise<void>;
 
   abstract getEntitlements(): Promise<Entitlements>;
 

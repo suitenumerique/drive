@@ -159,6 +159,54 @@ def test_versions_delete_editor_forbidden():
     assert response.status_code == 403
 
 
+def test_versions_discard_current_promotes_newest():
+    """Deleting the current version promotes the newest stored version."""
+    user = factories.UserFactory()
+    item = _file_item(user)
+    versions = _make_versions(item)
+    newest = versions[-1]
+    newest.size = 42
+    newest.mimetype = "application/pdf"
+    newest.save()
+
+    client = APIClient()
+    client.force_login(user)
+    with mock.patch("core.services.item_versions._s3") as s3:
+        response = client.post(f"/api/v1.0/items/{item.id!s}/versions/discard-current/")
+
+    assert response.status_code == 204
+    item.refresh_from_db()
+    assert item.size == 42
+    assert item.mimetype == "application/pdf"
+    assert not item.versions.filter(pk=newest.pk).exists()
+    assert item.versions.count() == 2
+    s3.return_value.copy_object.assert_called_once()
+
+
+def test_versions_discard_current_without_history():
+    """Deleting the current version requires a stored version to promote."""
+    user = factories.UserFactory()
+    item = _file_item(user)
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(f"/api/v1.0/items/{item.id!s}/versions/discard-current/")
+    assert response.status_code == 400
+
+
+def test_versions_discard_current_editor_forbidden():
+    """Editors cannot delete the current version."""
+    user = factories.UserFactory()
+    item = _file_item(
+        factories.UserFactory(),
+        users=[(user, models.RoleChoices.EDITOR)],
+    )
+    _make_versions(item)
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(f"/api/v1.0/items/{item.id!s}/versions/discard-current/")
+    assert response.status_code == 403
+
+
 def test_versions_editor_can_restore():
     """Editors can restore a version (update ability)."""
     user = factories.UserFactory()

@@ -5,7 +5,6 @@ import {
   Modal,
   ModalProps,
   ModalSize,
-  useModals,
 } from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,7 +13,6 @@ import { Item, ItemVersion } from "@/features/drivers/types";
 import { getDriver } from "@/features/config/Config";
 import { useConfig } from "@/features/config/ConfigProvider";
 import { useItemVersions } from "../../hooks/useQueries";
-import { formatSize } from "@/features/explorer/utils/utils";
 import {
   addToast,
   ToasterItem,
@@ -23,6 +21,7 @@ import { useRefreshItemCache } from "../../hooks/useRefreshItems";
 import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 import { ItemIcon } from "../icons/ItemIcon";
 import {
+  ArrowUpRight,
   Download,
   More,
   Restore,
@@ -37,9 +36,10 @@ type VersionHistoryModalProps = Pick<ModalProps, "isOpen" | "onClose"> & {
 type HistoryRow = {
   key: string;
   label: string;
+  filename: string;
   date: Date;
-  size?: number;
   author?: string;
+  onPreview?: () => void;
   onDownload: () => void;
   onRestore?: () => void;
   onDelete?: () => void;
@@ -56,13 +56,24 @@ const formatWhen = (date: Date) =>
 const VersionHistoryRow = ({ row, item }: { row: HistoryRow; item: Item }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
-  const details = [
-    formatWhen(row.date),
-    typeof row.size === "number" ? formatSize(row.size, t) : undefined,
-    row.author,
-  ].filter((part): part is string => Boolean(part));
+  const detail = [formatWhen(row.date), row.author]
+    .filter((part): part is string => Boolean(part))
+    .join(" • ");
 
   const options = [
+    ...(row.onPreview
+      ? [
+          {
+            icon: <ArrowUpRight />,
+            label: t("explorer.versions.modal.preview"),
+            value: "preview",
+            callback: () => {
+              setIsOpen(false);
+              row.onPreview?.();
+            },
+          },
+        ]
+      : []),
     {
       icon: <Download />,
       label: t("explorer.versions.modal.download"),
@@ -87,6 +98,7 @@ const VersionHistoryRow = ({ row, item }: { row: HistoryRow; item: Item }) => {
       : []),
     ...(row.onDelete
       ? [
+          { type: "separator" as const },
           {
             icon: <Trash />,
             label: t("explorer.versions.modal.delete"),
@@ -107,13 +119,10 @@ const VersionHistoryRow = ({ row, item }: { row: HistoryRow; item: Item }) => {
       </span>
       <div className="version-history__meta">
         <span className="version-history__name">{row.label}</span>
-        <span className="version-history__detail">{details.join(" · ")}</span>
+        <span className="version-history__file">{row.filename}</span>
+        <span className="version-history__detail">{detail}</span>
       </div>
-      <DropdownMenu
-        options={options}
-        isOpen={isOpen}
-        onOpenChange={setIsOpen}
-      >
+      <DropdownMenu options={options} isOpen={isOpen} onOpenChange={setIsOpen}>
         <Button
           variant="tertiary"
           size="small"
@@ -131,7 +140,6 @@ export const VersionHistoryModal = ({
   ...props
 }: VersionHistoryModalProps) => {
   const { t } = useTranslation();
-  const modals = useModals();
   const { config } = useConfig();
   const queryClient = useQueryClient();
   const refreshItemCache = useRefreshItemCache();
@@ -139,6 +147,12 @@ export const VersionHistoryModal = ({
   const { data: versions, isLoading } = useItemVersions(item.id);
   const [liveItem, setLiveItem] = useState(item);
   const [importing, setImporting] = useState(false);
+  const [pending, setPending] = useState<
+    | { kind: "restore"; version: ItemVersion }
+    | { kind: "delete"; version: ItemVersion }
+    | { kind: "delete-current"; nextNumber: number }
+    | null
+  >(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<(() => Promise<void>) | null>(null);
 
@@ -175,40 +189,40 @@ export const VersionHistoryModal = ({
     void getDriver().downloadItemVersion(item.id, version.id);
   };
 
-  const handleRestore = async (version: ItemVersion) => {
-    const decision = await modals.confirmationModal({
-      size: ModalSize.MEDIUM,
-      title: t("explorer.versions.confirm_restore.title"),
-      children: t("explorer.versions.confirm_restore.description"),
-    });
-    if (decision !== "yes") {
+  const confirmPending = async () => {
+    if (!pending) {
       return;
     }
-    await getDriver().restoreItemVersion(item.id, version.id);
+    const action = pending;
+    setPending(null);
+    if (action.kind === "restore") {
+      await getDriver().restoreItemVersion(item.id, action.version.id);
+      await refreshLiveItem();
+      addToast(
+        <ToasterItem type="info">
+          <span className="material-icons">history</span>
+          <span>{t("explorer.versions.toast.restored")}</span>
+        </ToasterItem>,
+      );
+      return;
+    }
+    if (action.kind === "delete") {
+      await getDriver().deleteItemVersion(item.id, action.version.id);
+      invalidate();
+      addToast(
+        <ToasterItem type="info">
+          <span className="material-icons">history</span>
+          <span>{t("explorer.versions.toast.deleted")}</span>
+        </ToasterItem>,
+      );
+      return;
+    }
+    await getDriver().discardCurrentVersion(item.id);
     await refreshLiveItem();
     addToast(
       <ToasterItem type="info">
         <span className="material-icons">history</span>
-        <span>{t("explorer.versions.toast.restored")}</span>
-      </ToasterItem>,
-    );
-  };
-
-  const handleDelete = async (version: ItemVersion) => {
-    const decision = await modals.confirmationModal({
-      size: ModalSize.MEDIUM,
-      title: t("explorer.versions.confirm_delete.title"),
-      children: t("explorer.versions.confirm_delete.description"),
-    });
-    if (decision !== "yes") {
-      return;
-    }
-    await getDriver().deleteItemVersion(item.id, version.id);
-    invalidate();
-    addToast(
-      <ToasterItem type="info">
-        <span className="material-icons">history</span>
-        <span>{t("explorer.versions.toast.deleted")}</span>
+        <span>{t("explorer.versions.toast.deleted_current")}</span>
       </ToasterItem>,
     );
   };
@@ -254,41 +268,84 @@ export const VersionHistoryModal = ({
   const currentAuthor =
     liveItem.creator?.full_name || liveItem.creator?.short_name;
 
+  const newest = versions?.[0];
   const rows: HistoryRow[] = [
     {
       key: "current",
       label: t("explorer.versions.modal.current"),
+      filename: liveItem.filename || liveItem.title,
       date: liveItem.updated_at,
-      size: liveItem.size,
       author: currentAuthor,
+      onPreview: () => {
+        window.open(
+          `/explorer/items/files/${liveItem.id}`,
+          "_blank",
+          "noopener,noreferrer",
+        );
+      },
       onDownload: () => {
         void handleDownloadItem(liveItem);
       },
+      onDelete:
+        canDelete && newest
+          ? () =>
+              setPending({
+                kind: "delete-current",
+                nextNumber: newest.version_number,
+              })
+          : undefined,
     },
     ...(versions ?? []).map((version) => ({
       key: version.id,
       label: t("explorer.versions.modal.version", {
         n: version.version_number,
       }),
+      filename: version.filename,
       date: version.created_at,
-      size: version.size,
-      author:
-        version.created_by?.full_name || version.created_by?.short_name,
+      author: version.created_by?.full_name || version.created_by?.short_name,
       onDownload: () => handleDownload(version),
       onRestore: canReplace
-        ? () => {
-            void handleRestore(version);
-          }
+        ? () => setPending({ kind: "restore", version })
         : undefined,
       onDelete: canDelete
-        ? () => {
-            void handleDelete(version);
-          }
+        ? () => setPending({ kind: "delete", version })
         : undefined,
     })),
   ];
 
+  const confirmTitle =
+    pending?.kind === "restore"
+      ? t("explorer.versions.confirm_restore.title", {
+          n: pending.version.version_number,
+        })
+      : pending?.kind === "delete"
+        ? t("explorer.versions.confirm_delete.title", {
+            n: pending.version.version_number,
+          })
+        : pending?.kind === "delete-current"
+          ? t("explorer.versions.confirm_delete_current.title")
+          : "";
+  const confirmDescription =
+    pending?.kind === "restore"
+      ? t("explorer.versions.confirm_restore.description", {
+          n: pending.version.version_number,
+        })
+      : pending?.kind === "delete"
+        ? t("explorer.versions.confirm_delete.description", {
+            n: pending.version.version_number,
+          })
+        : pending?.kind === "delete-current"
+          ? t("explorer.versions.confirm_delete_current.description", {
+              n: pending.nextNumber,
+            })
+          : "";
+  const confirmLabel =
+    pending?.kind === "restore"
+      ? t("explorer.versions.modal.restore")
+      : t("explorer.versions.modal.delete");
+
   return (
+    <>
     <Modal
       {...props}
       onClose={handleClose}
@@ -336,5 +393,34 @@ export const VersionHistoryModal = ({
         </ul>
       )}
     </Modal>
+    {pending && (
+      <Modal
+        isOpen
+        onClose={() => setPending(null)}
+        size={ModalSize.SMALL}
+        title={confirmTitle}
+      >
+        <p className="version-confirm__text">{confirmDescription}</p>
+        <div className="version-confirm__actions">
+          <Button
+            fullWidth
+            color={pending.kind === "restore" ? undefined : "error"}
+            onClick={() => {
+              void confirmPending();
+            }}
+          >
+            {confirmLabel}
+          </Button>
+          <Button
+            fullWidth
+            variant="bordered"
+            onClick={() => setPending(null)}
+          >
+            {t("explorer.versions.modal.cancel")}
+          </Button>
+        </div>
+      </Modal>
+    )}
+    </>
   );
 };

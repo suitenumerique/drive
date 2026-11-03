@@ -98,6 +98,27 @@ def restore_version(version, created_by=None):
     enforce_max_versions(item)
 
 
+def discard_current_version(item):
+    """Drop the live content and promote the newest stored version.
+
+    The current bytes are not snapshotted. Returns the promoted version, or
+    None when the file has no stored version to take its place.
+    """
+    version = item.versions.order_by("-version_number").first()
+    if version is None:
+        return None
+    _s3().copy_object(
+        Bucket=_bucket(),
+        Key=item.file_key,
+        CopySource={"Bucket": _bucket(), "Key": version.file_key},
+    )
+    item.size = version.size
+    item.mimetype = version.mimetype
+    item.save(update_fields=["size", "mimetype", "updated_at"])
+    delete_version(version)
+    return version
+
+
 def delete_version(version, keep_storage=False):
     """Delete a stored version (and, by default, its storage bytes)."""
     if not keep_storage:
