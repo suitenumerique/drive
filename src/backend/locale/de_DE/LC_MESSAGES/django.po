@@ -256,53 +256,53 @@ msgstr "{sender} hat das folgende Dokument mit Ihnen geteilt: <strong>{title}</s
 
 #: core/templates/mail/html/invitation.html
 msgid "Open the item"
-msgstr ""
+msgstr "Dokument öffnen"
 
 #: core/templates/mail/html/invitation.html
 #, python-format
 msgid ""
 "%(app_name)s, your essential tool to organize, share and collaborate as a "
 "team."
-msgstr ""
+msgstr "%(app_name)s, Ihr unverzichtbares Werkzeug, um im Team zu organisieren, zu teilen und zusammenzuarbeiten."
 
 #: core/templates/mail/html/invitation.html
 #, python-format
 msgid "Discover %(app_name)s by"
-msgstr ""
+msgstr "Entdecken Sie %(app_name)s, indem Sie"
 
 #: core/templates/mail/html/invitation.html
 msgid "clicking here"
-msgstr ""
+msgstr "hier klicken"
 
 #: core/templates/mail/html/invitation.html
 msgid "See you soon,"
-msgstr ""
+msgstr "Bis bald,"
 
 #: core/templates/mail/html/invitation.html
 #, python-format
 msgid "The %(app_name)s team"
-msgstr ""
+msgstr "Ihr %(app_name)s-Team"
 
 #: core/templates/mail/html/invitation.html
 msgid "Government"
-msgstr ""
+msgstr "Regierung"
 
 #: core/templates/mail/html/invitation.html
 #, python-format
 msgid "Subscribe to the %(brandname)s newsletter"
-msgstr ""
+msgstr "%(brandname)s-Newsletter abonnieren"
 
 #: core/templates/mail/html/invitation.html
 msgid "Subscribe to the newsletter"
-msgstr ""
+msgstr "Newsletter abonnieren"
 
 #: core/templates/mail/html/invitation.html
 msgid "Contact support"
-msgstr ""
+msgstr "Support kontaktieren"
 
 #: core/templates/mail/html/invitation.html
 msgid "Terms of use"
-msgstr ""
+msgstr "Nutzungsbedingungen"
 
 #: core/models.py:820
 #, fuzzy, python-brace-format
