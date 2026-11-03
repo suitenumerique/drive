@@ -1,7 +1,6 @@
 """Render and send the transactional emails of Drive."""
 
 import html
-import smtplib
 from logging import getLogger
 
 from django.conf import settings
@@ -79,8 +78,9 @@ def send_templated_email(subject, recipients, template_name, context=None, langu
     Render the html and plain text versions of a mail template and send them.
 
     `template_name` is the name of a template built from src/mail/mjml, without
-    extension. Sending is skipped when no SMTP host is configured, and SMTP errors
-    are logged instead of raised so that they never break the calling request.
+    extension. Sending is skipped when no SMTP host is configured, and sending errors
+    are logged instead of raised so that they never break the calling request: SMTP
+    errors as well as network errors, raised when the SMTP server is unreachable.
     """
     if not settings.EMAIL_HOST:
         logger.debug("EMAIL_HOST host is not set, skipping email sending")
@@ -106,5 +106,6 @@ def send_templated_email(subject, recipients, template_name, context=None, langu
                 html_message=msg_html,
                 fail_silently=False,
             )
-        except smtplib.SMTPException as exception:
+        # SMTPException is an OSError, like the errors of an unreachable server
+        except OSError as exception:
             logger.exception("email to %s was not sent: %s", recipients, exception)

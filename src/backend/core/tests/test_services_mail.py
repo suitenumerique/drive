@@ -276,3 +276,18 @@ def test_services_mail_send_templated_email_smtp_error(_mock_send_mail, caplog):
     assert caplog.records[0].getMessage() == (
         "email to ['a@example.com'] was not sent: Error SMTPException"
     )
+
+
+@mock.patch(
+    "core.services.mail.send_mail",
+    side_effect=ConnectionRefusedError("Connection refused"),
+)
+def test_services_mail_send_templated_email_server_unreachable(_mock_send_mail, caplog):
+    """An unreachable SMTP server is logged and not raised to the caller."""
+    with caplog.at_level("ERROR", logger="core.services.mail"):
+        send_templated_email("my subject", ["a@example.com"], "reconciliation", CONTEXT)
+
+    assert len(caplog.records) == 1
+    assert caplog.records[0].getMessage() == (
+        "email to ['a@example.com'] was not sent: Connection refused"
+    )
