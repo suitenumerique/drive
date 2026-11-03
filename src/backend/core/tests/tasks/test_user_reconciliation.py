@@ -87,6 +87,28 @@ def test_user_reconciliation_csv_import_invalid_email():
     assert mail.outbox[0].to == ["active1@example.com"]
 
 
+def test_user_reconciliation_csv_import_same_address():
+    """Emails only differing by ASCII case are logged and trigger an error email."""
+    csv_import = models.UserReconciliationCsvImport.objects.create(
+        file=ContentFile(
+            b"active_email,inactive_email,active_email_checked,inactive_email_checked,id\n"
+            b"User@example.com,user@example.com,1,1,41\n",
+            name="same_address.csv",
+        )
+    )
+    user_reconciliation_csv_import_job(csv_import.id)
+    csv_import.refresh_from_db()
+
+    assert csv_import.status == "done"
+    assert "set as both active and inactive email" in csv_import.logs
+    assert models.UserReconciliation.objects.count() == 0
+
+    # pylint: disable-next=no-member
+    assert len(mail.outbox) == 1
+    # pylint: disable-next=no-member
+    assert mail.outbox[0].to == ["User@example.com"]
+
+
 def test_user_reconciliation_csv_import_multiple_inactive_emails():
     """A single row may list several inactive emails separated by a pipe."""
     for email in ["active1", "inactive1", "inactive2"]:

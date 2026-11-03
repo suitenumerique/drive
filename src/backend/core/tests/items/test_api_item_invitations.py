@@ -884,6 +884,24 @@ def test_api_item_invitations_create_lower_email():
     assert response.json()["email"] == "guest@example.com"
 
 
+def test_api_item_invitations_create_lower_email_ascii_only():
+    """Only ASCII letters of the email should be converted to lowercase."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(users=[(user, "owner")])
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{item.id!s}/invitations/",
+        {"email": "KEVIN@example.com", "role": "reader"},
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert response.json()["email"] == "Kevin@example.com"
+
+
 # Posthog events
 
 

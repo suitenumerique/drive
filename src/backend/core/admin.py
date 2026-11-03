@@ -14,7 +14,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Subquery, UUIDField
 from django.db.models.fields.json import KeyTextTransform
-from django.db.models.functions import Cast, Coalesce, Lower
+from django.db.models.functions import Cast, Coalesce
 from django.http import Http404
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
@@ -69,7 +69,7 @@ class UserChangeForm(auth_forms.UserChangeForm):
 
 
 class DuplicateEmailFilter(admin.SimpleListFilter):
-    """Filter the users whose email is shared with another user, case ignored."""
+    """Filter the users whose email is shared with another user."""
 
     title = _("duplicate email")
     parameter_name = "duplicate_email"
@@ -82,9 +82,7 @@ class DuplicateEmailFilter(admin.SimpleListFilter):
         """Keep the users sharing their email with another user."""
         if self.value() != "yes":
             return queryset
-        others = models.User.objects.filter(email__iexact=OuterRef("email")).exclude(
-            pk=OuterRef("pk")
-        )
+        others = models.User.objects.filter(email=OuterRef("email")).exclude(pk=OuterRef("pk"))
         return queryset.filter(Exists(others))
 
 
@@ -231,7 +229,7 @@ class UserAdmin(auth_admin.UserAdmin):
     def get_ordering(self, request):
         """Group the users sharing an email when filtering on duplicates."""
         if DuplicateEmailFilter.parameter_name in request.GET:
-            return (Lower("email"), "created_at")
+            return ("email", "created_at")
         return super().get_ordering(request)
 
     @admin.action(description=_("Merge into another user"))
@@ -279,7 +277,7 @@ class UserAdmin(auth_admin.UserAdmin):
         for user in queryset.order_by(Coalesce("last_login", "created_at").desc()):
             if not user.email:
                 continue
-            if kept.setdefault(user.email.lower(), user) is not user:
+            if kept.setdefault(user.email, user) is not user:
                 deactivated.append(user.pk)
         models.User.objects.filter(pk__in=deactivated).update(is_active=False)
         self.message_user(request, f"{len(deactivated)} users deactivated.")

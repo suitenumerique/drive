@@ -58,6 +58,22 @@ def test_models_user_reconciliation_save_missing_user_sets_error():
     assert len(mail.outbox) == 0
 
 
+def test_models_user_reconciliation_save_same_address_sets_error():
+    """Saving fails into error status when both emails are the same address."""
+    user = factories.UserFactory(email="user@example.com")
+
+    reconciliation = models.UserReconciliation.objects.create(
+        active_email="User@example.com", inactive_email="user@example.com"
+    )
+
+    assert reconciliation.status == "error"
+    assert "are the same address" in reconciliation.logs
+    user.refresh_from_db()
+    assert user.is_active is True
+    # pylint: disable-next=no-member
+    assert len(mail.outbox) == 0
+
+
 def test_models_user_reconciliation_save_checked_emails_skip_confirmation():
     """No confirmation email is sent when both emails are already checked."""
     active = factories.UserFactory(email="active@example.com")
