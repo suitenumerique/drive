@@ -97,6 +97,24 @@ def test_models_invitations_is_expired_custom_duration(settings):
         assert invitation.is_expired is True
 
 
+def test_models_invitations_clean_email_case_insensitive_already_registered():
+    """Inviting an existing user's email with a different ASCII case should be rejected."""
+    factories.UserFactory(email="alice.smith@corp.test")
+    item = factories.ItemFactory()
+
+    with pytest.raises(exceptions.ValidationError, match="already associated to a registered user"):
+        factories.InvitationFactory(email="ALICE.SMITH@CORP.TEST", item=item)
+
+
+def test_models_invitations_clean_non_ascii_email_allowed():
+    """Inviting an email differing from an existing user's by a non-ASCII letter should work."""
+    factories.UserFactory(email="alice.smith@corp.test")
+    item = factories.ItemFactory()
+
+    invitation = factories.InvitationFactory(email="alıce.smith@corp.test", item=item)
+    assert invitation.email == "alıce.smith@corp.test"
+
+
 def test_models_invitationd_new_userd_convert_invitations_to_accesses():
     """
     Upon creating a new user, invitations linked to the email

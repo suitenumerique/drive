@@ -173,6 +173,29 @@ def test_usage_metrics_list_invalid_account_id_key(api_key):
 
 
 @override_settings(METRICS_ENABLED=True)
+@pytest.mark.parametrize(
+    "query",
+    [
+        "account_email=John.Doe@Example.com",
+        "account_id_key=email&account_id_value=John.Doe@Example.com",
+    ],
+)
+def test_usage_metrics_list_filter_by_email_ascii_case(query, api_key):
+    """Filtering by email should ignore the ASCII case, as stored emails are lowercase."""
+    client = APIClient()
+    user = factories.UserFactory(email="john.doe@example.com")
+    factories.UserFactory()
+
+    response = client.get(
+        f"/external_api/v1.0/metrics/usage/?{query}",
+        HTTP_AUTHORIZATION=f"Api-Key {api_key}",
+    )
+
+    assert response.status_code == 200
+    assert [result["account"]["id"] for result in response.json()["results"]] == [str(user.sub)]
+
+
+@override_settings(METRICS_ENABLED=True)
 def test_usage_metrics_list_filter_by_account_email(api_key):
     """
     API keys should be allowed to list usage metrics for a specific account.

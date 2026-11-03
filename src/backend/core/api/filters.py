@@ -350,7 +350,18 @@ class UsageMetricFilter(BaseUsageMetricFilter):
         choices=UsageMetricAccountIdKeyChoices.choices,
         method="filter_account_id_key",
     )
-    account_email = django_filters.CharFilter(field_name="email")
+    account_email = django_filters.CharFilter(method="filter_account_email")
+
+    def filter_account_email(self, queryset, _, value):
+        """Match an email in its stored form."""
+        return queryset.filter(email=models.normalize_email(value))
+
+    def filter_account_id_key(self, queryset, name, value):
+        """Apply the account_id_key/account_id_value pair, matching emails in their stored form."""
+        account_id_value = self.data.get("account_id_value")
+        if value == UsageMetricAccountIdKeyChoices.EMAIL and account_id_value:
+            return self.filter_account_email(queryset, name, account_id_value)
+        return super().filter_account_id_key(queryset, name, value)
 
 
 class OrganizationUsageMetricFilter(BaseUsageMetricFilter):
