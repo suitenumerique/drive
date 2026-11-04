@@ -1,4 +1,5 @@
 import { expect, Page } from "@playwright/test";
+import { login } from "./utils-common";
 import { getRowItem, getRowItemActions } from "./utils-embedded-grid";
 import { findItem, itemUrl, names, test } from "./utils/restriction-utils";
 
@@ -70,4 +71,56 @@ test("renaming a restriction entry renames its folder", async ({
   await expect(page.getByRole("row", { name: names.accessible })).toHaveCount(
     0,
   );
+});
+
+test("breadcrumbs mark restricted folders", async ({ page, folders }) => {
+  const accessible = findItem(folders.items, names.accessible);
+  const restrictedIcon = (page: Page) =>
+    page.getByRole("img", { name: "Restricted access", exact: true });
+
+  // 1. Inside the restricted folder, the current breadcrumb item is marked.
+  await page.goto(itemUrl(accessible.target!.id));
+  const breadcrumbs = page.getByTestId("explorer-breadcrumbs");
+  const buttons = breadcrumbs.getByTestId("breadcrumb-button");
+  await expect(buttons.last()).toContainText(names.accessible);
+  await expect(restrictedIcon(page)).toHaveCount(1);
+  await expect(buttons.last().getByRole("img")).toHaveAccessibleName(
+    "Restricted access",
+  );
+
+  // 2. One level deeper, the mark stays on the restricted ancestor only.
+  await (await getRowItem(page, "Cycle descendant")).dblclick();
+  await expect(buttons.last()).toContainText("Cycle descendant");
+  await expect(restrictedIcon(page)).toHaveCount(1);
+  await expect(
+    buttons.filter({ hasText: names.accessible }).getByRole("img"),
+  ).toHaveAccessibleName("Restricted access");
+
+  // 3. An ordinary folder has no mark.
+  await page.goto(itemUrl(findItem(folders.items, names.normal).id));
+  await expect(buttons.last()).toContainText(names.normal);
+  await expect(restrictedIcon(page)).toHaveCount(0);
+
+  // 4. On mobile, the current restricted folder is marked as well.
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.goto(itemUrl(accessible.target!.id));
+  await expect(
+    page
+      .locator(".explorer__content__breadcrumbs--mobile")
+      .getByRole("img", { name: "Restricted access", exact: true }),
+  ).toBeVisible();
+
+  // 5. A user invited directly on a restricted folder, without access to its
+  //    parent, has it as the only breadcrumb item: the mobile root layout
+  //    must mark it too.
+  const readOnly = findItem(folders.items, names.readOnly);
+  await login(page, "other-owner@example.com");
+  await page.goto(itemUrl(readOnly.target!.id));
+  const mobileRoot = page.locator(
+    ".explorer__content__breadcrumbs--mobile__workspace",
+  );
+  await expect(mobileRoot).toContainText(names.readOnly);
+  await expect(
+    mobileRoot.getByRole("img", { name: "Restricted access", exact: true }),
+  ).toBeVisible();
 });

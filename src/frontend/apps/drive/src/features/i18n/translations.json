@@ -183,7 +183,8 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Spaces",
-          "all_folders": "All folders"
+          "all_folders": "All folders",
+          "restricted": "Restricted access"
         },
         "modal": {
           "move": {
@@ -910,7 +911,8 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Espaces",
-          "all_folders": "Tous les dossiers"
+          "all_folders": "Tous les dossiers",
+          "restricted": "Accès restreint"
         },
         "modal": {
           "move": {
@@ -1637,7 +1639,8 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Werkruimten",
-          "all_folders": "Alle mappen"
+          "all_folders": "Alle mappen",
+          "restricted": "Beperkte toegang"
         },
         "modal": {
           "move": {
