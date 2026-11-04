@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛(backend) keep the file on a WOPI rename to its current name
+
 ## [v0.26.0] - 2026-11-04
 
 ### Added
