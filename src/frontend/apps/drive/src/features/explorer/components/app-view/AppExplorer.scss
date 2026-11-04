@@ -201,9 +201,17 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
               line-height: 18px;
               font-weight: 600;
               color: var(--c--contextuals--content--semantic--neutral--primary);
-              text-overflow: ellipsis;
-              white-space: nowrap;
-              overflow: hidden;
+              display: flex;
+              align-items: center;
+              gap: 4px;
+              min-width: 0;
+
+              // Only the title shrinks, so the restriction icon stays visible.
+              span {
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                overflow: hidden;
+              }
             }
           }
         }

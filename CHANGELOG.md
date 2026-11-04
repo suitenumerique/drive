@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(frontend) mark restricted folders in breadcrumbs
+
 ### Fixed
 
 - 🐛(frontend) offer folder actions on restricted folders from their parent
