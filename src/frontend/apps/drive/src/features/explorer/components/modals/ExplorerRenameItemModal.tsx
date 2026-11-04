@@ -8,12 +8,14 @@ import {
 import { useTranslation } from "react-i18next";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { Item } from "@/features/drivers/types";
+import { getRestrictionTarget } from "@/features/drivers/utils";
 import { RhfInput } from "@/features/forms/components/RhfInput";
 import { useMutationRenameItem } from "../../hooks/useMutations";
 import { useRef } from "react";
 import { useTreeUtils } from "../../hooks/useTreeUtils";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
 import { useSelectionStore } from "../../stores/selectionStore";
+import { useUpdateItemInPaginatedList } from "../../hooks/useOptimisticPagination";
 
 type Inputs = {
   title: string;
@@ -36,18 +38,30 @@ export const ExplorerRenameItemModal = (
   });
 
   const updateItem = useMutationRenameItem();
+  const updateItemInPaginatedList = useUpdateItemInPaginatedList();
+  // A restriction entry shows its folder's title: rename the folder itself.
+  const renamedId = getRestrictionTarget(props.item)?.id ?? props.item.id;
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     await updateItem.mutateAsync(
       {
         ...data,
-        id: props.item.id,
+        id: renamedId,
       },
       {
-        onSuccess: (_, updatedItem) => {
-          treeUtils.updateNodeByOriginalId(props.item.id, {
+        onSuccess: () => {
+          treeUtils.updateNodeByOriginalId(renamedId, {
             title: data.title,
           });
+          if (renamedId !== props.item.id) {
+            // The mutation only refreshes the folder, the entry mirrors it.
+            treeUtils.updateNodeByOriginalId(props.item.id, {
+              title: data.title,
+            });
+            updateItemInPaginatedList(["items"], props.item.id, {
+              title: data.title,
+            });
+          }
 
           const selectedItem =
             rightPanelForcedItem ?? selectionStore.getSelectedItems()[0];
@@ -55,7 +69,7 @@ export const ExplorerRenameItemModal = (
           if (rightPanelOpen && selectedItem?.id === props.item.id) {
             const newRightPanelForcedItem = {
               ...selectedItem,
-              ...updatedItem,
+              title: data.title,
             };
 
             setRightPanelForcedItem(newRightPanelForcedItem);

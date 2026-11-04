@@ -10,6 +10,7 @@ and this project adheres to
 
 ### Fixed
 
+- 🐛(frontend) offer folder actions on restricted folders from their parent
 - 🐛(backend) keep the file on a WOPI rename to its current name
 
 ## [v0.26.0] - 2026-11-04
