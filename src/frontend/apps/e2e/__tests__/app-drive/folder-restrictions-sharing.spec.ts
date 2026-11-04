@@ -231,13 +231,13 @@ test("files and ordinary root folders have no restriction control", async ({
       await moreActions.click();
       await expect(page.getByRole("menu")).toBeVisible();
       await expect(
-        page.getByRole("menuitem", { name: /Restrict access|Open access/ }),
+        page.getByRole("menuitem", { name: /Restrict access|Expand access/ }),
       ).toHaveCount(0);
       await page.keyboard.press("Escape");
     }
     await expect(
       shareModal(page).getByRole("button", {
-        name: /Restrict access|Open access/,
+        name: /Restrict access|Expand access/,
       }),
     ).toHaveCount(0);
     await shareModal(page)
@@ -261,7 +261,7 @@ test("non-owner administrator cannot restrict a folder", async ({
     .click();
   await expect(page.getByRole("menu")).toBeVisible();
   await expect(
-    page.getByRole("menuitem", { name: /Restrict access|Open access/ }),
+    page.getByRole("menuitem", { name: /Restrict access|Expand access/ }),
   ).toHaveCount(0);
   // 3. The backend agrees: the restrict ability is refused.
   const child = findItem(folders.items, names.child);
