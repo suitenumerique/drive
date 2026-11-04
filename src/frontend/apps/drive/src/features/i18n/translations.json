@@ -585,6 +585,18 @@
           "share": {
             "modal": {
               "title": "Share"
+            },
+            "restriction": {
+              "restrict": {
+                "description": "Only people added specifically to this folder will have access",
+                "confirmation": "Access inherited from the parent folder will be removed.",
+                "details": "People added directly to this folder will keep their access. Access can be restored for others at any time."
+              },
+              "unrestrict": {
+                "description": "Everyone with access to the parent folder will have access",
+                "confirmation": "Everyone with access to the parent folder will have access.",
+                "details": "People added directly will keep their access."
+              }
             }
           },
           "rename": {
@@ -1312,6 +1324,18 @@
           "share": {
             "modal": {
               "title": "Partager"
+            },
+            "restriction": {
+              "restrict": {
+                "description": "Seules les personnes ajoutées spécifiquement à ce dossier y auront accès",
+                "confirmation": "Les accès provenant du dossier parent seront retirés.",
+                "details": "Les personnes ajoutées directement à ce dossier conserveront leur accès. Vous pourrez redonner accès aux autres à tout moment."
+              },
+              "unrestrict": {
+                "description": "Toutes les personnes accédant au dossier parent y auront accès",
+                "confirmation": "Toutes les personnes accédant au dossier parent y auront accès.",
+                "details": "Les personnes ajoutées directement conserveront leur accès."
+              }
             }
           },
           "rename": {
@@ -2039,6 +2063,18 @@
           "share": {
             "modal": {
               "title": "Deel"
+            },
+            "restriction": {
+              "restrict": {
+                "description": "Alleen personen die specifiek aan deze map zijn toegevoegd, krijgen toegang",
+                "confirmation": "Toegang via de bovenliggende map wordt ingetrokken.",
+                "details": "Personen die rechtstreeks aan deze map zijn toegevoegd, behouden hun toegang. U kunt anderen op elk moment opnieuw toegang geven."
+              },
+              "unrestrict": {
+                "description": "Iedereen met toegang tot de bovenliggende map krijgt toegang",
+                "confirmation": "Iedereen met toegang tot de bovenliggende map krijgt toegang.",
+                "details": "Rechtstreeks toegevoegde personen behouden hun toegang."
+              }
             }
           },
           "rename": {

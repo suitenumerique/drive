@@ -30,6 +30,7 @@ import {
 import { useUsers } from "@/features/users/hooks/useUserQueries";
 import { useClipboard } from "@/hooks/useCopyToClipboard";
 import {
+  CustomTranslations,
   HorizontalSeparator,
   removeFileExtension,
   ShareModal,
@@ -103,6 +104,31 @@ export const ItemShareModal = ({
         label: t(`roles.${role}`),
         value: role,
       })),
+    [t],
+  );
+
+  // The ui-kit copy speaks of items, only folders can be restricted here.
+  const restrictionTranslations = useMemo<CustomTranslations>(
+    () => ({
+      "components.share.restrict.description": t(
+        "explorer.actions.share.restriction.restrict.description",
+      ),
+      "components.share.restrict.confirmation": t(
+        "explorer.actions.share.restriction.restrict.confirmation",
+      ),
+      "components.share.restrict.details": t(
+        "explorer.actions.share.restriction.restrict.details",
+      ),
+      "components.share.unrestrict.description": t(
+        "explorer.actions.share.restriction.unrestrict.description",
+      ),
+      "components.share.unrestrict.confirmation": t(
+        "explorer.actions.share.restriction.unrestrict.confirmation",
+      ),
+      "components.share.unrestrict.details": t(
+        "explorer.actions.share.restriction.unrestrict.details",
+      ),
+    }),
     [t],
   );
 
@@ -345,6 +371,7 @@ export const ItemShareModal = ({
           !updateRestriction.isPending
         }
         isRestricted={item?.is_restricted ?? false}
+        customTranslations={restrictionTranslations}
         onRestrict={() =>
           updateRestriction.mutate({ id: itemId, is_restricted: true })
         }

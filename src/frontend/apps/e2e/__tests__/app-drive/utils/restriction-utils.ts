@@ -90,9 +90,10 @@ export const test = base.extend<{ folders: RestrictionFixture }>({
 });
 
 export const itemUrl = (id: string) => `/explorer/items/${id}`;
+// Named "Share modal", or after its title ("Share <item>") in newer ui-kits.
 export const shareModal = (page: Page) =>
-  page.getByLabel("Share modal", { exact: true });
-/** The "Restrict access" / "Open access" confirmation above the share modal. */
+  page.getByRole("dialog", { name: /^Share /, exact: true });
+/** The "Restrict access" / "Expand access" confirmation above the share modal. */
 export const confirmation = (page: Page) =>
   page
     .getByRole("dialog")
@@ -166,11 +167,11 @@ export async function openSharing(
 }
 
 /**
- * Picks "Restrict access" or "Open access" in the share modal menu and returns
+ * Picks "Restrict access" or "Expand access" in the share modal menu and returns
  * the confirmation button, without clicking it.
  */
 export async function askRestriction(page: Page, restricted: boolean) {
-  const label = restricted ? "Restrict access" : "Open access";
+  const label = restricted ? "Restrict access" : "Expand access";
   await shareModal(page)
     .getByRole("button", { name: "More actions", exact: true })
     .click();

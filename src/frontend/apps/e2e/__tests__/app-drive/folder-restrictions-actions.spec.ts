@@ -1,6 +1,14 @@
 import { expect, Page } from "@playwright/test";
 import { getRowItem, getRowItemActions } from "./utils-embedded-grid";
-import { findItem, itemUrl, names, test } from "./utils/restriction-utils";
+import {
+  confirmation,
+  findItem,
+  itemUrl,
+  names,
+  openSharing,
+  shareModal,
+  test,
+} from "./utils/restriction-utils";
 
 const openRowMenu = async (page: Page, title: string) => {
   await (await getRowItemActions(page, title)).click({ force: true });
@@ -108,4 +116,29 @@ test("breadcrumbs mark restricted folders", async ({ page, folders }) => {
       .locator(".explorer__content__breadcrumbs--mobile")
       .getByRole("img", { name: "Restricted access", exact: true }),
   ).toBeVisible();
+});
+
+// The ui-kit copy speaks of items: Drive names them folders, since only
+// folders can be restricted.
+test("restriction copy speaks of folders", async ({ page, folders }) => {
+  // 1. Open sharing on a plain folder; its menu offers to restrict it, with
+  //    the folder wording.
+  await openSharing(page, folders, "row");
+  await shareModal(page)
+    .getByRole("button", { name: "More actions", exact: true })
+    .click();
+  const restrict = page.getByRole("menuitem", { name: /Restrict access/ });
+  await expect(restrict).toContainText(
+    "Only people added specifically to this folder will have access",
+  );
+
+  // 2. The confirmation states the consequence for the parent folder in bold,
+  //    then what happens to people added to the folder.
+  await restrict.click();
+  await expect(confirmation(page).locator("strong")).toHaveText(
+    "Access inherited from the parent folder will be removed.",
+  );
+  await expect(confirmation(page)).toContainText(
+    "People added directly to this folder will keep their access.",
+  );
 });
