@@ -1581,7 +1581,7 @@ class Item(TreeModel, BaseModel):
         return len(self.path) == 1
 
     @property
-    def is_restricted(self):
+    def is_restricted(self) -> bool:
         """Return whether a restriction targets this folder."""
         if (annotated := getattr(self, "has_restriction", None)) is not None:
             return annotated

@@ -143,6 +143,7 @@ def test_items_api_anonymous_to_a_public_breadcrumb_structure():
             "path": str(level1_2.path),
             "depth": 2,
             "main_workspace": False,
+            "is_restricted": False,
         },
         {
             "id": str(level2_1.id),
@@ -150,6 +151,7 @@ def test_items_api_anonymous_to_a_public_breadcrumb_structure():
             "path": str(level2_1.path),
             "depth": 3,
             "main_workspace": False,
+            "is_restricted": False,
         },
     ]
 
@@ -260,6 +262,7 @@ def test_items_api_breadcrumb_authenticated_direct_access(django_assert_num_quer
             "path": str(root.item.path),
             "depth": 1,
             "main_workspace": True,
+            "is_restricted": False,
         },
         {
             "id": str(level1_1.item.id),
@@ -267,6 +270,7 @@ def test_items_api_breadcrumb_authenticated_direct_access(django_assert_num_quer
             "path": str(level1_1.item.path),
             "depth": 2,
             "main_workspace": False,
+            "is_restricted": False,
         },
         {
             "id": str(level2_2.item.id),
@@ -274,6 +278,7 @@ def test_items_api_breadcrumb_authenticated_direct_access(django_assert_num_quer
             "path": str(level2_2.item.path),
             "depth": 3,
             "main_workspace": False,
+            "is_restricted": False,
         },
         {
             "id": str(level3_1.item.id),
@@ -281,6 +286,7 @@ def test_items_api_breadcrumb_authenticated_direct_access(django_assert_num_quer
             "path": str(level3_1.item.path),
             "depth": 4,
             "main_workspace": False,
+            "is_restricted": False,
         },
     ]
 
@@ -374,6 +380,7 @@ def test_api_items_breadcrumb_authenticated_with_access_authenticated():
             "path": str(level1_1.path),
             "depth": 2,
             "main_workspace": False,
+            "is_restricted": False,
         },
         {
             "id": str(level2_2.id),
@@ -381,6 +388,7 @@ def test_api_items_breadcrumb_authenticated_with_access_authenticated():
             "path": str(level2_2.path),
             "depth": 3,
             "main_workspace": False,
+            "is_restricted": False,
         },
     ]
 
@@ -404,6 +412,10 @@ def test_breadcrumb_nested_restrictions(move_entry):
     response = client.get(f"/api/v1.0/items/{inner.pk}/breadcrumb/")
     assert response.status_code == 200
     assert [item["id"] for item in response.json()] == [str(item.pk) for item in expected]
+    # Each detached root is flagged so the breadcrumb can show its restriction
+    assert [item["is_restricted"] for item in response.json()] == [
+        item in (outer, inner) for item in expected
+    ]
     assert response.json()[-1]["depth"] == 1
     assert response.json()[-1]["path"] == str(inner.pk)
 
