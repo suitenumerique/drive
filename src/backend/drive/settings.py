@@ -212,6 +212,9 @@ class Base(Configuration):
     FEATURES_INDEXED_SEARCH = values.BooleanValue(
         default=True, environ_name="FEATURES_INDEXED_SEARCH", environ_prefix=None
     )
+    FEATURES_RESTRICTED_FOLDERS_USERS = values.ListValue(
+        [], environ_name="FEATURES_RESTRICTED_FOLDERS_USERS", environ_prefix=None
+    )
 
     # Posthog
     POSTHOG_KEY = SecretFileValue(None, environ_name="POSTHOG_KEY", environ_prefix=None)

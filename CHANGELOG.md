@@ -13,6 +13,7 @@ and this project adheres to
 - ✨(backend) allow to leave an item #826
 - ✨(frontend) allow to leave an item #826
 - ✨(frontend) restrict and reopen folder access from the share modal
+- ✨(backend) open folder restriction to a list of users
 - 🔊(backend) log rejected WOPI requests
 - ✨(backend) browse the item tree and its accesses from the admin
 - ✨(backend) list the root items of a user in the admin

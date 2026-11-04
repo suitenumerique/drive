@@ -5,6 +5,8 @@ WOPI_CLIENTS="collabora"
 MALWARE_DETECTION_BACKEND=lasuite.malware_detection.backends.dummy.DummyBackend
 # Enable the share modal contacts file import tested by share-import.spec.ts
 ALLOW_SHARE_IMPORT_FILE=True
+# Open folder restriction to the owner of the folder-restrictions-*.spec.ts world
+FEATURES_RESTRICTED_FOLDERS_USERS=drive@example.com
 # Exercise real quota admission, including upload reservations.
 ENTITLEMENTS_BACKEND=core.entitlements.backends.local.LocalEntitlementsBackend
 ENTITLEMENTS_BACKEND_PARAMETERS={"default_storage_limit": 10737418240}

@@ -100,6 +100,9 @@ SEARCH_INDEXER_QUERY_URL="http://find:8000/api/v1.0/documents/search/"
 # Enables the search of indexed files through the API
 FEATURES_INDEXED_SEARCH=True
 
+# Users allowed to restrict folders
+FEATURES_RESTRICTED_FOLDERS_USERS=drive@drive.world
+
 # Malware detection
 # Delay the "safe" result so the frontend can observe the "analyzing" upload
 # state (polling + badge). Tune the delay with MALWARE_DETECTION_DUMMY_SLEEP.

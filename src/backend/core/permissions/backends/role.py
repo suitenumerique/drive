@@ -171,6 +171,7 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods,too-many-instanc
             self.is_owner
             and not self.is_deleted
             and self.item.type == models.ItemTypeChoices.FOLDER
+            and self.user.email in settings.FEATURES_RESTRICTED_FOLDERS_USERS
             and (self.item.depth > 1 or self.is_restricted)
         )
 
