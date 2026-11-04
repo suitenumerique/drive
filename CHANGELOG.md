@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(frontend) set an expiration date on item share links
+
 ## [v0.26.0] - 2026-11-04
 
 ### Added
