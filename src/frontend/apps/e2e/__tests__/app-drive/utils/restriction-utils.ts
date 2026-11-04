@@ -90,7 +90,7 @@ export const test = base.extend<{ folders: RestrictionFixture }>({
 });
 
 export const itemUrl = (id: string) => `/explorer/items/${id}`;
-// Named "Share modal", or after its title ("Share <item>") in newer ui-kits.
+// The share modal is named after its title, "Share <item>".
 export const shareModal = (page: Page) =>
   page.getByRole("dialog", { name: /^Share /, exact: true });
 /** The "Restrict access" / "Expand access" confirmation above the share modal. */

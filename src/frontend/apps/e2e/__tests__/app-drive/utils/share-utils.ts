@@ -1,8 +1,9 @@
 import { Page, expect } from "@playwright/test";
 import { clickOnBreadcrumbButtonAction } from "../utils-explorer";
 
+// The share modal is named after its title, "Share <item>".
 export const getShareModal = async (page: Page) => {
-  return page.getByLabel("Share modal");
+  return page.getByRole("dialog", { name: /^Share / });
 };
 
 export const expectShareModal = async (page: Page) => {
