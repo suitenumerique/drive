@@ -1,5 +1,6 @@
 import { Item, ItemType } from "@/features/drivers/types";
 import {
+  getRestrictionTarget,
   isFolder,
   isUnavailableRestriction,
 } from "@/features/drivers/utils";
@@ -154,6 +155,10 @@ export const useItemActionMenuItems = ({
     const allowCreate = options?.allowCreate ?? false;
     const effectiveItemId = options?.itemId ?? item.originalId ?? item.id;
     const effectiveItem = { ...item, id: effectiveItemId };
+    // A restriction entry stands for its folder: folder actions follow the
+    // folder's own permissions, as in its breadcrumb, while moving, starring
+    // or deleting still act on the entry in the parent folder.
+    const folder = getRestrictionTarget(item) ?? effectiveItem;
     const showAddChildren = allowCreate;
 
     return [
@@ -182,7 +187,7 @@ export const useItemActionMenuItems = ({
         icon: <Shared />,
         label: t("explorer.item.actions.share"),
         isHidden:
-          !item.abilities?.accesses_view || isUnavailableRestriction(item),
+          !folder.abilities?.accesses_view || isUnavailableRestriction(item),
         callback: () => {
           setSharedItem(effectiveItem);
         },
@@ -198,9 +203,9 @@ export const useItemActionMenuItems = ({
       {
         icon: <Download />,
         label: t("explorer.item.actions.download"),
-        isHidden: !item.abilities?.export || minimal,
+        isHidden: !folder.abilities?.export || minimal,
         callback: () => {
-          window.location.href = `${baseApiUrl()}items/${effectiveItemId}/export/`;
+          window.location.href = `${baseApiUrl()}items/${folder.id}/export/`;
         },
       },
       {
@@ -239,7 +244,7 @@ export const useItemActionMenuItems = ({
         icon: <Edit />,
         label: t("explorer.item.actions.rename"),
         isHidden:
-          !item.abilities?.update || item.type === ItemType.RESTRICTION,
+          !folder.abilities?.update || folder.type === ItemType.RESTRICTION,
         callback: () => {
           setCurrentItem(effectiveItem);
           renameModal.open();

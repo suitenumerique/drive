@@ -10,6 +10,7 @@ and this project adheres to
 
 ### Fixed
 
+- 🐛(frontend) offer folder actions on restricted folders from their parent
 - 🐛(backend) keep the file on a WOPI rename to its current name
 - ♿️(frontend) associate file list headers with their cells
 
