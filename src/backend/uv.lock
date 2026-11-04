@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = "==3.13.*"
 
 [manifest]
@@ -677,7 +677,7 @@ wheels = [
 
 [[package]]
 name = "drive"
-version = "0.25.3"
+version = "0.26.0"
 source = { editable = "." }
 dependencies = [
     { name = "boto3" },

@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.26.0] - 2026-11-04
+
 ### Added
 
 - ✨(backend) allow to leave an item #826
@@ -654,7 +656,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.25.3...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.26.0...main
+[v0.26.0]: https://github.com/suitenumerique/drive/releases/v0.26.0
 [v0.25.3]: https://github.com/suitenumerique/drive/releases/v0.25.3
 [v0.25.2]: https://github.com/suitenumerique/drive/releases/v0.25.2
 [v0.25.1]: https://github.com/suitenumerique/drive/releases/v0.25.1
