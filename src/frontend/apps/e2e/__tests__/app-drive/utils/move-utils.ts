@@ -4,7 +4,10 @@ import { PageOrLocator } from "./types-utils";
 import { getRowItem } from "../utils-embedded-grid";
 
 export const getMoveFolderModal = async (page: PageOrLocator) => {
-  const moveFolderModal = page.getByLabel("Move folder modal");
+  // Named after its title, which includes the moved item: find it by its header.
+  const moveFolderModal = page
+    .getByRole("dialog")
+    .filter({ has: page.locator(".modal__move__header") });
   await expect(moveFolderModal).toBeVisible();
   return moveFolderModal;
 };
