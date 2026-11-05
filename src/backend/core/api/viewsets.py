@@ -724,6 +724,10 @@ class ItemViewSet(
         data = serializer.validated_data.copy()
         extension = data.pop("extension", None)
         attributes = self.get_create_extra_attributes()
+        attributes.setdefault(
+            "source",
+            models.ItemSourceChoices.TEMPLATE if extension else models.ItemSourceChoices.UPLOAD,
+        )
         if parent is not None:
             attributes["parent"] = parent
         else:
@@ -2245,6 +2249,7 @@ class ItemViewSet(
                 type=models.ItemTypeChoices.FILE,
                 size=item_to_duplicate.size,
                 upload_state=models.ItemUploadStateChoices.DUPLICATING,
+                source=models.ItemSourceChoices.DUPLICATE,
                 mimetype=item_to_duplicate.mimetype,
                 filename=item_to_duplicate.filename,
                 description=item_to_duplicate.description,
