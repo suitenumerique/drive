@@ -69,11 +69,13 @@ urlpatterns = [
 if settings.OIDC_RESOURCE_SERVER_ENABLED:
     # - Resource server routes
     external_api_router = DefaultRouter()
-    external_api_router.register(
-        "items",
-        external_api_viewsets.ResourceServerItemViewSet,
-        basename="resource_server_items",
-    )
+    items_config = settings.EXTERNAL_API.get("items", {})
+    if items_config.get("enabled", False):
+        external_api_router.register(
+            "items",
+            external_api_viewsets.ResourceServerItemViewSet,
+            basename="resource_server_items",
+        )
 
     users_access_config = settings.EXTERNAL_API.get("users", {})
     if users_access_config.get("enabled", False):
@@ -87,6 +89,8 @@ if settings.OIDC_RESOURCE_SERVER_ENABLED:
 
     # - Resource server nested routes under items
     external_api_item_related_router = DefaultRouter()
+    # Its root view would answer on items/{id}/ when the items route is disabled
+    external_api_item_related_router.include_root_view = False
     item_access_config = settings.EXTERNAL_API.get("item_access", {})
     if item_access_config.get("enabled", False):
         external_api_item_related_router.register(
