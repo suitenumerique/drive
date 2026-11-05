@@ -1215,6 +1215,41 @@ def test_api_items_invitations_delete_resource_server_allowed(
     assert models.Invitation.objects.count() == count_before - 1
 
 
+@override_settings(
+    EXTERNAL_API={
+        "items": {
+            "enabled": False,
+            "actions": ["list", "retrieve"],
+        },
+        "item_access": {
+            "enabled": True,
+            "actions": ["list"],
+        },
+    }
+)
+def test_api_items_resource_server_items_disabled(
+    user_token, resource_server_backend, user_specific_sub
+):
+    """
+    The items routes should not exist when items are disabled in EXTERNAL_API,
+    while the routes nested under an item should stay available.
+    """
+    reload_urls()
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+
+    item = factories.ItemFactory(link_reach=models.LinkReachChoices.RESTRICTED)
+    factories.UserItemAccessFactory(
+        item=item, user=user_specific_sub, role=models.RoleChoices.OWNER
+    )
+
+    assert client.get("/external_api/v1.0/items/").status_code == 404
+    assert client.get(f"/external_api/v1.0/items/{item.id!s}/").status_code == 404
+
+    response = client.get(f"/external_api/v1.0/items/{item.id!s}/accesses/")
+    assert response.status_code == 200
+
+
 @pytest.mark.parametrize("path", ["favorites", "recents"])
 def test_api_items_resource_server_own_permission_classes_action_not_listed(
     path, user_token, resource_server_backend, user_specific_sub
