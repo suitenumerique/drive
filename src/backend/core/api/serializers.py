@@ -682,6 +682,7 @@ class CreateItemSerializer(ItemSerializer):
     TEMPLATE_EXTENSION_CHOICES = [(ext, ext) for ext in enums.TEMPLATE_FILES]
 
     policy = serializers.SerializerMethodField()
+    upload_challenge = serializers.SerializerMethodField()
     size = serializers.IntegerField(min_value=0, required=False)
     title = serializers.CharField(max_length=255, required=False)
     numchild_folder = serializers.SerializerMethodField()
@@ -730,6 +731,7 @@ class CreateItemSerializer(ItemSerializer):
             "url",
             "url_permalink",
             "filename",
+            "upload_challenge",
             "policy",
             "main_workspace",
             "size",
@@ -876,12 +878,21 @@ class CreateItemSerializer(ItemSerializer):
                 code="unexpected_upload_size",
             )
 
+    def get_upload_challenge(self, item):
+        """Single-use possession challenge for large content-addressed uploads."""
+        return getattr(item, "_upload_challenge", None)
+
     def get_policy(self, item):
         """Return the policy to use if the item is a file."""
         if item.type != models.ItemTypeChoices.FILE:
             return None
 
         if item.upload_state == models.ItemUploadStateChoices.READY:
+            return None
+
+        if getattr(item, "_upload_challenge", None):
+            # Large content-addressed upload: answer the challenge first, the
+            # upload-challenge endpoint returns the policy on failure.
             return None
 
         return utils.generate_upload_policy(item)

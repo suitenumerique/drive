@@ -287,6 +287,25 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    # Possession challenge for content-addressed uploads: above the threshold, the
+    # client must prove it holds the announced content before getting an upload
+    # policy, so the existence of a blob is not disclosed to hash-only callers.
+    UPLOAD_CHALLENGE_THRESHOLD_BYTES = values.PositiveIntegerValue(
+        1048576,  # 1 MiB
+        environ_name="UPLOAD_CHALLENGE_THRESHOLD_BYTES",
+        environ_prefix=None,
+    )
+    UPLOAD_CHALLENGE_RANGE_BYTES = values.PositiveIntegerValue(
+        65536,  # 64 KiB
+        environ_name="UPLOAD_CHALLENGE_RANGE_BYTES",
+        environ_prefix=None,
+    )
+    UPLOAD_CHALLENGE_TTL_SECONDS = values.PositiveIntegerValue(
+        300,  # 5 minutes
+        environ_name="UPLOAD_CHALLENGE_TTL_SECONDS",
+        environ_prefix=None,
+    )
+
     # Maximum size of the request body in memory.
     # This is used to limit the size of the request body in memory.
     # This also limits the size of the file that can be uploaded to the server.

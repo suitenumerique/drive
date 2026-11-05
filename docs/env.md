@@ -161,6 +161,9 @@ This document lists all configurable environment variables for the Drive applica
 | `PURGE_DELETED_ITEMS_SCHEDULE` | Schedule `purge_deleted_items` with celery beat, same format, e.g. `45 0 * * *`. Do not set it if the command already runs as a cron job (the Helm chart does), it would run twice | |
 | `GC_UNREFERENCED_BLOBS_SCHEDULE` | Schedule `gc_unreferenced_blobs` with celery beat, same format, e.g. `15 1 * * *`. Do not set it if the command already runs as a cron job (the Helm chart does), it would run twice | |
 | `BLOB_UNREFERENCED_GRACE_HOURS` | Grace period in hours before a blob that lost its last reference is deleted from object storage by the garbage collector | `168` (7 days) |
+| `UPLOAD_CHALLENGE_THRESHOLD_BYTES` | File size above which an upload with an announced hash requires a possession challenge before getting an upload policy | `1048576` (1 MiB) |
+| `UPLOAD_CHALLENGE_RANGE_BYTES` | Size of the random byte range the client must hash to answer a possession challenge | `65536` (64 KiB) |
+| `UPLOAD_CHALLENGE_TTL_SECONDS` | Lifetime of a possession challenge (single use) | `300` (5 minutes) |
 | `USER_RECONCILIATION_FORM_URL` | URL of a third-party form for user reconciliation requests, used in the email sent when a request fails | `None` |
 | `WOPI_CLIENTS` | List of client name. These client names will be used in the post_setup | [] |
 | `WOPI_{CLIENT_NAME}_DISCOVERY_URL` | The discovery url for each client present in the `WOPI_CLIENTS`. if `WOPI_CLIENTS=vendorA` then set `WOPI_VENDORA_DISCOVERY_URL` | |

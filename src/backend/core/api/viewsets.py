@@ -2,9 +2,12 @@
 # pylint: disable=too-many-lines
 
 import base64
+import hashlib
+import hmac
 import json
 import logging
 import os
+import random
 import re
 import uuid
 from urllib.parse import quote, unquote, urlparse
@@ -743,6 +746,7 @@ class ItemViewSet(
                 serializer.instance = models.Item.objects.create_child(
                     creator=self.request.user, **data, **attributes
                 )
+            self._maybe_generate_upload_challenge(serializer.instance)
         else:
             if extension:
                 self._check_can_upload(self.request.user, data["type"])
@@ -751,6 +755,128 @@ class ItemViewSet(
             )
             if extension:
                 self._create_file_from_template(serializer.instance, extension)
+
+    def _maybe_generate_upload_challenge(self, item):
+        """
+        For large content-addressed uploads, store a single-use possession challenge
+        in cache and expose it on the instance for the creation response. Sending the
+        challenge whether or not the blob exists avoids disclosing its existence.
+        """
+        if not item.upload_hash or not item.size:
+            return
+        if item.size <= settings.UPLOAD_CHALLENGE_THRESHOLD_BYTES:
+            return
+        length = min(settings.UPLOAD_CHALLENGE_RANGE_BYTES, item.size)
+        offset = random.randint(0, item.size - length)
+        challenge = {"offset": offset, "length": length}
+        cache.set(
+            f"upload-challenge:{item.id!s}",
+            challenge,
+            timeout=settings.UPLOAD_CHALLENGE_TTL_SECONDS,
+        )
+        item._upload_challenge = challenge  # noqa: SLF001
+
+    @drf.decorators.action(detail=True, methods=["post"], url_path="upload-challenge")
+    def upload_challenge(self, request, *args, **kwargs):
+        """
+        Answer the possession challenge of a large content-addressed upload.
+
+        If the announced hash matches an existing safe blob and the proof is valid,
+        the item is attached to the blob directly (READY, no upload). Otherwise —
+        including when no blob exists for the hash — the response carries the upload
+        policy and the normal upload flow resumes, so both cases are indistinguishable.
+        """
+        item = self.get_object()
+
+        if item.type != models.ItemTypeChoices.FILE:
+            raise drf.exceptions.ValidationError(
+                {"item": "This action is only available for items of type FILE."},
+                code="item_upload_type_unavailable",
+            )
+        if item.upload_state != models.ItemUploadStateChoices.PENDING:
+            raise drf.exceptions.ValidationError(
+                {"item": "This action is only available for items in PENDING state."},
+                code="item_upload_state_not_pending",
+            )
+        if not item.upload_hash:
+            raise drf.exceptions.ValidationError(
+                {"item": "This action requires an announced upload hash."},
+                code="item_upload_hash_missing",
+            )
+
+        proof = request.data.get("proof")
+        if not proof:
+            raise drf.exceptions.ValidationError(
+                {"proof": "This field is required."}, code="proof_required"
+            )
+
+        cache_key = f"upload-challenge:{item.id!s}"
+        challenge = cache.get(cache_key)
+        if challenge is None:
+            raise drf.exceptions.ValidationError(
+                {"detail": "No active challenge for this item."},
+                code="no_active_challenge",
+            )
+        # Single use: a replayed or brute-forced proof must not be reusable.
+        cache.delete(cache_key)
+
+        blob = models.Blob.objects.filter(
+            hash=item.upload_hash,
+            upload_state=models.ItemUploadStateChoices.READY,
+        ).first()
+
+        if blob is not None and self._challenge_matches(blob, challenge, proof):
+            s3_client = default_storage.connection.meta.client
+            if blob.size and blob.size > 2048:
+                file_head = s3_client.get_object(
+                    Bucket=default_storage.bucket_name,
+                    Key=blob.file_key,
+                    Range="bytes=0-2047",
+                )["Body"].read()
+            else:
+                file_head = s3_client.get_object(
+                    Bucket=default_storage.bucket_name, Key=blob.file_key
+                )["Body"].read()
+            mimetype = utils.detect_mimetype(file_head, filename=item.filename)
+
+            with transaction.atomic():
+                locked_item = models.Item.objects.select_for_update().get(pk=item.pk)
+                if locked_item.upload_state != models.ItemUploadStateChoices.PENDING:
+                    raise drf.exceptions.ValidationError(
+                        {"item": "This action is only available for items in PENDING state."},
+                        code="item_upload_state_not_pending",
+                    )
+                locked_item.blob = blob
+                locked_item.upload_state = models.ItemUploadStateChoices.READY
+                locked_item.mimetype = mimetype
+                locked_item.size = blob.size
+                locked_item.save(
+                    update_fields=["blob", "upload_state", "mimetype", "size", "updated_at"]
+                )
+
+            serializer = serializers.ItemSerializer(
+                locked_item, context=self.get_serializer_context()
+            )
+            return drf.response.Response(serializer.data, status=status.HTTP_200_OK)
+
+        # Challenge failed or no blob for this hash: identical response in both cases.
+        return drf.response.Response(
+            {"policy": utils.generate_upload_policy(item)}, status=status.HTTP_200_OK
+        )
+
+    @staticmethod
+    def _challenge_matches(blob, challenge, proof):
+        """Compare the proof with the SHA-256 of the challenged byte range of the blob."""
+        s3_client = default_storage.connection.meta.client
+        start = challenge["offset"]
+        end = start + challenge["length"] - 1
+        file_range = s3_client.get_object(
+            Bucket=default_storage.bucket_name,
+            Key=blob.file_key,
+            Range=f"bytes={start}-{end}",
+        )["Body"].read()
+        digest = hashlib.sha256(file_range).hexdigest()
+        return hmac.compare_digest(digest, str(proof).lower())
 
     def perform_destroy(self, instance):
         """Override to implement a soft delete instead of dumping the record in database."""
