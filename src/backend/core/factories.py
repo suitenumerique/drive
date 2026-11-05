@@ -54,6 +54,16 @@ class ParentNodeFactory(factory.declarations.ParameteredAttribute):
         return step.recurse(subfactory, params)
 
 
+class BlobFactory(factory.django.DjangoModelFactory):
+    """A factory to create blobs"""
+
+    class Meta:
+        model = models.Blob
+
+    hash = factory.Sequence(lambda n: f"{n:064x}")
+    size = factory.fuzzy.FuzzyInteger(1, 10**9)
+
+
 class ItemFactory(factory.django.DjangoModelFactory):
     """A factory to create items"""
 

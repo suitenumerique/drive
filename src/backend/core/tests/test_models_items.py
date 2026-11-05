@@ -88,6 +88,23 @@ def test_models_items_file_key():
     assert item.file_key == "item/9531a5f1-42b1-496c-b3f4-1c09ed139b3c/logo.png"
 
 
+def test_models_items_file_key_with_blob():
+    """An item attached to a blob should be stored under the content-addressed key."""
+    blob = factories.BlobFactory(hash="a" * 64)
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="logo.png",
+        blob=blob,
+    )
+    assert item.file_key == f"blobs/{'a' * 64}"
+
+
+def test_models_blob_file_key():
+    """The blob file key should be derived from its hash."""
+    blob = factories.BlobFactory(hash="b" * 64)
+    assert blob.file_key == f"blobs/{'b' * 64}"
+
+
 @pytest.mark.parametrize("depth", range(5))
 def test_models_items_soft_delete(depth):
     """Trying to delete an item that is already deleted or is a descendant of

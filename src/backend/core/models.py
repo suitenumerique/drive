@@ -1286,6 +1286,52 @@ class ItemManager(TreeManager.from_queryset(ItemQuerySet)):
         return item
 
 
+class Blob(BaseModel):
+    """Content-addressed object stored in object storage under `blobs/<hash>`."""
+
+    hash = models.CharField(_("hash"), max_length=64, unique=True)
+    size = models.BigIntegerField(_("size"))
+    upload_state = models.CharField(
+        _("upload state"),
+        max_length=25,
+        choices=ItemUploadStateChoices.choices,
+        null=True,
+        blank=True,
+    )
+    malware_detection_info = models.JSONField(
+        null=True,
+        blank=True,
+        default=dict,
+        help_text=_("Malware detection info when the analysis status is unsafe."),
+    )
+    unreferenced_at = models.DateTimeField(
+        _("unreferenced at"),
+        null=True,
+        blank=True,
+        help_text=_("When the blob lost its last reference, for the garbage collector."),
+    )
+
+    class Meta:
+        db_table = "drive_blob"
+        verbose_name = _("Blob")
+        verbose_name_plural = _("Blobs")
+        indexes = [
+            models.Index(
+                fields=["unreferenced_at"],
+                condition=models.Q(unreferenced_at__isnull=False),
+                name="blob_unreferenced_at_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return self.hash
+
+    @property
+    def file_key(self):
+        """Key used to store the blob in object storage."""
+        return f"blobs/{self.hash}"
+
+
 # pylint: disable=too-many-public-methods,too-many-instance-attributes
 class Item(TreeModel, BaseModel):
     """Item in the tree."""
@@ -1326,6 +1372,13 @@ class Item(TreeModel, BaseModel):
         blank=True,
     )
     mimetype = models.CharField(max_length=255, null=True, blank=True)
+    blob = models.ForeignKey(
+        Blob,
+        on_delete=models.PROTECT,
+        related_name="items",
+        null=True,
+        blank=True,
+    )
     target = models.OneToOneField(
         "self",
         on_delete=models.CASCADE,
@@ -1520,9 +1573,16 @@ class Item(TreeModel, BaseModel):
 
     @property
     def file_key(self):
-        """Key used to store the file in object storage."""
+        """Key used to store the file in object storage.
+
+        Items attached to a blob are stored under the content-addressed key
+        `blobs/<hash>`; legacy items keep their historical `item/<uuid>/<filename>` key.
+        """
         if self.filename is None:
             raise RuntimeError("The item must have a filename to generate a file key.")
+
+        if self.blob_id is not None:
+            return self.blob.file_key
 
         return f"{self.key_base}/{self.filename}"
 
