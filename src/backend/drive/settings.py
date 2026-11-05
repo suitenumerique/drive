@@ -1228,6 +1228,9 @@ class Base(Configuration):
     GC_UNREFERENCED_BLOBS_SCHEDULE = values.Value(
         None, environ_name="GC_UNREFERENCED_BLOBS_SCHEDULE", environ_prefix=None
     )
+    MIGRATE_ITEMS_TO_BLOBS_SCHEDULE = values.Value(
+        None, environ_name="MIGRATE_ITEMS_TO_BLOBS_SCHEDULE", environ_prefix=None
+    )
     # Grace period before an unreferenced blob object is deleted from storage
     BLOB_UNREFERENCED_GRACE_HOURS = values.Value(
         168, environ_name="BLOB_UNREFERENCED_GRACE_HOURS", environ_prefix=None
