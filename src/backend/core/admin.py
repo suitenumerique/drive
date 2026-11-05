@@ -461,6 +461,7 @@ class ItemAdmin(admin.ModelAdmin):
                     "filename",
                     "size_display",
                     "quota_excluded",
+                    "source",
                     "deleted_at",
                     "ancestors_deleted_at",
                     "malware_detection_info",
@@ -500,6 +501,7 @@ class ItemAdmin(admin.ModelAdmin):
         "type",
         "size_display",
         "quota_excluded",
+        "source",
         "link_reach",
         "link_role",
         "upload_state",
@@ -517,10 +519,11 @@ class ItemAdmin(admin.ModelAdmin):
         "deleted_at",
         "ancestors_deleted_at",
         "malware_detection_info",
+        "source",
         "tree",
     )
     search_fields = ("id", "title", "creator__email")
-    list_filter = ("upload_state", "link_reach", "link_role", "quota_excluded")
+    list_filter = ("upload_state", "link_reach", "link_role", "quota_excluded", "source")
     show_facets = admin.ShowFacets.ALWAYS
     actions = (
         "trigger_file_analysis",

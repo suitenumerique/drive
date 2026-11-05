@@ -33,6 +33,11 @@ def test_api_items_create_root_resource_server_source_is_client_id(
     child = models.Item.objects.get(id=response.json()["id"])
     assert child.source == "some_service_provider"
 
+    # The source is exposed read-only on retrieve
+    response = client.get(f"/external_api/v1.0/items/{child.id!s}/")
+    assert response.status_code == 200
+    assert response.json()["source"] == "some_service_provider"
+
 
 def test_api_items_create_children_resource_server_source_is_client_id(
     user_token, resource_server_backend, user_specific_sub

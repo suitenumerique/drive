@@ -106,6 +106,7 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
                 "quota_excluded": False,
+                "source": None,
                 "is_favorite": True,
                 "is_restricted": False,
                 "target": None,

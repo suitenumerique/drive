@@ -72,6 +72,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "hard_delete_at": None,
         "is_wopi_supported": False,
         "quota_excluded": False,
+        "source": None,
     }
 
 
@@ -134,6 +135,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         "hard_delete_at": None,
         "is_wopi_supported": False,
         "quota_excluded": False,
+        "source": None,
     }
 
 
@@ -243,6 +245,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "hard_delete_at": None,
         "is_wopi_supported": False,
         "quota_excluded": False,
+        "source": None,
     }
     assert models.LinkTrace.objects.filter(item=item, user=user).exists() is True
 
@@ -311,6 +314,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "hard_delete_at": None,
         "is_wopi_supported": False,
         "quota_excluded": False,
+        "source": None,
     }
 
 
@@ -457,6 +461,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         "hard_delete_at": None,
         "is_wopi_supported": False,
         "quota_excluded": False,
+        "source": None,
     }
 
 
@@ -529,6 +534,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         "hard_delete_at": None,
         "is_wopi_supported": False,
         "quota_excluded": False,
+        "source": None,
     }
 
 
@@ -711,6 +717,7 @@ def test_api_items_retrieve_authenticated_related_team_members(teams, role, mock
         "hard_delete_at": None,
         "is_wopi_supported": False,
         "quota_excluded": False,
+        "source": None,
     }
 
 
@@ -791,6 +798,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(teams, rol
         "hard_delete_at": None,
         "is_wopi_supported": False,
         "quota_excluded": False,
+        "source": None,
     }
 
 
@@ -871,6 +879,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(teams, mock_user_t
         "hard_delete_at": None,
         "is_wopi_supported": False,
         "quota_excluded": False,
+        "source": None,
     }
 
 
@@ -1295,6 +1304,7 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "hard_delete_at": None,
         "is_wopi_supported": False,
         "quota_excluded": False,
+        "source": None,
     }
 
 
@@ -1373,6 +1383,7 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
         "hard_delete_at": None,
         "is_wopi_supported": False,
         "quota_excluded": False,
+        "source": None,
     }
 
 
@@ -1443,6 +1454,7 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
         "hard_delete_at": None,
         "is_wopi_supported": False,
         "quota_excluded": False,
+        "source": None,
     }
 
 
@@ -1568,6 +1580,7 @@ def test_api_items_retrieve_file_analysing_not_creator():
         "target": None,
         "is_wopi_supported": False,
         "quota_excluded": False,
+        "source": None,
         "link_reach": "public",
         "link_role": item.link_role,
         "link_expires_at": None,

@@ -50,6 +50,11 @@ def test_api_items_create_file_source_upload():
     item = models.Item.objects.get()
     assert item.source == models.ItemSourceChoices.UPLOAD
 
+    # The source is exposed read-only on retrieve
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+    assert response.status_code == 200
+    assert response.json()["source"] == models.ItemSourceChoices.UPLOAD
+
 
 def test_api_items_children_create_file_source_upload():
     """Files created as children are tagged drive_upload."""
