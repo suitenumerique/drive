@@ -1332,8 +1332,12 @@ class Blob(BaseModel):
         return f"blobs/{self.hash}"
 
     def mark_unreferenced_if_orphan(self):
-        """Set unreferenced_at when no item references the blob anymore."""
-        if self.unreferenced_at is None and not self.items.exists():
+        """Set unreferenced_at when no item or version references the blob anymore."""
+        if (
+            self.unreferenced_at is None
+            and not self.items.exists()
+            and not self.versions.exists()
+        ):
             self.unreferenced_at = timezone.now()
             self.save(update_fields=["unreferenced_at", "updated_at"])
 
@@ -2365,6 +2369,31 @@ class Item(TreeModel, BaseModel):
         item.invalidate_nb_accesses_cache()
 
         return item
+
+
+class ItemVersion(BaseModel):
+    """A content snapshot of an item, recorded when it became the current one."""
+
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="versions")
+    blob = models.ForeignKey(Blob, on_delete=models.PROTECT, related_name="versions")
+    filename = models.CharField(max_length=255, null=True, blank=True)
+    mimetype = models.CharField(max_length=255, null=True, blank=True)
+    author = models.ForeignKey(
+        User,
+        on_delete=models.RESTRICT,
+        related_name="item_versions",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        db_table = "drive_item_version"
+        verbose_name = _("Item version")
+        verbose_name_plural = _("Item versions")
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        return f"{self.item_id!s} @ {self.created_at}"
 
 
 class MirrorItemTask(BaseModel):

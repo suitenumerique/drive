@@ -19,17 +19,18 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from sentry_sdk import capture_exception
 
-from core.api.utils import get_item_file_head_object, is_extension_allowed
-from core.models import Item
+from core.api.utils import detect_mimetype, get_item_file_head_object, is_extension_allowed
+from core.models import Item, ItemUploadStateChoices, ItemVersion
+from core.services import blobs
 from core.utils.analytics import posthog_capture
 from wopi.authentication import WopiAccessTokenAuthentication, get_access_token
 from wopi.exceptions import WopiRequestSignatureError
 from wopi.permissions import AccessTokenPermission
 from wopi.services.lock import LockService
 from wopi.utils import (
+    get_item_version_token,
     get_wopi_client_config,
     get_wopi_client_proof_keys,
-    get_wopi_item_version,
     signature,
 )
 
@@ -158,7 +159,7 @@ class WopiViewSet(viewsets.ViewSet):
             "UserFriendlyName": request.user.full_name if not request.user.is_anonymous else None,
             "Size": head_object["ContentLength"],
             "UserId": str(request.user.id),
-            "Version": get_wopi_item_version(head_object),
+            "Version": get_item_version_token(item),
             "UserCanWrite": abilities["update"],
             "UserCanRename": abilities["update"],
             "UserCanPresent": False,
@@ -224,7 +225,7 @@ class WopiViewSet(viewsets.ViewSet):
             # A null mimetype would fall back to Django's text/html default.
             content_type=item.mimetype or "application/octet-stream",
             headers={
-                "X-WOPI-ItemVersion": get_wopi_item_version(head_object),
+                "X-WOPI-ItemVersion": get_item_version_token(item),
                 "Content-Length": head_object["ContentLength"],
                 # Stored bytes must never render on the application origin.
                 "Content-Disposition": "attachment",
@@ -264,6 +265,9 @@ class WopiViewSet(viewsets.ViewSet):
         except RequestDataTooBig:
             return Response(status=413)
 
+        if item.blob_id is not None:
+            return self._put_file_content_blob(item, request, file)
+
         s3_client = default_storage.connection.meta.client
         default_storage.save(item.file_key, file)
         item.size = file.size
@@ -284,8 +288,67 @@ class WopiViewSet(viewsets.ViewSet):
         head_response = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)
         return Response(
             status=200,
-            headers={X_WOPI_ITEMVERSION: get_wopi_item_version(head_response)},
+            headers={X_WOPI_ITEMVERSION: get_item_version_token(item)},
         )
+
+    def _put_file_content_blob(self, item, request, file):
+        """
+        PutFile on a blob-backed item: store the new content as a blob, record an
+        ItemVersion and repoint the item in one transaction. The item stays READY
+        on its previous blob until the repoint, so nobody is blocked mid-edit.
+        """
+        content = file.read()
+        blob = blobs.store_content_as_blob(content, ready=False)
+
+        if blob.id == item.blob_id:
+            # Same content as the current blob: no new version, no repoint.
+            return Response(
+                status=200, headers={X_WOPI_ITEMVERSION: get_item_version_token(item)}
+            )
+
+        mimetype = detect_mimetype(content[:2048], filename=item.filename)
+
+        with transaction.atomic():
+            locked_item = Item.objects.select_for_update().get(pk=item.pk)
+            version = ItemVersion.objects.create(
+                item=locked_item,
+                blob=blob,
+                filename=locked_item.filename,
+                mimetype=mimetype,
+                author=request.user if request.user.is_authenticated else None,
+            )
+            locked_item.blob = blob
+            locked_item.size = len(content)
+            locked_item.mimetype = mimetype
+            if blob.upload_state == ItemUploadStateChoices.SUSPICIOUS:
+                locked_item.upload_state = ItemUploadStateChoices.SUSPICIOUS
+            locked_item.save(
+                update_fields=["blob", "size", "mimetype", "upload_state", "updated_at"]
+            )
+
+            needs_analysis = blob.upload_state in (
+                None,
+                ItemUploadStateChoices.PENDING,
+                ItemUploadStateChoices.ANALYZING,
+            )
+            transaction.on_commit(
+                lambda: self._after_put_file_blob(version, needs_analysis)
+            )
+
+        wopi_client_config = get_wopi_client_config(item, request.user)
+        posthog_capture(
+            "item_edited",
+            request.user if request.user.is_authenticated else None,
+            {"wopi_client": wopi_client_config["client"] if wopi_client_config else None},
+            item=item,
+        )
+
+        return Response(status=200, headers={X_WOPI_ITEMVERSION: str(version.id)})
+
+    def _after_put_file_blob(self, version, needs_analysis):
+        """Launch the antivirus analysis of the new blob once the repoint is committed."""
+        if needs_analysis:
+            malware_detection.analyse_file(version.blob.file_key, item_id=version.item_id)
 
     def detail_post(self, request, pk=None):
         """

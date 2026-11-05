@@ -35,7 +35,7 @@ def gc_unreferenced_blob(blob_id):
         if blob.unreferenced_at is None or blob.unreferenced_at > grace_cutoff:
             return
 
-        if blob.items.exists():
+        if blob.items.exists() or blob.versions.exists():
             # Referenced again in the meantime: cancel the pending deletion.
             blob.unreferenced_at = None
             blob.save(update_fields=["unreferenced_at", "updated_at"])

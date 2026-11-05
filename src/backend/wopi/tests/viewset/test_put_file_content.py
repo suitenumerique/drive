@@ -1,6 +1,8 @@
 """Test the PUT file content viewset."""
 
+import hashlib
 import logging
+from io import BytesIO
 from unittest import mock
 
 from django.core.files.storage import default_storage
@@ -503,3 +505,112 @@ def test_put_file_content_posthog_event(settings):
 
     assert response.status_code == 200
     mock_capture.assert_called_once_with("item_edited", user, {"wopi_client": "vendorA"}, item=item)
+
+
+def _wopi_put(client, item, access_token, content):
+    """POST a WOPI PutFile on the item contents endpoint."""
+    return client.post(
+        f"/api/v1.0/wopi/files/{item.id}/contents/",
+        data=content,
+        content_type="text/plain",
+        HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        headers={
+            "X-WOPI-Override": "PUT",
+            "X-WOPI-Lock": "1234567890",
+        },
+    )
+
+
+def test_put_file_content_blob_item_creates_version_and_repoints(
+    django_capture_on_commit_callbacks,
+):
+    """PutFile on a blob-backed item stores a new blob, records an ItemVersion and
+    repoints the item; the version token is the ItemVersion id."""
+    folder = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    blob = factories.BlobFactory(
+        hash=hashlib.sha256(b"old content").hexdigest(),
+        size=11,
+        upload_state=models.ItemUploadStateChoices.READY,
+    )
+    item = factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.EDITOR,
+        size=11,
+        blob=blob,
+    )
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
+    current_version = factories.ItemVersionFactory(
+        item=item, blob=blob, filename=item.filename, mimetype="text/plain", author=user
+    )
+    default_storage.save(blob.file_key, BytesIO(b"old content"))
+
+    access_token, _ = AccessUserItemService().insert_new_access(item, user)
+    LockService(item).lock("1234567890")
+
+    client = APIClient()
+    with mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file:
+        with django_capture_on_commit_callbacks(execute=True):
+            response = _wopi_put(client, item, access_token, b"new content")
+
+    assert response.status_code == 200
+    new_blob = models.Blob.objects.get(hash=hashlib.sha256(b"new content").hexdigest())
+    item.refresh_from_db()
+    assert item.blob_id == new_blob.id
+    assert item.size == 11
+    # the item is not blocked mid-edit: it stays READY on the new blob
+    assert item.upload_state == models.ItemUploadStateChoices.READY
+    version = item.versions.exclude(pk=current_version.pk).get()
+    assert response.headers["X-WOPI-ItemVersion"] == str(version.id)
+    assert version.blob_id == new_blob.id
+    assert version.author == user
+    assert default_storage.exists(new_blob.file_key)
+    # the previous blob is untouched, still referenced by the old version
+    assert default_storage.exists(blob.file_key)
+    mock_analyse_file.assert_called_once_with(new_blob.file_key, item_id=item.id)
+
+
+def test_put_file_content_blob_item_same_content_is_noop(django_capture_on_commit_callbacks):
+    """PutFile with content identical to the current blob creates no version and
+    keeps the current version token."""
+    folder = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    blob = factories.BlobFactory(
+        hash=hashlib.sha256(b"old content").hexdigest(),
+        size=11,
+        upload_state=models.ItemUploadStateChoices.READY,
+    )
+    item = factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.EDITOR,
+        size=11,
+        blob=blob,
+    )
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
+    current_version = factories.ItemVersionFactory(
+        item=item, blob=blob, filename=item.filename, mimetype="text/plain", author=user
+    )
+    default_storage.save(blob.file_key, BytesIO(b"old content"))
+
+    access_token, _ = AccessUserItemService().insert_new_access(item, user)
+    LockService(item).lock("1234567890")
+
+    client = APIClient()
+    with mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file:
+        with django_capture_on_commit_callbacks(execute=True):
+            response = _wopi_put(client, item, access_token, b"old content")
+
+    assert response.status_code == 200
+    assert response.headers["X-WOPI-ItemVersion"] == str(current_version.id)
+    assert item.versions.count() == 1
+    item.refresh_from_db()
+    assert item.blob_id == blob.id
+    mock_analyse_file.assert_not_called()

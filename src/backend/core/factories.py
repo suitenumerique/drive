@@ -64,6 +64,18 @@ class BlobFactory(factory.django.DjangoModelFactory):
     size = factory.fuzzy.FuzzyInteger(1, 10**9)
 
 
+class ItemVersionFactory(factory.django.DjangoModelFactory):
+    """A factory to create item versions"""
+
+    class Meta:
+        model = models.ItemVersion
+
+    item = factory.SubFactory("core.factories.ItemFactory")
+    blob = factory.SubFactory(BlobFactory)
+    filename = "file.txt"
+    mimetype = "text/plain"
+
+
 class ItemFactory(factory.django.DjangoModelFactory):
     """A factory to create items"""
 

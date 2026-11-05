@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core.cache import cache
 
 from core import models
+from core.api.utils import get_item_file_head_object
 from wopi.tasks.configure_wopi import (
     WOPI_CONFIGURATION_CACHE_KEY,
     WOPI_DEFAULT_CONFIGURATION,
@@ -133,3 +134,19 @@ def get_wopi_item_version(head_object):
         return str(last_modified)
 
     return str(head_object.get("ContentLength", "0"))
+
+
+def get_item_version_token(item):
+    """
+    WOPI version token of an item.
+
+    For blob-backed items it is the id of the current ItemVersion: the storage
+    ETag derives from the content, so restoring A -> B -> A would repeat the A
+    token, which WOPI forbids. Legacy items fall back to the storage ETag.
+    """
+    if item.blob_id is not None:
+        version = item.versions.first()  # ItemVersion.Meta.ordering is -created_at
+        if version is not None:
+            return str(version.id)
+
+    return get_wopi_item_version(get_item_file_head_object(item))
