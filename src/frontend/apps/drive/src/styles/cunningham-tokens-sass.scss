@@ -946,7 +946,7 @@ $themes: (
         'header--color': #25252F,
         'header--size': 12px,
         'header--weight': 500,
-        'body--background-color-hover': #F0F0F3
+        'body--background-color-hover': #1B1B230D
       ),
       'badge': (
         'font-size': 0.75rem,
@@ -977,6 +977,19 @@ $themes: (
           'background-color': #D5E4F3,
           'color': #005BC0
         )
+      ),
+      'gaufre': (
+        'widgetPath': 'https://static.suite.anct.gouv.fr/widgets/lagaufre.js',
+        'apiUrl': 'https://lasuite.numerique.gouv.fr/api/services'
+      ),
+      'favicon': (
+        'src': '/assets/favicon.png'
+      ),
+      'logo': (
+        'src': url('/assets/logo_beta.svg')
+      ),
+      'logo-icon': (
+        'src': url('/assets/logo-icon_beta.svg')
       )
     )
   ),
