@@ -103,6 +103,16 @@ class ItemUploadStateChoices(models.TextChoices):
     READY = "ready", _("Ready")
 
 
+class ItemSourceChoices(models.TextChoices):
+    """Define the reserved drive_ source values, any other source is an external client_id."""
+
+    UPLOAD = "drive_upload"
+    CREATE = "drive_create"
+    TEMPLATE = "drive_template"
+    DUPLICATE = "drive_duplicate"
+    CONVERT = "drive_convert"
+
+
 class MirrorItemTaskStatusChoices(models.TextChoices):
     """Defines the possible statuses for a mirroring task."""
 
@@ -1345,6 +1355,15 @@ class Item(TreeModel, BaseModel):
         blank=True,
         default=dict,
         help_text=_("Malware detection info when the analysis status is unsafe."),
+    )
+    source = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text=_(
+            "Provenance of the item: a reserved drive_* value for internal operations, "
+            "or the client_id of the resource server that created it."
+        ),
     )
 
     label_size = 7
