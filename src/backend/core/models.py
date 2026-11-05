@@ -1331,6 +1331,12 @@ class Blob(BaseModel):
         """Key used to store the blob in object storage."""
         return f"blobs/{self.hash}"
 
+    def mark_unreferenced_if_orphan(self):
+        """Set unreferenced_at when no item references the blob anymore."""
+        if self.unreferenced_at is None and not self.items.exists():
+            self.unreferenced_at = timezone.now()
+            self.save(update_fields=["unreferenced_at", "updated_at"])
+
 
 # pylint: disable=too-many-public-methods,too-many-instance-attributes
 class Item(TreeModel, BaseModel):

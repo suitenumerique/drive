@@ -62,6 +62,15 @@ def process_item_purge(item_id):
     # Get descendants, leaf first. Don't burst memory
     for item in Item.objects.filter(path__descendants=root.path).order_by("-path").iterator():
         if item.type == ItemTypeChoices.FILE and item.file_key:
+            if item.blob_id is not None:
+                # Content-addressed file: detach the item from its blob instead of
+                # deleting the object, which may be shared with other items. The
+                # garbage collector removes the object once no reference remains.
+                blob = item.blob
+                item.delete()
+                blob.mark_unreferenced_if_orphan()
+                continue
+
             try:
                 default_storage.delete(item.file_key)
             except FileNotFoundError:

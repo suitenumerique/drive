@@ -290,3 +290,50 @@ def test_process_item_purge_stops_on_subfolder_delete_failure(monkeypatch):
     # The files should have processed first and should be deleted
     assert not default_storage.exists(file1.file_key)
     assert not default_storage.exists(file2.file_key)
+
+
+def test_process_item_purge_file_with_blob_keeps_object_and_marks_blob():
+    """A purged file attached to a blob keeps its object in storage; the blob is
+    marked unreferenced once no item references it anymore."""
+    blob = factories.BlobFactory()
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="foo.txt",
+        blob=blob,
+    )
+    item.soft_delete()
+    item.hard_delete()
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+    assert default_storage.exists(item.file_key)
+
+    process_item_purge(item.id)
+
+    assert not models.Item.objects.filter(id=item.id).exists()
+    assert default_storage.exists(blob.file_key)
+    blob.refresh_from_db()
+    assert blob.unreferenced_at is not None
+
+
+def test_process_item_purge_shared_blob_not_marked_until_last_reference():
+    """A blob shared by two items is not marked unreferenced while one item still
+    references it, and its object is never deleted by the purge."""
+    blob = factories.BlobFactory()
+    item1 = factories.ItemFactory(type=models.ItemTypeChoices.FILE, filename="a.txt", blob=blob)
+    item2 = factories.ItemFactory(type=models.ItemTypeChoices.FILE, filename="b.txt", blob=blob)
+    default_storage.save(blob.file_key, BytesIO(b"shared"))
+
+    item1.soft_delete()
+    item1.hard_delete()
+    process_item_purge(item1.id)
+
+    blob.refresh_from_db()
+    assert blob.unreferenced_at is None
+    assert default_storage.exists(blob.file_key)
+
+    item2.soft_delete()
+    item2.hard_delete()
+    process_item_purge(item2.id)
+
+    blob.refresh_from_db()
+    assert blob.unreferenced_at is not None
+    assert default_storage.exists(blob.file_key)
