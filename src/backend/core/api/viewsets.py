@@ -7,7 +7,6 @@ import logging
 import os
 import re
 import uuid
-from io import BytesIO
 from urllib.parse import quote, unquote, urlparse
 
 from django.conf import settings
@@ -53,6 +52,7 @@ from rest_framework_api_key.permissions import HasAPIKey
 
 from core import enums, models
 from core.entitlements import get_entitlements_backend
+from core.services import blobs
 from core.services.accesses import (
     batch_share_process_rows,
     synchronize_descendants_accesses,
@@ -669,7 +669,7 @@ class ItemViewSet(
             ) from e
 
         try:
-            default_storage.save(item.file_key, BytesIO(template_content))
+            item.blob = blobs.store_content_as_blob(template_content)
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error(
                 "Error uploading template file to storage for item %s: %s",
@@ -686,7 +686,7 @@ class ItemViewSet(
         item.upload_state = models.ItemUploadStateChoices.READY
         item.mimetype = utils.detect_mimetype(template_content, item.filename)
         item.size = len(template_content)
-        item.save(update_fields=["upload_state", "mimetype", "size", "updated_at"])
+        item.save(update_fields=["blob", "upload_state", "mimetype", "size", "updated_at"])
 
         posthog_capture(
             "item_created_from_template",

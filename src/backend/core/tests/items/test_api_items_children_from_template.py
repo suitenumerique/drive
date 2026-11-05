@@ -4,6 +4,8 @@ Tests for items API endpoint in drive's core app: create children from template
 
 from unittest import mock
 
+from django.core.files.storage import default_storage
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -103,6 +105,33 @@ def test_api_items_children_from_template_authenticated_success(role):
     assert child.upload_state == ItemUploadStateChoices.READY
     assert child.size > 0
     assert child.mimetype is not None
+
+
+def test_api_items_children_from_template_stores_a_blob():
+    """A file created from a template is stored as a blob under blobs/<hash>."""
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    access = factories.UserItemAccessFactory(
+        user=user, role="owner", item__type=ItemTypeChoices.FOLDER
+    )
+    response = client.post(
+        f"/api/v1.0/items/{access.item.id!s}/children/",
+        {
+            "title": "my document",
+            "extension": "odt",
+            "type": "file",
+        },
+    )
+    assert response.status_code == 201
+
+    child = Item.objects.get(id=response.json()["id"])
+    assert child.blob is not None
+    assert child.file_key == child.blob.file_key
+    assert default_storage.exists(child.blob.file_key)
+    assert not default_storage.exists(f"{child.key_base}/{child.filename}")
 
 
 @pytest.mark.parametrize("extension", ["odt", "ods", "odp"])

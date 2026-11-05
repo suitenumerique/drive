@@ -3,13 +3,13 @@
 from os.path import splitext
 
 from django.conf import settings
-from django.core.files.storage import default_storage
 from django.db import DatabaseError, transaction
 from django.utils.translation import gettext as _
 
 from core import models
 from core.api.utils import detect_mimetype
 from core.models import Item
+from core.services import blobs
 from core.utils.item_title import manage_unique_title
 from wopi.conversion.backends.onlyoffice import OnlyOfficeConversionBackend
 from wopi.conversion.exceptions import (
@@ -140,15 +140,20 @@ def perform_conversion(source_item, placeholder, user):
         filename=placeholder.filename,
     )
     converted_file.seek(0)
+    blob = blobs.store_content_as_blob(converted_file.read())
 
-    default_storage.save(placeholder.file_key, converted_file)
     try:
+        placeholder.blob = blob
         placeholder.mimetype = mimetype
         placeholder.size = converted_file.size
         placeholder.upload_state = models.ItemUploadStateChoices.READY
-        placeholder.save(update_fields=["mimetype", "size", "upload_state", "updated_at"])
+        placeholder.save(
+            update_fields=["blob", "mimetype", "size", "upload_state", "updated_at"]
+        )
     except DatabaseError:
-        default_storage.delete(placeholder.file_key)
+        # The object may be shared with other items: never delete it here,
+        # just mark the blob unreferenced so the garbage collector reaps it.
+        blob.mark_unreferenced_if_orphan()
         raise
 
     return placeholder
