@@ -472,7 +472,7 @@ def test_api_items_media_auth_blob_item_preview_disposition():
         filename="my file.txt",
         blob=blob,
         update_upload_state=models.ItemUploadStateChoices.READY,
-        mimetype="text/plain",
+        mimetype="image/png",
     )
     preview_url = f"http://localhost/media/preview/item/{item.pk!s}/{quote(item.filename)}"
 

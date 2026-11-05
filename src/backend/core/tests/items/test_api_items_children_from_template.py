@@ -278,12 +278,14 @@ def test_api_items_children_from_template_empty_title():
     }
 
 
+@mock.patch("core.services.blobs.default_storage")
 @mock.patch("core.api.viewsets.default_storage")
-def test_api_items_children_from_template_storage_error(mock_storage):
+def test_api_items_children_from_template_storage_error(mock_storage, mock_blobs_storage):
     """
     Test that storage errors are handled properly and the item is cleaned up.
     """
-    mock_storage.save.side_effect = Exception("Storage unavailable")
+    mock_blobs_storage.exists.return_value = False
+    mock_blobs_storage.save.side_effect = Exception("Storage unavailable")
 
     user = factories.UserFactory()
 

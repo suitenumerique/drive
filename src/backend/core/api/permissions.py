@@ -14,6 +14,7 @@ ACTION_FOR_METHOD_TO_PERMISSION = {
     "batch_share": {"POST": "accesses_manage"},
     "deletion_info": {"POST": "destroy"},
     "unlock": {"POST": "unlock"},
+    "upload_challenge": {"POST": "upload_ended"},
 }
 
 
@@ -134,10 +135,11 @@ class ItemVersionPermission(IsAuthenticated):
         except (Item.DoesNotExist, exceptions.ValidationError, ValueError):
             return False
         abilities = item.get_abilities(request.user)
-        if not abilities.has_access_role() or not abilities.can_get():
+        # accesses_view is true only for an explicit access (never a share link)
+        if not abilities.get("accesses_view") or not abilities.get("retrieve"):
             return False
         if view.action in ("restore", "destroy"):
-            return abilities.can_update()
+            return abilities.get("update", False)
         return True
 
 

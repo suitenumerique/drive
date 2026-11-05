@@ -251,26 +251,26 @@ def test_resolve_backend_rejects_missing_convert_service_url():
         services.resolve_backend({})
 
 
-def test_perform_conversion_removes_saved_file_when_database_save_fails(settings):
-    """Delete saved bytes when flipping the placeholder to READY fails."""
+def test_perform_conversion_marks_blob_unreferenced_when_database_save_fails(settings):
+    """When flipping the placeholder to READY fails, the saved object is kept (it may
+    be shared with other items) and the blob is marked unreferenced for the GC."""
     _configure_wopi(settings)
     user = factories.UserFactory()
     item = _file(user)
     placeholder = services.prepare_conversion(item, user)
     saved_keys = []
-    deleted_keys = []
 
     class FakeStorage:
-        """Storage fake tracking saved and deleted keys."""
+        """Storage fake tracking saved keys."""
+
+        def exists(self, key):
+            """Pretend the object is absent so it gets saved."""
+            return False
 
         def save(self, key, _content):
             """Track saved keys."""
             saved_keys.append(key)
             return key
-
-        def delete(self, key):
-            """Track deleted keys."""
-            deleted_keys.append(key)
 
     original_save = models.Item.save
 
@@ -281,13 +281,18 @@ def test_perform_conversion_removes_saved_file_when_database_save_fails(settings
         return original_save(instance, *args, **kwargs)
 
     with (
-        mock.patch.object(services, "default_storage", FakeStorage()),
+        mock.patch("core.services.blobs.default_storage", FakeStorage()),
         mock.patch.object(models.Item, "save", fail_ready_save),
     ):
         with pytest.raises(DatabaseError, match="database write failed"):
             services.perform_conversion(item, placeholder, user)
 
-    assert deleted_keys == saved_keys
+    # the object is stored under its content-addressed key and never deleted here
+    assert len(saved_keys) == 1
+    assert saved_keys[0].startswith("blobs/")
+    blob = models.Blob.objects.get()
+    assert blob.unreferenced_at is not None
+    assert not blob.items.exists()
 
 
 def test_resolve_backend_builds_onlyoffice_backend(settings):

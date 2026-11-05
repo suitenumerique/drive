@@ -7,8 +7,8 @@ import hmac
 import json
 import logging
 import os
-import random
 import re
+import secrets
 import uuid
 from urllib.parse import quote, unquote, urlparse
 
@@ -767,7 +767,7 @@ class ItemViewSet(
         if item.size <= settings.UPLOAD_CHALLENGE_THRESHOLD_BYTES:
             return
         length = min(settings.UPLOAD_CHALLENGE_RANGE_BYTES, item.size)
-        offset = random.randint(0, item.size - length)
+        offset = secrets.randbelow(item.size - length + 1)
         challenge = {"offset": offset, "length": length}
         cache.set(
             f"upload-challenge:{item.id!s}",
@@ -2447,14 +2447,18 @@ class ItemViewSet(
             raise drf.exceptions.PermissionDenied()
 
         # Sign the storage key of the served content: the version's blob when a
-        # version is requested, the item's key otherwise (blobs/<hash> when the
-        # item is attached to a blob, historical item/<uuid>/<filename> otherwise).
+        # version is requested, blobs/<hash> when the item is attached to a blob,
+        # the key as requested in the public URL for legacy items.
         if version is not None:
             storage_key = version.blob.file_key
             filename = version.filename or item.filename
             mimetype = version.mimetype or item.mimetype
-        else:
+        elif item.blob_id is not None:
             storage_key = item.file_key
+            filename = item.filename
+            mimetype = item.mimetype
+        else:
+            storage_key = url_params["key"]
             filename = item.filename
             mimetype = item.mimetype
 

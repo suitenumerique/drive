@@ -67,9 +67,12 @@ def migrate_item_to_blob(self, item_id):
         item = Item.objects.get(pk=item_id)
     except Item.DoesNotExist:
         return
-    if item.blob_id is not None or item.type != ItemTypeChoices.FILE:
-        return
-    if item.deleted_at or item.hard_deleted_at:
+    if (
+        item.blob_id is not None
+        or item.type != ItemTypeChoices.FILE
+        or item.deleted_at
+        or item.hard_deleted_at
+    ):
         return
 
     s3_client = default_storage.connection.meta.client
@@ -114,7 +117,11 @@ def migrate_item_to_blob(self, item_id):
 
     with transaction.atomic():
         locked_item = Item.objects.select_for_update().get(pk=item_id)
-        if locked_item.blob_id is not None or locked_item.deleted_at or locked_item.hard_deleted_at:
+        if (
+            locked_item.blob_id is not None
+            or locked_item.deleted_at
+            or locked_item.hard_deleted_at
+        ):
             return
 
         # Re-check the historical key still holds the hashed content before repointing.

@@ -234,6 +234,19 @@ class WopiViewSet(viewsets.ViewSet):
             status=200,
         )
 
+    @staticmethod
+    def _wopi_lock_error(item, request):
+        """Return a 409 response when the WOPI lock does not match, else None."""
+        lock_value = request.META.get(HTTP_X_WOPI_LOCK)
+        if lock_value:
+            current_lock_value = LockService(item).get_lock(default="")
+            if current_lock_value != lock_value:
+                return Response(status=409, headers={X_WOPI_LOCK: current_lock_value})
+        elif item.size:
+            # Check if the body is 0 bytes
+            return Response(status=409, headers={X_WOPI_LOCK: ""})
+        return None
+
     def _put_file_content(self, request, pk=None):
         """
         Implementation of the Wopi PutFile file operation
@@ -248,17 +261,8 @@ class WopiViewSet(viewsets.ViewSet):
         if not abilities["update"]:
             return Response(status=401)
 
-        lock_value = request.META.get(HTTP_X_WOPI_LOCK)
-        if lock_value:
-            lock_service = LockService(item)
-            current_lock_value = lock_service.get_lock(default="")
-            if current_lock_value != lock_value:
-                return Response(status=409, headers={X_WOPI_LOCK: current_lock_value})
-        else:
-            # Check if the body is 0 bytes
-            body_size = item.size or 0
-            if body_size > 0:
-                return Response(status=409, headers={X_WOPI_LOCK: ""})
+        if (lock_error := self._wopi_lock_error(item, request)) is not None:
+            return lock_error
 
         try:
             file = ContentFile(request.body)
@@ -268,7 +272,6 @@ class WopiViewSet(viewsets.ViewSet):
         if item.blob_id is not None:
             return self._put_file_content_blob(item, request, file)
 
-        s3_client = default_storage.connection.meta.client
         default_storage.save(item.file_key, file)
         item.size = file.size
         # Keep the item READY during re-analysis: non-creators cannot open
@@ -285,7 +288,6 @@ class WopiViewSet(viewsets.ViewSet):
             item=item,
         )
 
-        head_response = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)
         return Response(
             status=200,
             headers={X_WOPI_ITEMVERSION: get_item_version_token(item)},

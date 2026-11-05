@@ -192,8 +192,9 @@ def test_api_items_create_file_with_upload_hash_targets_tmp_key():
     assert policy_parsed.path == f"/drive-media-storage/{item.upload_tmp_key}"
 
     query_params = parse_qs(policy_parsed.query)
-    # the announced hash is carried as a checksum so the storage can verify it on reception
-    assert any("checksum" in key.lower() for key in query_params)
+    # the announced hash is signed as a checksum header so the storage verifies it on reception
+    signed_headers = query_params["X-Amz-SignedHeaders"][0].split(";")
+    assert "x-amz-checksum-sha256" in signed_headers
 
 
 def test_api_items_create_file_with_invalid_upload_hash():
