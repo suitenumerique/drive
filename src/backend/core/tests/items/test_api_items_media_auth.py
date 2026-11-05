@@ -422,3 +422,62 @@ def test_api_items_media_auth_link_password_locked():
 
     response = client.get("/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url)
     assert response.status_code == 200
+
+
+def test_api_items_media_auth_blob_item_signs_the_blob_key():
+    """A blob-backed item is served from blobs/<hash>: media-auth signs that key and
+    returns it as X-Storage-Path, with the filename reinjected as Content-Disposition."""
+    blob = factories.BlobFactory(hash="a" * 64)
+    item = factories.ItemFactory(
+        link_reach="public",
+        type=models.ItemTypeChoices.FILE,
+        filename="my file.txt",
+        blob=blob,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    default_storage.save(blob.file_key, BytesIO(b"my prose"))
+    # the public URL still carries the item id, not the blob hash
+    original_url = f"http://localhost/media/item/{item.pk!s}/{quote(item.filename)}"
+    now = timezone.now()
+    with freeze_time(now):
+        response = APIClient().get("/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url)
+
+    assert response.status_code == 200
+    assert response["X-Storage-Path"] == f"/drive-media-storage/blobs/{blob.hash}"
+    assert response["X-Content-Disposition"] == 'attachment; filename="my file.txt"'
+
+    # the signed headers must match the blob key path, not the public URL one
+    s3_url = urlparse(settings.AWS_S3_ENDPOINT_URL)
+    signed_url = f"{settings.AWS_S3_ENDPOINT_URL:s}{response['X-Storage-Path']}"
+    storage_response = requests.get(
+        signed_url,
+        headers={
+            "authorization": response["Authorization"],
+            "x-amz-date": response["x-amz-date"],
+            "x-amz-content-sha256": response["x-amz-content-sha256"],
+            "Host": f"{s3_url.hostname:s}:{s3_url.port:d}",
+        },
+        timeout=1,
+    )
+    assert storage_response.content.decode("utf-8") == "my prose"
+
+
+def test_api_items_media_auth_blob_item_preview_disposition():
+    """The preview URL of a blob-backed item gets an inline Content-Disposition."""
+    blob = factories.BlobFactory(hash="b" * 64)
+    item = factories.ItemFactory(
+        link_reach="public",
+        type=models.ItemTypeChoices.FILE,
+        filename="my file.txt",
+        blob=blob,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        mimetype="text/plain",
+    )
+    preview_url = f"http://localhost/media/preview/item/{item.pk!s}/{quote(item.filename)}"
+
+    response = APIClient().get("/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=preview_url)
+
+    assert response.status_code == 200
+    assert response["X-Storage-Path"] == f"/drive-media-storage/blobs/{blob.hash}"
+    assert response["X-Content-Disposition"] == 'inline; filename="my file.txt"'

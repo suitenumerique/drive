@@ -2301,10 +2301,23 @@ class ItemViewSet(
             logger.debug("Item '%s' is not previewable", item.id)
             raise drf.exceptions.PermissionDenied()
 
-        # Generate S3 authorization headers using the extracted URL parameters
-        request = utils.generate_s3_authorization_headers(f"{url_params.get('key'):s}")
+        # Sign the item's actual storage key: blobs/<hash> when the item is attached
+        # to a blob, the historical item/<uuid>/<filename> key otherwise.
+        storage_key = item.file_key
+        signed_request = utils.generate_s3_authorization_headers(storage_key)
 
-        return drf.response.Response("authorized", headers=request.headers, status=200)
+        headers = dict(signed_request.headers)
+        # Nginx proxies to this path instead of the public URL one, so blob-backed
+        # items are served from their content-addressed key. The path is taken from
+        # the presigned URL to keep the exact encoding the signature covers.
+        headers["X-Storage-Path"] = urlparse(signed_request.url).path
+        if item.blob_id is not None:
+            # The blob key no longer carries the filename: reinject it, along with
+            # the inline/attachment disposition, for the proxy to forward.
+            disposition = "inline" if url_params.get("preview") else "attachment"
+            headers["X-Content-Disposition"] = f'{disposition}; filename="{item.filename}"'
+
+        return drf.response.Response("authorized", headers=headers, status=200)
 
     @drf.decorators.action(detail=True, methods=["get"], url_path="wopi")
     def wopi(self, request, *args, **kwargs):
