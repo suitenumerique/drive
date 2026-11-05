@@ -163,3 +163,30 @@ def test_duplicate_file_max_retries_exceeded(caplog):
         f"duplicating file: 0 max retries exceeded, the duplicated item {duplicated_item.id} is"
         " deleted" in caplog.text
     )
+
+
+def test_duplicate_file_with_blob_shares_the_blob():
+    """Duplicating a blob-backed item attaches the same blob, no object is copied."""
+    blob = factories.BlobFactory(
+        hash="e" * 64, upload_state=models.ItemUploadStateChoices.READY
+    )
+    item_to_duplicate = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="my_file.txt",
+        blob=blob,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    duplicated_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="my_file.txt",
+        update_upload_state=models.ItemUploadStateChoices.DUPLICATING,
+    )
+
+    duplicate_file(
+        item_to_duplicate_id=item_to_duplicate.id,
+        duplicated_item_id=duplicated_item.id,
+    )
+
+    duplicated_item.refresh_from_db()
+    assert duplicated_item.blob_id == blob.id
+    assert duplicated_item.upload_state == models.ItemUploadStateChoices.READY

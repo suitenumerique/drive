@@ -120,6 +120,11 @@ def rename_file(item_id, new_title):
     item.filename = new_filename
     item.save(update_fields=["filename", "updated_at"])
 
+    if item.blob_id is not None:
+        # Content-addressed item: the storage key does not carry the filename,
+        # renaming is a pure database update, no object to move.
+        return
+
     to_file_key = item.file_key
 
     s3_client = default_storage.connection.meta.client
@@ -188,6 +193,15 @@ def duplicate_file(self, item_to_duplicate_id, duplicated_item_id):
             "aborting",
             duplicated_item.upload_state,
         )
+        return
+
+    if item_to_duplicate.blob_id is not None:
+        # Content-addressed item: the duplicate shares the same blob, no object
+        # to copy. It inherits the blob's analysis state.
+        blob = item_to_duplicate.blob
+        duplicated_item.blob = blob
+        duplicated_item.upload_state = blob.upload_state or ItemUploadStateChoices.READY
+        duplicated_item.save(update_fields=["blob", "upload_state", "updated_at"])
         return
 
     s3_client = default_storage.connection.meta.client

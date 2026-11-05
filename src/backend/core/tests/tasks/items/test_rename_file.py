@@ -33,6 +33,28 @@ def test_rename_file():
     assert not default_storage.exists(f"{item.key_base}/old_title.txt")
 
 
+def test_rename_file_with_blob_is_a_database_update_only():
+    """Renaming a blob-backed item does not move any object: the key is blobs/<hash>."""
+    user = factories.UserFactory()
+    blob = factories.BlobFactory(hash="d" * 64)
+    item = factories.ItemFactory(
+        title="new_title",
+        type=models.ItemTypeChoices.FILE,
+        filename="old_title.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+        blob=blob,
+    )
+    default_storage.save(blob.file_key, BytesIO(b"my prose"))
+
+    rename_file(item.id, "new_title")
+    item.refresh_from_db()
+    assert item.filename == "new_title.txt"
+    assert item.file_key == blob.file_key
+    assert default_storage.exists(blob.file_key)
+
+
 def test_rename_file_origin_extension_is_kept():
     """The origin extension is kept no matter the new title."""
     user = factories.UserFactory()
