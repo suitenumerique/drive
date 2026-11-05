@@ -4,6 +4,7 @@ import Script from "next/script";
 import { useApiConfig } from "./useApiConfig";
 import { ApiConfig } from "@/features/drivers/types";
 import { createContext, useContext, useEffect } from "react";
+import { resolveFrontendTheme } from "@/features/ui/cunningham/resolveFrontendTheme";
 import { useAppContext } from "@/pages/_app";
 
 export interface ConfigContextType {
@@ -27,11 +28,7 @@ export const ConfigProvider = ({ children }: { children: React.ReactNode }) => {
   const { setTheme } = useAppContext();
 
   useEffect(() => {
-    if (config?.FRONTEND_THEME) {
-      setTheme(config.FRONTEND_THEME);
-    } else {
-      setTheme("dsfr-light");
-    }
+    setTheme(resolveFrontendTheme(config?.FRONTEND_THEME));
   }, [config?.FRONTEND_THEME, setTheme]);
 
   if (!config) {
