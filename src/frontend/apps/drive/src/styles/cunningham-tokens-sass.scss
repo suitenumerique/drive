@@ -432,7 +432,9 @@ $themes: (
         'semantic': (
           'overlay': (
             'primary': #1B1B230D,
-            'primary-hover': #1B1B231A
+            'primary-hover': #1B1B231A,
+            'on-surface': #F8F8F9A6,
+            'transparent': #F8F8F900
           ),
           'contextual': (
             'primary': #1B1B230D,
@@ -557,7 +559,8 @@ $themes: (
             'primary': #F8F8F9F2
           ),
           'overlay': (
-            'primary': #F8F8F9F2
+            'primary': #F8F8F9F2,
+            'secondary': #F8F8F9CC
           ),
           'brand': (
             'primary': #3E3B98,
@@ -900,6 +903,8 @@ $themes: (
         'content-font-size': 0.875rem,
         'content-font-weight': 400,
         'content-color': #25252F,
+        'padding': 1.5rem,
+        'close-button-size': 28px,
         'width-small': 342px,
         'width-medium': 600px,
         'width-large': 800px,
@@ -911,8 +916,8 @@ $themes: (
         'tab-item-font-size': 0.875rem,
         'tab-item-font-weight': 500,
         'tab-item-font-weight--active': 600,
-        'tab-item-active-background-color': #{rgba(24, 27, 36, 0.05)},
-        'tab-item-hover-background-color': #{rgba(24, 27, 36, 0.03)}
+        'tab-item-active-background-color': #1B1B231A,
+        'tab-item-hover-background-color': #1B1B230D
       ),
       'toast': (
         'slide-in-duration': 1000ms,
@@ -939,7 +944,7 @@ $themes: (
         'header--color': #25252F,
         'header--size': 12px,
         'header--weight': 500,
-        'body--background-color-hover': #F0F0F3
+        'body--background-color-hover': #1B1B230D
       ),
       'badge': (
         'font-size': 0.75rem,
@@ -970,6 +975,19 @@ $themes: (
           'background-color': #D5E4F3,
           'color': #005BC0
         )
+      ),
+      'gaufre': (
+        'widgetPath': 'https://static.suite.anct.gouv.fr/widgets/lagaufre.js',
+        'apiUrl': 'https://lasuite.numerique.gouv.fr/api/services'
+      ),
+      'favicon': (
+        'src': '/assets/favicon.png'
+      ),
+      'logo': (
+        'src': url('/assets/logo_beta.svg')
+      ),
+      'logo-icon': (
+        'src': url('/assets/logo-icon_beta.svg')
       )
     )
   ),
@@ -1410,7 +1428,9 @@ $themes: (
           ),
           'overlay': (
             'primary': #F8F8F90D,
-            'primary-hover': #F8F8F91A
+            'primary-hover': #F8F8F91A,
+            'on-surface': #1B1B23A6,
+            'transparent': #1B1B2300
           ),
           'brand': (
             'primary': #5E5CD0,
@@ -1531,7 +1551,8 @@ $themes: (
             'primary': #1B1B23D9
           ),
           'overlay': (
-            'primary': #1B1B23D9
+            'primary': #1B1B23D9,
+            'secondary': #1B1B23B2
           ),
           'brand': (
             'primary': #EEF1FA,
@@ -1874,6 +1895,8 @@ $themes: (
         'content-font-size': 0.875rem,
         'content-font-weight': 400,
         'content-color': #25252F,
+        'padding': 1.5rem,
+        'close-button-size': 28px,
         'width-small': 342px,
         'width-medium': 600px,
         'width-large': 800px,
@@ -1885,8 +1908,8 @@ $themes: (
         'tab-item-font-size': 0.875rem,
         'tab-item-font-weight': 500,
         'tab-item-font-weight--active': 600,
-        'tab-item-active-background-color': #{rgba(24, 27, 36, 0.05)},
-        'tab-item-hover-background-color': #{rgba(24, 27, 36, 0.03)}
+        'tab-item-active-background-color': #1B1B231A,
+        'tab-item-hover-background-color': #1B1B230D
       ),
       'toast': (
         'slide-in-duration': 1000ms,
@@ -2353,7 +2376,9 @@ $themes: (
         'semantic': (
           'overlay': (
             'primary': #1B1B230D,
-            'primary-hover': #1B1B231A
+            'primary-hover': #1B1B231A,
+            'on-surface': #F8F8F9A6,
+            'transparent': #F8F8F900
           ),
           'contextual': (
             'primary': #1B1B230D,
@@ -2478,7 +2503,8 @@ $themes: (
             'primary': #F8F8F9F2
           ),
           'overlay': (
-            'primary': #F8F8F9F2
+            'primary': #F8F8F9F2,
+            'secondary': #F8F8F9CC
           ),
           'brand': (
             'primary': #3E3B98,
@@ -2821,6 +2847,8 @@ $themes: (
         'content-font-size': 0.875rem,
         'content-font-weight': 400,
         'content-color': #25252F,
+        'padding': 1.5rem,
+        'close-button-size': 28px,
         'width-small': 342px,
         'width-medium': 600px,
         'width-large': 800px,
@@ -2832,8 +2860,8 @@ $themes: (
         'tab-item-font-size': 0.875rem,
         'tab-item-font-weight': 500,
         'tab-item-font-weight--active': 600,
-        'tab-item-active-background-color': #{rgba(24, 27, 36, 0.05)},
-        'tab-item-hover-background-color': #{rgba(24, 27, 36, 0.03)}
+        'tab-item-active-background-color': #1B1B231A,
+        'tab-item-hover-background-color': #1B1B230D
       ),
       'toast': (
         'slide-in-duration': 1000ms,
@@ -3317,7 +3345,9 @@ $themes: (
           ),
           'overlay': (
             'primary': #F8F8F90D,
-            'primary-hover': #F8F8F91A
+            'primary-hover': #F8F8F91A,
+            'on-surface': #1B1B23A6,
+            'transparent': #1B1B2300
           ),
           'brand': (
             'primary': #5E5CD0,
@@ -3438,7 +3468,8 @@ $themes: (
             'primary': #1B1B23D9
           ),
           'overlay': (
-            'primary': #1B1B23D9
+            'primary': #1B1B23D9,
+            'secondary': #1B1B23B2
           ),
           'brand': (
             'primary': #EEF1FA,
@@ -3781,6 +3812,8 @@ $themes: (
         'content-font-size': 0.875rem,
         'content-font-weight': 400,
         'content-color': #25252F,
+        'padding': 1.5rem,
+        'close-button-size': 28px,
         'width-small': 342px,
         'width-medium': 600px,
         'width-large': 800px,
@@ -3792,8 +3825,8 @@ $themes: (
         'tab-item-font-size': 0.875rem,
         'tab-item-font-weight': 500,
         'tab-item-font-weight--active': 600,
-        'tab-item-active-background-color': #{rgba(24, 27, 36, 0.05)},
-        'tab-item-hover-background-color': #{rgba(24, 27, 36, 0.03)}
+        'tab-item-active-background-color': #1B1B231A,
+        'tab-item-hover-background-color': #1B1B230D
       ),
       'toast': (
         'slide-in-duration': 1000ms,
@@ -4276,7 +4309,9 @@ $themes: (
         'semantic': (
           'overlay': (
             'primary': #1B1B230D,
-            'primary-hover': #1B1B231A
+            'primary-hover': #1B1B231A,
+            'on-surface': #F8F8F9A6,
+            'transparent': #F8F8F900
           ),
           'contextual': (
             'primary': #1B1B230D,
@@ -4401,7 +4436,8 @@ $themes: (
             'primary': #F8F8F9F2
           ),
           'overlay': (
-            'primary': #F8F8F9F2
+            'primary': #F8F8F9F2,
+            'secondary': #F8F8F9CC
           ),
           'brand': (
             'primary': #3E3B98,
@@ -4744,6 +4780,8 @@ $themes: (
         'content-font-size': 0.875rem,
         'content-font-weight': 400,
         'content-color': #25252F,
+        'padding': 1.5rem,
+        'close-button-size': 28px,
         'width-small': 342px,
         'width-medium': 600px,
         'width-large': 800px,
@@ -4755,8 +4793,8 @@ $themes: (
         'tab-item-font-size': 0.875rem,
         'tab-item-font-weight': 500,
         'tab-item-font-weight--active': 600,
-        'tab-item-active-background-color': #{rgba(24, 27, 36, 0.05)},
-        'tab-item-hover-background-color': #{rgba(24, 27, 36, 0.03)}
+        'tab-item-active-background-color': #1B1B231A,
+        'tab-item-hover-background-color': #1B1B230D
       ),
       'toast': (
         'slide-in-duration': 1000ms,
@@ -5243,7 +5281,9 @@ $themes: (
           ),
           'overlay': (
             'primary': #F8F8F90D,
-            'primary-hover': #F8F8F91A
+            'primary-hover': #F8F8F91A,
+            'on-surface': #1B1B23A6,
+            'transparent': #1B1B2300
           ),
           'brand': (
             'primary': #5E5CD0,
@@ -5364,7 +5404,8 @@ $themes: (
             'primary': #1B1B23D9
           ),
           'overlay': (
-            'primary': #1B1B23D9
+            'primary': #1B1B23D9,
+            'secondary': #1B1B23B2
           ),
           'brand': (
             'primary': #EEF1FA,
@@ -5707,6 +5748,8 @@ $themes: (
         'content-font-size': 0.875rem,
         'content-font-weight': 400,
         'content-color': #25252F,
+        'padding': 1.5rem,
+        'close-button-size': 28px,
         'width-small': 342px,
         'width-medium': 600px,
         'width-large': 800px,
@@ -5718,8 +5761,8 @@ $themes: (
         'tab-item-font-size': 0.875rem,
         'tab-item-font-weight': 500,
         'tab-item-font-weight--active': 600,
-        'tab-item-active-background-color': #{rgba(24, 27, 36, 0.05)},
-        'tab-item-hover-background-color': #{rgba(24, 27, 36, 0.03)}
+        'tab-item-active-background-color': #1B1B231A,
+        'tab-item-hover-background-color': #1B1B230D
       ),
       'toast': (
         'slide-in-duration': 1000ms,

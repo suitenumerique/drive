@@ -2,6 +2,11 @@ import { cunninghamConfig } from "@gouvfr-lasuite/ui-components";
 import deepMerge from "deepmerge";
 
 const themesImages = {
+  default: {
+    favicon: "/assets/favicon.png",
+    logo: "/assets/logo_beta.svg",
+    "logo-icon": "/assets/logo-icon_beta.svg",
+  },
   "anct-light": {
     favicon: "/assets/anct_favicon.png",
     logo: "/assets/anct_logo_beta.svg",
@@ -20,6 +25,10 @@ const themesImages = {
 };
 
 const themesGaufre = {
+  default: {
+    widgetPath: "https://static.suite.anct.gouv.fr/widgets/lagaufre.js",
+    apiUrl: "https://lasuite.numerique.gouv.fr/api/services",
+  },
   "anct-light": {
     widgetPath: "https://static.suite.anct.gouv.fr/widgets/lagaufre.js",
     apiUrl:
@@ -59,6 +68,9 @@ const getComponents = (theme: keyof typeof themesImages) => {
 
 const defaultConfig = deepMerge(cunninghamConfig, {
   themes: {
+    default: {
+      components: getComponents("default"),
+    },
     "anct-light": {
       components: getComponents("anct-light"),
     },
