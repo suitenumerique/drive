@@ -33,6 +33,7 @@ import { useTranslation } from "react-i18next";
 import { AnalyticsProvider } from "@/features/analytics/AnalyticsProvider";
 import { capitalizeRegion } from "@/features/i18n/utils";
 import { ConfigProvider } from "@/features/config/ConfigProvider";
+import { DEFAULT_FRONTEND_THEME } from "@/features/ui/cunningham/resolveFrontendTheme";
 import {
   removeQuotes,
   useCunninghamTheme,
@@ -108,7 +109,7 @@ export default function MyApp({
   pageProps,
   router,
 }: AppPropsWithLayout) {
-  const [theme, setTheme] = useState<string>("anct-light");
+  const [theme, setTheme] = useState<string>(DEFAULT_FRONTEND_THEME);
 
   return (
     <AppContext.Provider value={{ theme, setTheme }}>
