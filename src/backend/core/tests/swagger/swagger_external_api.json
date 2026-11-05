@@ -1767,6 +1767,79 @@
                 }
             }
         },
+        "/external_api/v1.0/metrics/usage/": {
+            "get": {
+                "operationId": "metrics_usage_list",
+                "description": "Handle listing with account_type branching.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "account_email",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "account_id_key",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "account_id_value",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "account_type",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "organization",
+                                "user"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "required": false,
+                        "in": "query",
+                        "description": "Number of results to return per page.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "metrics"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedUsageMetricList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/external_api/v1.0/users/": {
             "get": {
                 "operationId": "users_list",
@@ -3318,6 +3391,37 @@
                     }
                 }
             },
+            "PaginatedUsageMetricList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/UsageMetric"
+                        }
+                    }
+                }
+            },
             "PatchedInvitationRequest": {
                 "type": "object",
                 "description": "Serialize invitations.",
@@ -3735,6 +3839,23 @@
                 ],
                 "type": "string",
                 "description": "* `pending` - Pending\n* `duplicating` - Duplicating\n* `converting` - Converting\n* `analyzing` - Analyzing\n* `suspicious` - Suspicious\n* `file_too_large_to_analyze` - File too large to analyze\n* `ready` - Ready"
+            },
+            "UsageMetric": {
+                "type": "object",
+                "properties": {
+                    "account": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "metrics": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "required": [
+                    "account",
+                    "metrics"
+                ]
             },
             "User": {
                 "type": "object",

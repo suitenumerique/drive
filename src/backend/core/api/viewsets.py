@@ -32,7 +32,12 @@ from corsheaders.middleware import (
     ACCESS_CONTROL_ALLOW_METHODS,
     ACCESS_CONTROL_ALLOW_ORIGIN,
 )
-from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    extend_schema,
+    extend_schema_view,
+    inline_serializer,
+)
 from lasuite.drf.models.choices import (
     PRIVILEGED_ROLES,
     LinkReachChoices,
@@ -2832,6 +2837,25 @@ class SDKRelayEventViewset(drf.viewsets.ViewSet):
         return response
 
 
+# The serializers and filters are resolved in the view, out of reach of drf-spectacular.
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[
+            OpenApiParameter("account_type", enum=UsageMetricAccountTypeChoices.values),
+            OpenApiParameter("account_id_key"),
+            OpenApiParameter("account_id_value"),
+            OpenApiParameter("account_email"),
+        ],
+        responses=inline_serializer(
+            name="UsageMetric",
+            fields={
+                "account": drf.serializers.DictField(),
+                "metrics": drf.serializers.DictField(),
+            },
+            many=True,
+        ),
+    ),
+)
 class UsageMetricViewset(drf.mixins.ListModelMixin, viewsets.GenericViewSet):
     """
     Viewset for usage metrics.

@@ -71,7 +71,7 @@ def test_openapi_external_api_schema():
     """
     with _urls_under_settings(
         OIDC_RESOURCE_SERVER_ENABLED=True,
-        METRICS_ENABLED=False,
+        METRICS_ENABLED=True,
         EXTERNAL_API={route: {"enabled": True, "actions": []} for route in EXTERNAL_API_ROUTES},
     ):
         _check_schema(
