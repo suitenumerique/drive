@@ -52,7 +52,12 @@ class ResourceServerItemViewSet(ResourceServerRestrictionMixin, ItemViewSet):
     def get_create_extra_attributes(self):
         """Apply per-audience item attributes from EXTERNAL_API_AUD_ITEM_ATTRIBUTES."""
         audience = getattr(self.request, "resource_server_token_audience", None)
-        return dict(settings.EXTERNAL_API_AUD_ITEM_ATTRIBUTES.get(audience) or {})
+        attributes = dict(settings.EXTERNAL_API_AUD_ITEM_ATTRIBUTES.get(audience) or {})
+        if audience:
+            # The audience is the client_id of the token (OIDC_RS_AUDIENCE_CLAIM claim,
+            # or client_id reported by Menshen introspection).
+            attributes.setdefault("source", audience)
+        return attributes
 
 
 class ResourceServerUserViewSet(ResourceServerRestrictionMixin, UserViewSet):
