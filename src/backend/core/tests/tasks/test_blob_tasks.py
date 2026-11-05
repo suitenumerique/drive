@@ -1,6 +1,7 @@
 """Tests for the blob garbage-collection and legacy migration tasks."""
 
 import hashlib
+import secrets
 from datetime import timedelta
 from io import BytesIO
 from unittest import mock
@@ -14,14 +15,14 @@ import pytest
 from core import factories, models
 from core.tasks.blob import gc_unreferenced_blob, migrate_item_to_blob
 
+# pylint: disable=no-value-for-parameter
+
 pytestmark = pytest.mark.django_db
 
 
 def test_gc_unreferenced_blob_past_grace_period():
     """A blob unreferenced since longer than the grace period is deleted, object included."""
-    blob = factories.BlobFactory(
-        unreferenced_at=timezone.now() - timedelta(hours=169, minutes=1)
-    )
+    blob = factories.BlobFactory(unreferenced_at=timezone.now() - timedelta(hours=169, minutes=1))
     default_storage.save(blob.file_key, BytesIO(b"orphan"))
 
     gc_unreferenced_blob(blob.id)
@@ -45,12 +46,8 @@ def test_gc_unreferenced_blob_within_grace_period_is_kept():
 def test_gc_unreferenced_blob_still_referenced_is_kept():
     """A blob that got referenced again before collection keeps its content and is
     marked referenced again."""
-    blob = factories.BlobFactory(
-        unreferenced_at=timezone.now() - timedelta(hours=169, minutes=1)
-    )
-    factories.ItemFactory(
-        type=models.ItemTypeChoices.FILE, filename="a.txt", blob=blob
-    )
+    blob = factories.BlobFactory(unreferenced_at=timezone.now() - timedelta(hours=169, minutes=1))
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE, filename="a.txt", blob=blob)
     default_storage.save(blob.file_key, BytesIO(b"shared"))
 
     gc_unreferenced_blob(blob.id)
@@ -62,9 +59,7 @@ def test_gc_unreferenced_blob_still_referenced_is_kept():
 
 def test_gc_unreferenced_blob_missing_object_still_drops_row():
     """A missing object is tolerated: the blob row is still deleted."""
-    blob = factories.BlobFactory(
-        unreferenced_at=timezone.now() - timedelta(hours=169, minutes=1)
-    )
+    blob = factories.BlobFactory(unreferenced_at=timezone.now() - timedelta(hours=169, minutes=1))
 
     gc_unreferenced_blob(blob.id)
 
@@ -79,7 +74,8 @@ def test_gc_unreferenced_blob_does_not_exist():
 def test_migrate_item_to_blob_success():
     """A legacy item is repointed to a blob copied under blobs/<sha256>; the historical
     object is kept and file_key now resolves to the blob key."""
-    content = b"legacy content"
+    # unique content: identical contents share the same blob key across xdist workers
+    content = b"legacy content " + secrets.token_bytes(8)
     item = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE,
         filename="legacy.txt",
@@ -104,7 +100,8 @@ def test_migrate_item_to_blob_success():
 
 def test_migrate_item_to_blob_already_migrated_is_noop():
     """An item already attached to a blob is left alone."""
-    blob = factories.BlobFactory()
+    # random hash: the factory sequence collides across xdist workers
+    blob = factories.BlobFactory(hash=secrets.token_hex(32))
     item = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE,
         filename="legacy.txt",

@@ -304,9 +304,7 @@ class WopiViewSet(viewsets.ViewSet):
 
         if blob.id == item.blob_id:
             # Same content as the current blob: no new version, no repoint.
-            return Response(
-                status=200, headers={X_WOPI_ITEMVERSION: get_item_version_token(item)}
-            )
+            return Response(status=200, headers={X_WOPI_ITEMVERSION: get_item_version_token(item)})
 
         mimetype = detect_mimetype(content[:2048], filename=item.filename)
 
@@ -333,9 +331,7 @@ class WopiViewSet(viewsets.ViewSet):
                 ItemUploadStateChoices.PENDING,
                 ItemUploadStateChoices.ANALYZING,
             )
-            transaction.on_commit(
-                lambda: self._after_put_file_blob(version, needs_analysis)
-            )
+            transaction.on_commit(lambda: self._after_put_file_blob(version, needs_analysis))
 
         wopi_client_config = get_wopi_client_config(item, request.user)
         posthog_capture(

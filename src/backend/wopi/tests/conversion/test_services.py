@@ -263,7 +263,7 @@ def test_perform_conversion_marks_blob_unreferenced_when_database_save_fails(set
     class FakeStorage:
         """Storage fake tracking saved keys."""
 
-        def exists(self, key):
+        def exists(self, _key):
             """Pretend the object is absent so it gets saved."""
             return False
 

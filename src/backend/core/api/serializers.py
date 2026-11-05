@@ -880,7 +880,7 @@ class CreateItemSerializer(ItemSerializer):
 
     def get_upload_challenge(self, item):
         """Single-use possession challenge for large content-addressed uploads."""
-        return getattr(item, "_upload_challenge", None)
+        return getattr(item, "upload_challenge", None)
 
     def get_policy(self, item):
         """Return the policy to use if the item is a file."""
@@ -890,7 +890,7 @@ class CreateItemSerializer(ItemSerializer):
         if item.upload_state == models.ItemUploadStateChoices.READY:
             return None
 
-        if getattr(item, "_upload_challenge", None):
+        if getattr(item, "upload_challenge", None):
             # Large content-addressed upload: answer the challenge first, the
             # upload-challenge endpoint returns the policy on failure.
             return None

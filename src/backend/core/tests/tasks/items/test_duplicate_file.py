@@ -167,9 +167,7 @@ def test_duplicate_file_max_retries_exceeded(caplog):
 
 def test_duplicate_file_with_blob_shares_the_blob():
     """Duplicating a blob-backed item attaches the same blob, no object is copied."""
-    blob = factories.BlobFactory(
-        hash="e" * 64, upload_state=models.ItemUploadStateChoices.READY
-    )
+    blob = factories.BlobFactory(hash="e" * 64, upload_state=models.ItemUploadStateChoices.READY)
     item_to_duplicate = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE,
         filename="my_file.txt",

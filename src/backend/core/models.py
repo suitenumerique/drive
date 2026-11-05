@@ -1333,11 +1333,7 @@ class Blob(BaseModel):
 
     def mark_unreferenced_if_orphan(self):
         """Set unreferenced_at when no item or version references the blob anymore."""
-        if (
-            self.unreferenced_at is None
-            and not self.items.exists()
-            and not self.versions.exists()
-        ):
+        if self.unreferenced_at is None and not self.items.exists() and not self.versions.exists():
             self.unreferenced_at = timezone.now()
             self.save(update_fields=["unreferenced_at", "updated_at"])
 

@@ -476,7 +476,8 @@ def test_api_upload_ended_file_size_exceeded(settings, caplog):
 
 
 def test_api_item_upload_ended_content_addressed(django_capture_on_commit_callbacks):
-    """An upload with an announced hash is verified, copied under blobs/<hash> and attached to a blob."""
+    """An upload with an announced hash is verified, copied under blobs/<hash> and
+    attached to a blob."""
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)

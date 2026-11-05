@@ -1024,6 +1024,54 @@
                 }
             }
         },
+        "/api/v1.0/items/{id}/upload-challenge/": {
+            "post": {
+                "operationId": "items_upload_challenge_create",
+                "description": "Answer the possession challenge of a large content-addressed upload.\n\nIf the announced hash matches an existing safe blob and the proof is valid,\nthe item is attached to the blob directly (READY, no upload). Otherwise —\nincluding when no blob exists for the hash — the response carries the upload\npolicy and the normal upload flow resumes, so both cases are indistinguishable.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1.0/items/{id}/upload-ended/": {
             "post": {
                 "operationId": "items_upload_ended_create",
@@ -1642,6 +1690,158 @@
                 "responses": {
                     "204": {
                         "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1.0/items/{resource_id}/versions/": {
+            "get": {
+                "operationId": "items_versions_list",
+                "description": "List, restore and delete the versions of an item.\n\nGET    /api/v1.0/items/<resource_id>/versions/\nPOST   /api/v1.0/items/<resource_id>/versions/<pk>/restore/\nDELETE /api/v1.0/items/<resource_id>/versions/<pk>/",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ItemVersion"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1.0/items/{resource_id}/versions/{id}/": {
+            "get": {
+                "operationId": "items_versions_retrieve",
+                "description": "List, restore and delete the versions of an item.\n\nGET    /api/v1.0/items/<resource_id>/versions/\nPOST   /api/v1.0/items/<resource_id>/versions/<pk>/restore/\nDELETE /api/v1.0/items/<resource_id>/versions/<pk>/",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ItemVersion"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "items_versions_destroy",
+                "description": "Delete a version: the reference to its blob is detached and the object is\nreaped by the garbage collector once no reference remains.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1.0/items/{resource_id}/versions/{id}/restore/": {
+            "post": {
+                "operationId": "items_versions_restore_create",
+                "description": "Restore a version as the item's current content.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ItemVersion"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -2283,6 +2483,10 @@
                         "nullable": true,
                         "maxLength": 255
                     },
+                    "upload_challenge": {
+                        "type": "string",
+                        "readOnly": true
+                    },
                     "policy": {
                         "type": "string",
                         "readOnly": true
@@ -2326,6 +2530,7 @@
                     "path",
                     "policy",
                     "updated_at",
+                    "upload_challenge",
                     "upload_state",
                     "url",
                     "url_permalink",
@@ -2373,6 +2578,13 @@
                                 "$ref": "#/components/schemas/NullEnum"
                             }
                         ]
+                    },
+                    "upload_hash": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "nullable": true,
+                        "minLength": 64,
+                        "maxLength": 64
                     }
                 }
             },
@@ -2834,6 +3046,68 @@
                 },
                 "required": [
                     "title"
+                ]
+            },
+            "ItemVersion": {
+                "type": "object",
+                "description": "Serializer for item versions.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "description": "primary key for the record as UUID"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Created on",
+                        "description": "date and time at which a record was created"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Updated on",
+                        "description": "date and time at which a record was last updated"
+                    },
+                    "filename": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "mimetype": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "size": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "author": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/UserLight"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "is_current": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "author",
+                    "created_at",
+                    "filename",
+                    "id",
+                    "is_current",
+                    "mimetype",
+                    "size",
+                    "updated_at"
                 ]
             },
             "ItemsDeletionInfoRequestRequest": {

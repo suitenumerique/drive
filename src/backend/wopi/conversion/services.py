@@ -147,9 +147,7 @@ def perform_conversion(source_item, placeholder, user):
         placeholder.mimetype = mimetype
         placeholder.size = converted_file.size
         placeholder.upload_state = models.ItemUploadStateChoices.READY
-        placeholder.save(
-            update_fields=["blob", "mimetype", "size", "upload_state", "updated_at"]
-        )
+        placeholder.save(update_fields=["blob", "mimetype", "size", "upload_state", "updated_at"])
     except DatabaseError:
         # The object may be shared with other items: never delete it here,
         # just mark the blob unreferenced so the garbage collector reaps it.

@@ -2,6 +2,7 @@
 Core application factories
 """
 
+import secrets
 from io import BytesIO
 
 from django.conf import settings
@@ -60,7 +61,8 @@ class BlobFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = models.Blob
 
-    hash = factory.Sequence(lambda n: f"{n:064x}")
+    # random hash: a sequence would collide across xdist workers
+    hash = factory.LazyFunction(lambda: secrets.token_hex(32))
     size = factory.fuzzy.FuzzyInteger(1, 10**9)
 
 

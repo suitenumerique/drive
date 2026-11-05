@@ -736,7 +736,11 @@ class ItemViewSet(
         else:
             attributes["link_reach"] = LinkReachChoices.RESTRICTED
 
-        if data["type"] == models.ItemTypeChoices.FILE and not extension and data.get("upload_hash"):
+        if (
+            data["type"] == models.ItemTypeChoices.FILE
+            and not extension
+            and data.get("upload_hash")
+        ):
             # Content-addressed upload: the policy targets a temporary key, the object
             # is moved under blobs/<hash> by upload-ended once the hash is verified.
             attributes["upload_tmp_key"] = f"tmp/{uuid.uuid4()!s}"
@@ -774,7 +778,7 @@ class ItemViewSet(
             challenge,
             timeout=settings.UPLOAD_CHALLENGE_TTL_SECONDS,
         )
-        item._upload_challenge = challenge  # noqa: SLF001
+        item.upload_challenge = challenge
 
     @drf.decorators.action(detail=True, methods=["post"], url_path="upload-challenge")
     def upload_challenge(self, request, *args, **kwargs):
@@ -2430,9 +2434,10 @@ class ItemViewSet(
         version_pk = url_params.get("version_pk")
         if version_pk:
             # Versions are served to explicit accesses only, never through share links.
-            if request.user.is_anonymous or not models.ItemAccess.objects.filter(
-                item=item, user=request.user
-            ).exists():
+            if (
+                request.user.is_anonymous
+                or not models.ItemAccess.objects.filter(item=item, user=request.user).exists()
+            ):
                 logger.debug("Version access requires an explicit access on item '%s'", item.id)
                 raise drf.exceptions.PermissionDenied()
             try:
@@ -2890,7 +2895,7 @@ class ItemVersionViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset.filter(**{self.resource_field_name: self.kwargs["resource_id"]})
 
     @drf.decorators.action(detail=True, methods=["post"], url_path="restore")
-    def restore(self, request, resource_id=None, pk=None):
+    def restore(self, request, *args, **kwargs):
         """Restore a version as the item's current content."""
         version = self.get_object()
         item = self.item
@@ -2917,12 +2922,10 @@ class ItemVersionViewSet(viewsets.ReadOnlyModelViewSet):
             locked_item.mimetype = version.mimetype or locked_item.mimetype
             locked_item.save(update_fields=["blob", "mimetype", "updated_at"])
 
-        serializer = serializers.ItemSerializer(
-            locked_item, context=self.get_serializer_context()
-        )
+        serializer = serializers.ItemSerializer(locked_item, context=self.get_serializer_context())
         return drf.response.Response(serializer.data, status=status.HTTP_200_OK)
 
-    def destroy(self, request, resource_id=None, pk=None):
+    def destroy(self, request, *args, **kwargs):
         """
         Delete a version: the reference to its blob is detached and the object is
         reaped by the garbage collector once no reference remains.

@@ -117,11 +117,7 @@ def migrate_item_to_blob(self, item_id):
 
     with transaction.atomic():
         locked_item = Item.objects.select_for_update().get(pk=item_id)
-        if (
-            locked_item.blob_id is not None
-            or locked_item.deleted_at
-            or locked_item.hard_deleted_at
-        ):
+        if locked_item.blob_id is not None or locked_item.deleted_at or locked_item.hard_deleted_at:
             return
 
         # Re-check the historical key still holds the hashed content before repointing.

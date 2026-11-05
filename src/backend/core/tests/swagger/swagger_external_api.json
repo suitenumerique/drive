@@ -993,6 +993,54 @@
                 }
             }
         },
+        "/external_api/v1.0/items/{id}/upload-challenge/": {
+            "post": {
+                "operationId": "items_upload_challenge_create",
+                "description": "Answer the possession challenge of a large content-addressed upload.\n\nIf the announced hash matches an existing safe blob and the proof is valid,\nthe item is attached to the blob directly (READY, no upload). Otherwise —\nincluding when no blob exists for the hash — the response carries the upload\npolicy and the normal upload flow resumes, so both cases are indistinguishable.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/external_api/v1.0/items/{id}/upload-ended/": {
             "post": {
                 "operationId": "items_upload_ended_create",
@@ -2248,6 +2296,10 @@
                         "nullable": true,
                         "maxLength": 255
                     },
+                    "upload_challenge": {
+                        "type": "string",
+                        "readOnly": true
+                    },
                     "policy": {
                         "type": "string",
                         "readOnly": true
@@ -2291,6 +2343,7 @@
                     "path",
                     "policy",
                     "updated_at",
+                    "upload_challenge",
                     "upload_state",
                     "url",
                     "url_permalink",
@@ -2338,6 +2391,13 @@
                                 "$ref": "#/components/schemas/NullEnum"
                             }
                         ]
+                    },
+                    "upload_hash": {
+                        "type": "string",
+                        "writeOnly": true,
+                        "nullable": true,
+                        "minLength": 64,
+                        "maxLength": 64
                     }
                 }
             },
