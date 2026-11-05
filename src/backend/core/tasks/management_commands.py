@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 PERIODIC_COMMAND_SETTINGS = {
     "clean_pending_items": "CLEAN_PENDING_ITEMS_SCHEDULE",
     "purge_deleted_items": "PURGE_DELETED_ITEMS_SCHEDULE",
+    "gc_unreferenced_blobs": "GC_UNREFERENCED_BLOBS_SCHEDULE",
 }
 
 

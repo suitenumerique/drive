@@ -159,6 +159,8 @@ This document lists all configurable environment variables for the Drive applica
 | `PURGE_GRACE_DAYS` | Number of days before items and their associated file can be permanently purged from storage and database after the trashbin cutoff period | `7` |
 | `CLEAN_PENDING_ITEMS_SCHEDULE` | Schedule `clean_pending_items` with celery beat: a crontab expression (m h dom mon dow) followed by the command arguments, e.g. `30 0 * * * --hours=48`. Do not set it if the command already runs as a cron job (the Helm chart does), it would run twice. An invalid value stops the application at startup | |
 | `PURGE_DELETED_ITEMS_SCHEDULE` | Schedule `purge_deleted_items` with celery beat, same format, e.g. `45 0 * * *`. Do not set it if the command already runs as a cron job (the Helm chart does), it would run twice | |
+| `GC_UNREFERENCED_BLOBS_SCHEDULE` | Schedule `gc_unreferenced_blobs` with celery beat, same format, e.g. `15 1 * * *`. Do not set it if the command already runs as a cron job (the Helm chart does), it would run twice | |
+| `BLOB_UNREFERENCED_GRACE_HOURS` | Grace period in hours before a blob that lost its last reference is deleted from object storage by the garbage collector | `168` (7 days) |
 | `USER_RECONCILIATION_FORM_URL` | URL of a third-party form for user reconciliation requests, used in the email sent when a request fails | `None` |
 | `WOPI_CLIENTS` | List of client name. These client names will be used in the post_setup | [] |
 | `WOPI_{CLIENT_NAME}_DISCOVERY_URL` | The discovery url for each client present in the `WOPI_CLIENTS`. if `WOPI_CLIENTS=vendorA` then set `WOPI_VENDORA_DISCOVERY_URL` | |

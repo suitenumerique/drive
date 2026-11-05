@@ -1206,6 +1206,13 @@ class Base(Configuration):
     PURGE_DELETED_ITEMS_SCHEDULE = values.Value(
         None, environ_name="PURGE_DELETED_ITEMS_SCHEDULE", environ_prefix=None
     )
+    GC_UNREFERENCED_BLOBS_SCHEDULE = values.Value(
+        None, environ_name="GC_UNREFERENCED_BLOBS_SCHEDULE", environ_prefix=None
+    )
+    # Grace period before an unreferenced blob object is deleted from storage
+    BLOB_UNREFERENCED_GRACE_HOURS = values.Value(
+        168, environ_name="BLOB_UNREFERENCED_GRACE_HOURS", environ_prefix=None
+    )  # 7 days, in hours
 
     # Mail
     EMAIL_BACKEND = values.Value("django.core.mail.backends.smtp.EmailBackend")
