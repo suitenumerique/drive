@@ -1385,6 +1385,20 @@ class Item(TreeModel, BaseModel):
         null=True,
         blank=True,
     )
+    upload_hash = models.CharField(
+        _("upload hash"),
+        max_length=64,
+        null=True,
+        blank=True,
+        help_text=_("SHA-256 hash of the content announced by the client at creation."),
+    )
+    upload_tmp_key = models.CharField(
+        _("upload temporary key"),
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text=_("Temporary storage key the upload policy targets when a hash was announced."),
+    )
     target = models.OneToOneField(
         "self",
         on_delete=models.CASCADE,

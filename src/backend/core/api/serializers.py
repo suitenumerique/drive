@@ -667,6 +667,13 @@ class CreateItemSerializer(ItemSerializer):
         default=None,
         write_only=True,
     )
+    upload_hash = serializers.CharField(
+        max_length=64,
+        min_length=64,
+        required=False,
+        allow_null=True,
+        write_only=True,
+    )
 
     class Meta:
         model = models.Item
@@ -703,6 +710,7 @@ class CreateItemSerializer(ItemSerializer):
             "description",
             "hard_delete_at",
             "extension",
+            "upload_hash",
         ]
         read_only_fields = [
             "abilities",
@@ -749,6 +757,24 @@ class CreateItemSerializer(ItemSerializer):
                     code="item_create_existing_id",
                 )
 
+        return value
+
+    def validate_upload_hash(self, value):
+        """Ensure the announced hash is a lowercase hexadecimal SHA-256."""
+        if value is None:
+            return value
+        try:
+            bytes.fromhex(value)
+        except ValueError:
+            raise serializers.ValidationError(
+                "The hash must be a hexadecimal SHA-256.",
+                code="item_upload_hash_not_hex",
+            ) from None
+        if value != value.lower():
+            raise serializers.ValidationError(
+                "The hash must be lowercase hexadecimal.",
+                code="item_upload_hash_not_lowercase",
+            )
         return value
 
     def validate(self, attrs):

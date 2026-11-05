@@ -1,6 +1,8 @@
 """Test related to item upload ended API."""
 
+import hashlib
 import logging
+import uuid
 from io import BytesIO
 from unittest import mock
 
@@ -471,3 +473,105 @@ def test_api_upload_ended_file_size_exceeded(settings, caplog):
         in caplog.text
     )
     assert response.status_code == 400
+
+
+def test_api_item_upload_ended_content_addressed(django_capture_on_commit_callbacks):
+    """An upload with an announced hash is verified, copied under blobs/<hash> and attached to a blob."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    content = b"my prose"
+    announced_hash = hashlib.sha256(content).hexdigest()
+    item = factories.ItemFactory(
+        type=ItemTypeChoices.FILE,
+        filename="my_file.txt",
+        size=len(content),
+        upload_hash=announced_hash,
+        upload_tmp_key=f"tmp/{uuid.uuid4()!s}",
+    )
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+    default_storage.save(item.upload_tmp_key, BytesIO(content))
+
+    with mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file:
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    assert response.status_code == 200
+    item.refresh_from_db()
+    assert item.blob is not None
+    assert item.blob.hash == announced_hash
+    assert item.blob.size == len(content)
+    assert item.upload_state == ItemUploadStateChoices.ANALYZING
+    assert item.mimetype == "text/plain"
+    assert item.size == len(content)
+    assert default_storage.exists(f"blobs/{announced_hash}")
+    assert not default_storage.exists(item.upload_tmp_key)
+    mock_analyse_file.assert_called_once_with(f"blobs/{announced_hash}", item_id=item.id)
+
+
+def test_api_item_upload_ended_content_addressed_hash_mismatch():
+    """A temporary object whose hash does not match the announced one is rejected."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    content = b"my prose"
+    wrong_hash = hashlib.sha256(b"other content").hexdigest()
+    item = factories.ItemFactory(
+        type=ItemTypeChoices.FILE,
+        filename="my_file.txt",
+        size=len(content),
+        upload_hash=wrong_hash,
+        upload_tmp_key=f"tmp/{uuid.uuid4()!s}",
+    )
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+    default_storage.save(item.upload_tmp_key, BytesIO(content))
+
+    response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "file_hash_mismatch"
+    assert not models.Item.objects.filter(id=item.id).exists()
+    assert not models.Blob.objects.filter(hash=wrong_hash).exists()
+
+
+def test_api_item_upload_ended_content_addressed_existing_ready_blob(
+    django_capture_on_commit_callbacks,
+):
+    """When a ready blob already exists for the hash, the item attaches to it and goes
+    READY directly, without a new antivirus analysis."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    content = b"my prose"
+    announced_hash = hashlib.sha256(content).hexdigest()
+    factories.BlobFactory(
+        hash=announced_hash,
+        size=len(content),
+        upload_state=ItemUploadStateChoices.READY,
+    )
+    default_storage.save(f"blobs/{announced_hash}", BytesIO(content))
+
+    item = factories.ItemFactory(
+        type=ItemTypeChoices.FILE,
+        filename="my_file.txt",
+        size=len(content),
+        upload_hash=announced_hash,
+        upload_tmp_key=f"tmp/{uuid.uuid4()!s}",
+    )
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+    default_storage.save(item.upload_tmp_key, BytesIO(content))
+
+    with mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file:
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    assert response.status_code == 200
+    item.refresh_from_db()
+    assert item.upload_state == ItemUploadStateChoices.READY
+    assert item.blob is not None
+    assert item.blob.hash == announced_hash
+    assert not default_storage.exists(item.upload_tmp_key)
+    mock_analyse_file.assert_not_called()

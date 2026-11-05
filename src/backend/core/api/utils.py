@@ -1,5 +1,7 @@
 """Util to generate S3 authorization headers for object storage access control"""
 
+import base64
+import hashlib
 import logging
 import mimetypes
 import re
@@ -112,8 +114,9 @@ def generate_upload_policy(item):
     if item.size is None:
         raise ValueError("An upload authorization requires a storage reservation.")
 
-    # Generate a unique key for the item
-    key = f"{item.key_base}/{item.filename}"
+    # Content-addressed uploads target a temporary key; upload-ended moves the
+    # object under blobs/<hash> once the announced hash is verified.
+    key = item.upload_tmp_key or f"{item.key_base}/{item.filename}"
 
     # This settings should be used if the backend application and the frontend application
     # can't connect to the object storage with the same domain. This is the case in the
@@ -141,6 +144,10 @@ def generate_upload_policy(item):
         "Key": key,
         "ContentLength": item.size,
     }
+    if item.upload_hash:
+        # Ask the storage to verify the content checksum on reception; upload-ended
+        # falls back to re-reading the object when the checksum comes back absent.
+        params["ChecksumSHA256"] = base64.b64encode(bytes.fromhex(item.upload_hash)).decode("ascii")
     if settings.AWS_S3_UPLOAD_ACL and settings.AWS_S3_UPLOAD_ACL != "default":
         params["ACL"] = settings.AWS_S3_UPLOAD_ACL
 
@@ -175,6 +182,20 @@ def is_previewable_item(item):
         elif item.mimetype == allowed:
             return True
     return False
+
+
+def compute_sha256(s3_client, bucket, key, chunk_size=8 * 1024 * 1024):
+    """
+    Re-read an object from storage and compute its SHA-256.
+
+    Fallback used by upload-ended when the storage did not verify a checksum
+    on reception (no ChecksumSHA256 on the head object).
+    """
+    digest = hashlib.sha256()
+    response = s3_client.get_object(Bucket=bucket, Key=key)
+    for chunk in response["Body"].iter_chunks(chunk_size):
+        digest.update(chunk)
+    return digest.hexdigest()
 
 
 def get_item_file_head_object(item):

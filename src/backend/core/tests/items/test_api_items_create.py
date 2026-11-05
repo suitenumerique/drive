@@ -163,6 +163,60 @@ def test_api_items_create_file_authenticated_success():
     assert len(query_params) == 0
 
 
+def test_api_items_create_file_with_upload_hash_targets_tmp_key():
+    """Creating a file with an announced hash should target a temporary key in the policy."""
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    upload_hash = "a" * 64
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "size": 8,
+            "type": ItemTypeChoices.FILE,
+            "filename": "file.txt",
+            "upload_hash": upload_hash,
+        },
+        format="json",
+    )
+    assert response.status_code == 201
+    item = Item.objects.get()
+    assert item.upload_hash == upload_hash
+    assert item.upload_tmp_key is not None
+    assert item.upload_tmp_key.startswith("tmp/")
+
+    policy = response.json()["policy"]
+    policy_parsed = urlparse(policy)
+    assert policy_parsed.path == f"/drive-media-storage/{item.upload_tmp_key}"
+
+    query_params = parse_qs(policy_parsed.query)
+    # the announced hash is carried as a checksum so the storage can verify it on reception
+    assert any("checksum" in key.lower() for key in query_params)
+
+
+def test_api_items_create_file_with_invalid_upload_hash():
+    """An announced hash must be a 64-char hexadecimal string."""
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "size": 8,
+            "type": ItemTypeChoices.FILE,
+            "filename": "file.txt",
+            "upload_hash": "z" * 64,
+        },
+        format="json",
+    )
+    assert response.status_code == 400
+    assert not Item.objects.exists()
+
+
 @override_settings(AWS_S3_UPLOAD_ACL="default")
 def test_api_items_create_file_authenticated_success_without_upload_acl():
     """The upload policy should not sign an ACL when AWS_S3_UPLOAD_ACL is "default"."""

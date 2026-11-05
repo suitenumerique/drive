@@ -1,6 +1,7 @@
 """API endpoints"""
 # pylint: disable=too-many-lines
 
+import base64
 import json
 import logging
 import os
@@ -729,6 +730,11 @@ class ItemViewSet(
         else:
             attributes["link_reach"] = LinkReachChoices.RESTRICTED
 
+        if data["type"] == models.ItemTypeChoices.FILE and not extension and data.get("upload_hash"):
+            # Content-addressed upload: the policy targets a temporary key, the object
+            # is moved under blobs/<hash> by upload-ended once the hash is verified.
+            attributes["upload_tmp_key"] = f"tmp/{uuid.uuid4()!s}"
+
         if data["type"] == models.ItemTypeChoices.FILE and not extension:
             with reserve_upload(self.request.user, get_entitlements_backend()):
                 serializer.instance = models.Item.objects.create_child(
@@ -920,6 +926,9 @@ class ItemViewSet(
                     code=can_upload.get("reason"),
                 )
 
+        if item.upload_tmp_key and item.upload_hash and item.blob_id is None:
+            return self._finalize_content_addressed_upload(item, request)
+
         s3_client = default_storage.connection.meta.client
 
         head_response = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)
@@ -1015,6 +1024,132 @@ class ItemViewSet(
         )
 
         return drf_response.Response(serializer.data, status=status.HTTP_200_OK)
+
+    def _finalize_content_addressed_upload(self, item, request):
+        """
+        Finalize a content-addressed upload: verify the announced hash of the temporary
+        object, copy it under blobs/<hash>, then attach the blob to the item.
+        """
+        s3_client = default_storage.connection.meta.client
+        bucket = default_storage.bucket_name
+        tmp_key = item.upload_tmp_key
+        announced_hash = item.upload_hash
+
+        head_response = s3_client.head_object(Bucket=bucket, Key=tmp_key, ChecksumMode="ENABLED")
+        file_size = head_response["ContentLength"]
+        self._validate_uploaded_size(item, file_size)
+
+        if "ChecksumSHA256" in head_response:
+            actual_hash = base64.b64decode(head_response["ChecksumSHA256"]).hex()
+        else:
+            # The storage did not verify the checksum on reception: re-read the object.
+            actual_hash = utils.compute_sha256(s3_client, bucket, tmp_key)
+
+        if actual_hash != announced_hash:
+            self._complete_item_deletion(item)
+            raise drf.exceptions.ValidationError(
+                detail="The uploaded file hash does not match the announced hash.",
+                code="file_hash_mismatch",
+            )
+
+        if file_size > 2048:
+            file_head = s3_client.get_object(Bucket=bucket, Key=tmp_key, Range="bytes=0-2047")[
+                "Body"
+            ].read()
+        else:
+            file_head = s3_client.get_object(Bucket=bucket, Key=tmp_key)["Body"].read()
+
+        mimetype = utils.detect_mimetype(file_head, filename=item.filename)
+        if not utils.is_mimetype_allowed(mimetype):
+            self._complete_item_deletion(item)
+            logger.info(
+                "upload_ended: mimetype not allowed %s for filename %s",
+                mimetype,
+                item.filename,
+            )
+            raise drf.exceptions.ValidationError(
+                detail="The file type is not allowed.",
+                code="file_type_not_allowed",
+            )
+
+        blob_key = f"blobs/{announced_hash}"
+        # Copy the verified object: CopySourceIfMatch ties the copy to the ETag read
+        # above, so a rewrite of the temporary object in between makes the copy fail.
+        s3_client.copy_object(
+            Bucket=bucket,
+            Key=blob_key,
+            CopySource={"Bucket": bucket, "Key": tmp_key},
+            CopySourceIfMatch=head_response["ETag"],
+            ContentType=mimetype,
+            MetadataDirective="REPLACE",
+        )
+
+        with transaction.atomic():
+            item = models.Item.objects.select_for_update().get(pk=item.pk)
+            if item.hard_deleted_at or item.ancestors_deleted_at:
+                raise drf.exceptions.PermissionDenied()
+            if item.upload_state != models.ItemUploadStateChoices.PENDING:
+                raise drf.exceptions.ValidationError(
+                    {"item": "This action is only available for items in PENDING state."},
+                    code="item_upload_state_not_pending",
+                )
+
+            blob, created = models.Blob.objects.get_or_create(
+                hash=announced_hash,
+                defaults={
+                    "size": file_size,
+                    "upload_state": models.ItemUploadStateChoices.ANALYZING,
+                },
+            )
+
+            item.blob = blob
+            item.upload_state = (
+                models.ItemUploadStateChoices.READY
+                if blob.upload_state == models.ItemUploadStateChoices.READY
+                else models.ItemUploadStateChoices.ANALYZING
+            )
+            item.mimetype = mimetype
+            item.size = file_size
+            item.save(update_fields=["blob", "upload_state", "mimetype", "size", "updated_at"])
+
+            needs_analysis = created or blob.upload_state in (
+                None,
+                models.ItemUploadStateChoices.PENDING,
+            )
+            if needs_analysis:
+                blob.upload_state = models.ItemUploadStateChoices.ANALYZING
+                blob.save(update_fields=["upload_state", "updated_at"])
+
+            transaction.on_commit(
+                lambda: self._after_content_upload(item.pk, blob.pk, tmp_key, needs_analysis)
+            )
+
+        serializer = self.get_serializer(item)
+
+        posthog_capture(
+            "item_uploaded",
+            request.user,
+            {
+                "id": item.id,
+                "title": item.title,
+                "size": item.size,
+                "mimetype": item.mimetype,
+            },
+        )
+
+        return drf_response.Response(serializer.data, status=status.HTTP_200_OK)
+
+    def _after_content_upload(self, item_id, blob_id, tmp_key, needs_analysis):
+        """Remove the temporary object and launch the antivirus analysis of the blob."""
+        s3_client = default_storage.connection.meta.client
+        try:
+            s3_client.delete_object(Bucket=default_storage.bucket_name, Key=tmp_key)
+        except ClientError:
+            logger.exception("upload_ended: failed to delete temporary object %s", tmp_key)
+
+        if needs_analysis:
+            blob = models.Blob.objects.get(pk=blob_id)
+            malware_detection.analyse_file(blob.file_key, item_id=item_id)
 
     def _validate_uploaded_size(self, item, file_size):
         """Verify storage metadata even though the PUT has a signed length."""
