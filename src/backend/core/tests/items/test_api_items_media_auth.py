@@ -481,3 +481,41 @@ def test_api_items_media_auth_blob_item_preview_disposition():
     assert response.status_code == 200
     assert response["X-Storage-Path"] == f"/drive-media-storage/blobs/{blob.hash}"
     assert response["X-Content-Disposition"] == 'inline; filename="my file.txt"'
+
+
+def test_api_items_media_auth_version_requires_explicit_access():
+    """A version URL is served from the version's blob, only to explicit accesses."""
+    blob = factories.BlobFactory(hash="a" * 64)
+    old_blob = factories.BlobFactory(hash="f" * 64)
+    item = factories.ItemFactory(
+        link_reach="public",
+        type=models.ItemTypeChoices.FILE,
+        filename="current.txt",
+        blob=blob,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    version = factories.ItemVersionFactory(
+        item=item, blob=old_blob, filename="old name.txt", mimetype="text/plain"
+    )
+    version_url = (
+        f"http://localhost/media/item/{item.pk!s}/versions/{version.pk!s}/{quote(version.filename)}"
+    )
+
+    # anonymous, even with a public link on the item: denied
+    response = APIClient().get("/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=version_url)
+    assert response.status_code == 403
+
+    # authenticated without an explicit access on the item: denied
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    response = client.get("/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=version_url)
+    assert response.status_code == 403
+
+    # with an explicit access: served from the version blob, with its own metadata
+    factories.UserItemAccessFactory(item=item, user=user, role="reader")
+    response = client.get("/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=version_url)
+    assert response.status_code == 200
+    assert response["X-Storage-Path"] == f"/drive-media-storage/blobs/{old_blob.hash}"
+    assert response["X-Content-Disposition"] == 'attachment; filename="old name.txt"'
+    assert response["X-Content-Type"] == "text/plain"

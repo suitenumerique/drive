@@ -168,20 +168,25 @@ def generate_upload_policy(item):
     return policy
 
 
-def is_previewable_item(item):
-    """
-    Check if a mime type is previewable.
-    """
-    if item.mimetype is None:
+def is_mimetype_previewable(mimetype):
+    """Check if a mime type is previewable."""
+    if mimetype is None:
         return False
 
     for allowed in settings.ITEM_PREVIEWABLE_MIME_TYPES:
         if allowed.endswith("/"):
-            if item.mimetype.startswith(allowed):
+            if mimetype.startswith(allowed):
                 return True
-        elif item.mimetype == allowed:
+        elif mimetype == allowed:
             return True
     return False
+
+
+def is_previewable_item(item):
+    """
+    Check if a mime type is previewable.
+    """
+    return is_mimetype_previewable(item.mimetype)
 
 
 def compute_sha256(s3_client, bucket, key, chunk_size=8 * 1024 * 1024):

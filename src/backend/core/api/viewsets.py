@@ -93,7 +93,9 @@ UUID_REGEX = r"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA
 FILE_EXT_REGEX = '[^.\\/:*?&"<>|\r\n]+'
 MEDIA_STORAGE_URL_PATTERN = re.compile(
     f"{settings.MEDIA_URL:s}(?P<preview>preview/)?"
-    f"(?P<key>{ITEM_FOLDER:s}/(?P<pk>{UUID_REGEX:s})/.*{FILE_EXT_REGEX:s})$"
+    f"(?P<key>{ITEM_FOLDER:s}/(?P<pk>{UUID_REGEX:s})/"
+    f"(?:versions/(?P<version_pk>{UUID_REGEX:s})/)?"
+    f"(?P<filename>.*{FILE_EXT_REGEX:s}))$"
 )
 # pylint: disable=too-many-ancestors
 
@@ -2297,25 +2299,52 @@ class ItemViewSet(
             logger.debug("Item '%s' is not ready", item.id)
             raise drf.exceptions.PermissionDenied()
 
-        if url_params.get("preview") and not utils.is_previewable_item(item):
+        version = None
+        version_pk = url_params.get("version_pk")
+        if version_pk:
+            # Versions are served to explicit accesses only, never through share links.
+            if request.user.is_anonymous or not models.ItemAccess.objects.filter(
+                item=item, user=request.user
+            ).exists():
+                logger.debug("Version access requires an explicit access on item '%s'", item.id)
+                raise drf.exceptions.PermissionDenied()
+            try:
+                version = item.versions.get(pk=version_pk)
+            except models.ItemVersion.DoesNotExist as exc:
+                logger.debug("Version '%s' not found on item '%s'", version_pk, item.id)
+                raise drf.exceptions.PermissionDenied() from exc
+
+        preview_mimetype = version.mimetype if version is not None else item.mimetype
+        if url_params.get("preview") and not utils.is_mimetype_previewable(preview_mimetype):
             logger.debug("Item '%s' is not previewable", item.id)
             raise drf.exceptions.PermissionDenied()
 
-        # Sign the item's actual storage key: blobs/<hash> when the item is attached
-        # to a blob, the historical item/<uuid>/<filename> key otherwise.
-        storage_key = item.file_key
+        # Sign the storage key of the served content: the version's blob when a
+        # version is requested, the item's key otherwise (blobs/<hash> when the
+        # item is attached to a blob, historical item/<uuid>/<filename> otherwise).
+        if version is not None:
+            storage_key = version.blob.file_key
+            filename = version.filename or item.filename
+            mimetype = version.mimetype or item.mimetype
+        else:
+            storage_key = item.file_key
+            filename = item.filename
+            mimetype = item.mimetype
+
         signed_request = utils.generate_s3_authorization_headers(storage_key)
 
         headers = dict(signed_request.headers)
         # Nginx proxies to this path instead of the public URL one, so blob-backed
-        # items are served from their content-addressed key. The path is taken from
+        # content is served from its content-addressed key. The path is taken from
         # the presigned URL to keep the exact encoding the signature covers.
         headers["X-Storage-Path"] = urlparse(signed_request.url).path
-        if item.blob_id is not None:
+        if item.blob_id is not None or version is not None:
             # The blob key no longer carries the filename: reinject it, along with
             # the inline/attachment disposition, for the proxy to forward.
             disposition = "inline" if url_params.get("preview") else "attachment"
-            headers["X-Content-Disposition"] = f'{disposition}; filename="{item.filename}"'
+            headers["X-Content-Disposition"] = f'{disposition}; filename="{filename}"'
+        # The mimetype lives on the item (or the version), not on the storage key.
+        headers["X-Content-Type"] = mimetype or "application/octet-stream"
 
         return drf.response.Response("authorized", headers=headers, status=200)
 
