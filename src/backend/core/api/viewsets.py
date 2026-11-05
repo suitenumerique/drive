@@ -2252,7 +2252,7 @@ class ItemViewSet(
         if item.upload_state == models.ItemUploadStateChoices.PENDING:
             raise drf.exceptions.PermissionDenied()
 
-        redirect_url = f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL}{quote(item.file_key)}"
+        redirect_url = f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL}{quote(item.public_file_key)}"
         return drf.response.Response(
             status=status.HTTP_302_FOUND,
             headers={"Location": redirect_url},

@@ -1592,19 +1592,28 @@ class Item(TreeModel, BaseModel):
         return f"item/{self.pk!s}"
 
     @property
+    def public_file_key(self):
+        """Key exposed in public media URLs, always `item/<uuid>/<filename>`.
+
+        The storage key may differ (blobs/<hash> for blob-backed items), media-auth
+        translates the public URL to the signed storage key.
+        """
+        if self.filename is None:
+            raise RuntimeError("The item must have a filename to generate a public file key.")
+
+        return f"{self.key_base}/{self.filename}"
+
+    @property
     def file_key(self):
         """Key used to store the file in object storage.
 
         Items attached to a blob are stored under the content-addressed key
         `blobs/<hash>`; legacy items keep their historical `item/<uuid>/<filename>` key.
         """
-        if self.filename is None:
-            raise RuntimeError("The item must have a filename to generate a file key.")
-
         if self.blob_id is not None:
             return self.blob.file_key
 
-        return f"{self.key_base}/{self.filename}"
+        return self.public_file_key
 
     @property
     def depth(self):

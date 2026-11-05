@@ -105,6 +105,19 @@ def test_models_blob_file_key():
     assert blob.file_key == f"blobs/{'b' * 64}"
 
 
+def test_models_items_public_file_key_with_blob():
+    """The public media URL key stays item/<uuid>/<filename> even when a blob is attached."""
+    blob = factories.BlobFactory(hash="c" * 64)
+    item = factories.ItemFactory(
+        id="9531a5f1-42b1-496c-b3f4-1c09ed139b3c",
+        type=models.ItemTypeChoices.FILE,
+        filename="logo.png",
+        blob=blob,
+    )
+    assert item.public_file_key == "item/9531a5f1-42b1-496c-b3f4-1c09ed139b3c/logo.png"
+    assert item.file_key == f"blobs/{'c' * 64}"
+
+
 @pytest.mark.parametrize("depth", range(5))
 def test_models_items_soft_delete(depth):
     """Trying to delete an item that is already deleted or is a descendant of

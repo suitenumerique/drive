@@ -396,7 +396,7 @@ class ListItemSerializer(serializers.ModelSerializer):
         ):
             return None
 
-        return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL}{quote(item.file_key)}"
+        return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL}{quote(item.public_file_key)}"
 
     def get_url_permalink(self, item):
         """Return a stable permalink URL for downloading the item.
@@ -428,7 +428,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             or not utils.is_previewable_item(item)
         ):
             return None
-        return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL_PREVIEW}{quote(item.file_key)}"
+        return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL_PREVIEW}{quote(item.public_file_key)}"
 
     def get_hard_delete_at(self, item):
         """Return the hard delete date of the item."""

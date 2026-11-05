@@ -175,7 +175,7 @@ class WopiViewSet(viewsets.ViewSet):
             "SupportsGetLock": True,
             "SupportsLocks": True,
             "SupportsUserInfo": False,
-            "DownloadUrl": f"/media/{item.file_key}",
+            "DownloadUrl": f"/media/{item.public_file_key}",
         }
 
         return Response(properties, status=200)
