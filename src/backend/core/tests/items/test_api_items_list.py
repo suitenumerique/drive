@@ -133,6 +133,7 @@ def test_api_items_list_format():
             "hard_delete_at": None,
             "is_wopi_supported": False,
             "quota_excluded": False,
+            "source": None,
         },
         {
             "id": str(item2.id),
@@ -176,6 +177,7 @@ def test_api_items_list_format():
             "hard_delete_at": None,
             "is_wopi_supported": False,
             "quota_excluded": False,
+            "source": None,
         },
         {
             "id": str(item.id),
@@ -219,6 +221,7 @@ def test_api_items_list_format():
             "hard_delete_at": None,
             "is_wopi_supported": False,
             "quota_excluded": False,
+            "source": None,
         },
     ]
 

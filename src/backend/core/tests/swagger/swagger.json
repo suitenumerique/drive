@@ -2669,6 +2669,12 @@
                         "type": "boolean",
                         "readOnly": true,
                         "description": "Exclude this item from its creator's storage quota computation."
+                    },
+                    "source": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true,
+                        "description": "Provenance of the item: a reserved drive_* value for internal operations, or the client_id of the resource server that created it."
                     }
                 },
                 "required": [
@@ -2699,6 +2705,7 @@
                     "path",
                     "quota_excluded",
                     "size",
+                    "source",
                     "target",
                     "title",
                     "type",
@@ -3086,6 +3093,12 @@
                         "type": "boolean",
                         "readOnly": true,
                         "description": "Exclude this item from its creator's storage quota computation."
+                    },
+                    "source": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true,
+                        "description": "Provenance of the item: a reserved drive_* value for internal operations, or the client_id of the resource server that created it."
                     }
                 },
                 "required": [
@@ -3116,6 +3129,7 @@
                     "path",
                     "quota_excluded",
                     "size",
+                    "source",
                     "target",
                     "title",
                     "type",
@@ -3313,6 +3327,12 @@
                         "type": "boolean",
                         "readOnly": true,
                         "description": "Exclude this item from its creator's storage quota computation."
+                    },
+                    "source": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true,
+                        "description": "Provenance of the item: a reserved drive_* value for internal operations, or the client_id of the resource server that created it."
                     }
                 },
                 "required": [
@@ -3338,6 +3358,7 @@
                     "path",
                     "quota_excluded",
                     "size",
+                    "source",
                     "target",
                     "title",
                     "type",
@@ -3784,6 +3805,12 @@
                         "readOnly": true,
                         "description": "Exclude this item from its creator's storage quota computation."
                     },
+                    "source": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true,
+                        "description": "Provenance of the item: a reserved drive_* value for internal operations, or the client_id of the resource server that created it."
+                    },
                     "parents": {
                         "type": "array",
                         "items": {
@@ -3821,6 +3848,7 @@
                     "path",
                     "quota_excluded",
                     "size",
+                    "source",
                     "target",
                     "title",
                     "type",

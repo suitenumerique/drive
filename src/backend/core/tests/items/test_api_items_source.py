@@ -44,6 +44,47 @@ def test_api_items_create_file_source_upload():
     item = models.Item.objects.get()
     assert item.source == models.ItemSourceChoices.UPLOAD
 
+    # The source is exposed on retrieve
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+    assert response.status_code == 200
+    assert response.json()["source"] == models.ItemSourceChoices.UPLOAD
+
+
+def test_api_items_create_source_read_only():
+    """The source of an item should not be settable at creation through the API."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        "/api/v1.0/items/",
+        {"title": "my folder", "type": models.ItemTypeChoices.FOLDER, "source": "meet"},
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert models.Item.objects.get().source == models.ItemSourceChoices.CREATE
+
+
+def test_api_items_update_source_read_only():
+    """The source of an item should not be editable through the API."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(creator=user, users=[(user, models.RoleChoices.OWNER)])
+
+    response = client.patch(
+        f"/api/v1.0/items/{item.id!s}/",
+        {"source": "meet"},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert response.json()["source"] is None
+    item.refresh_from_db()
+    assert item.source is None
+
 
 def test_api_items_children_create_file_source_upload():
     """Files created as children are tagged drive_upload."""
