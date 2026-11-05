@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+-💄(frontend) default to the neutral gray theme #960
+
 ## [v0.26.0] - 2026-11-04
 
 ### Added

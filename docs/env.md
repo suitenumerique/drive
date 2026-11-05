@@ -62,7 +62,7 @@ This document lists all configurable environment variables for the Drive applica
 | `FILE_EXTENSIONS_DENIED` | List of file extension refused at upload in `denylist` mode | See in the settings.py file |
 | `FILE_MIMETYPE_ALLOWED` | List of file mimetype allowed to be uploaded | See in the setings.py file |
 | `FILE_MIMETYPE_DENIED` | List of file mimetype refused at upload in `denylist` mode | See in the settings.py file |
-| `FRONTEND_THEME` | Frontend theme configuration | `None` |
+| `FRONTEND_THEME` | Frontend theme. When unset, the interface uses the neutral gray theme (`default`), same as Docs. `dsfr-light` and `anct-light` stay available. | `None` |
 | `FRONTEND_EXTERNAL_HOME_URL` | Frontend external home url to redirect to | `None` |
 | `FRONTEND_FEEDBACK_BUTTON_SHOW` | Show feedback button | `False` |
 | `FRONTEND_FEEDBACK_BUTTON_IDLE` | Make feedback button idle (e.g. to bind to external library) | `False` |
