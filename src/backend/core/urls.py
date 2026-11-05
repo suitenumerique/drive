@@ -27,6 +27,11 @@ item_related_router.register(
     viewsets.InvitationViewset,
     basename="invitations",
 )
+item_related_router.register(
+    "versions",
+    viewsets.ItemVersionViewSet,
+    basename="item_versions",
+)
 
 sdk_relay_router = DefaultRouter()
 sdk_relay_router.register(

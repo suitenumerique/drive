@@ -221,6 +221,32 @@ class ItemAccessLightSerializer(ItemAccessSerializer):
         ]
 
 
+class ItemVersionSerializer(serializers.ModelSerializer):
+    """Serializer for item versions."""
+
+    size = serializers.IntegerField(source="blob.size", read_only=True)
+    author = UserLightSerializer(read_only=True)
+    is_current = serializers.SerializerMethodField()
+
+    class Meta:
+        model = models.ItemVersion
+        fields = [
+            "id",
+            "created_at",
+            "updated_at",
+            "filename",
+            "mimetype",
+            "size",
+            "author",
+            "is_current",
+        ]
+        read_only_fields = fields
+
+    def get_is_current(self, version):
+        """Whether this version is the one the item currently points to."""
+        return version.item.blob_id == version.blob_id
+
+
 class RestrictionTargetSerializer(serializers.ModelSerializer):
     """Serialize the restricted folder a restriction points to."""
 

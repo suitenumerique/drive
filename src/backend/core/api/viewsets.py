@@ -70,6 +70,7 @@ from core.utils.analytics import posthog_capture
 from wopi.conversion import exceptions as conversion_exceptions
 from wopi.conversion.services import prepare_conversion
 from wopi.services import access as access_service
+from wopi.services.lock import LockService
 from wopi.tasks.conversion import convert_file
 from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
 
@@ -2725,6 +2726,88 @@ class ItemAccessViewSet(
             },
             item=item,
         )
+
+
+class ItemVersionViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    List, restore and delete the versions of an item.
+
+    GET    /api/v1.0/items/<resource_id>/versions/
+    POST   /api/v1.0/items/<resource_id>/versions/<pk>/restore/
+    DELETE /api/v1.0/items/<resource_id>/versions/<pk>/
+    """
+
+    lookup_field = "pk"
+    # Forcing to None makes sure the OpenApi schema does not infer that the
+    # list endpoint supports pagination.
+    pagination_class = None
+    permission_classes = [permissions.ItemVersionPermission]
+    queryset = models.ItemVersion.objects.select_related("blob", "author", "item").all()
+    resource_field_name = "item"
+    serializer_class = serializers.ItemVersionSerializer
+
+    @cached_property
+    def item(self):
+        """Get related item from resource ID in url."""
+        try:
+            return models.Item.objects.get(pk=self.kwargs["resource_id"])
+        except models.Item.DoesNotExist as exc:
+            raise drf.exceptions.NotFound() from exc
+
+    def filter_queryset(self, queryset):
+        """Override to filter on related resource."""
+        queryset = super().filter_queryset(queryset)
+        return queryset.filter(**{self.resource_field_name: self.kwargs["resource_id"]})
+
+    @drf.decorators.action(detail=True, methods=["post"], url_path="restore")
+    def restore(self, request, resource_id=None, pk=None):
+        """Restore a version as the item's current content."""
+        version = self.get_object()
+        item = self.item
+
+        # Refuse while a WOPI editing session holds the lock: the next autosave
+        # of the session would overwrite the restored content.
+        if LockService(item).get_lock(default=""):
+            return drf.response.Response(
+                {"detail": "The item is currently being edited."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        with transaction.atomic():
+            locked_item = models.Item.objects.select_for_update().get(pk=item.pk)
+            models.ItemVersion.objects.create(
+                item=locked_item,
+                blob=version.blob,
+                filename=version.filename or locked_item.filename,
+                mimetype=version.mimetype or locked_item.mimetype,
+                author=request.user,
+            )
+            locked_item.blob = version.blob
+            # The restored version's mimetype is applied; the item keeps its own filename.
+            locked_item.mimetype = version.mimetype or locked_item.mimetype
+            locked_item.save(update_fields=["blob", "mimetype", "updated_at"])
+
+        serializer = serializers.ItemSerializer(
+            locked_item, context=self.get_serializer_context()
+        )
+        return drf.response.Response(serializer.data, status=status.HTTP_200_OK)
+
+    def destroy(self, request, resource_id=None, pk=None):
+        """
+        Delete a version: the reference to its blob is detached and the object is
+        reaped by the garbage collector once no reference remains.
+        """
+        version = self.get_object()
+        if version.item.blob_id == version.blob_id:
+            raise drf.exceptions.ValidationError(
+                {"detail": "The current version cannot be deleted."},
+                code="version_is_current",
+            )
+
+        blob = version.blob
+        version.delete()
+        blob.mark_unreferenced_if_orphan()
+        return drf.response.Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class InvitationViewset(

@@ -6,7 +6,7 @@ from django.http import Http404
 from lasuite.drf.models.choices import PRIVILEGED_ROLES
 from rest_framework import permissions
 
-from core.models import RoleChoices, get_trashbin_cutoff
+from core.models import Item, RoleChoices, get_trashbin_cutoff
 
 ACTION_FOR_METHOD_TO_PERMISSION = {
     "versions_detail": {"DELETE": "versions_destroy", "GET": "versions_retrieve"},
@@ -117,6 +117,28 @@ class ItemAccessPermission(CreateWithPriviliegedRolesMixin, IsAuthenticated):
             return False
 
         return abilities.get(view.action, False)
+
+
+class ItemVersionPermission(IsAuthenticated):
+    """Versions are accessible only to users with an explicit access on the item.
+
+    Share links (even public or authenticated ones) never grant access to versions.
+    """
+
+    def has_permission(self, request, view):
+        """Check the user has an explicit access on the parent item."""
+        if not super().has_permission(request, view):
+            return False
+        try:
+            item = Item.objects.get(pk=view.kwargs.get("resource_id"))
+        except (Item.DoesNotExist, exceptions.ValidationError, ValueError):
+            return False
+        abilities = item.get_abilities(request.user)
+        if not abilities.has_access_role() or not abilities.can_get():
+            return False
+        if view.action in ("restore", "destroy"):
+            return abilities.can_update()
+        return True
 
 
 class ItemPermission(permissions.BasePermission):
