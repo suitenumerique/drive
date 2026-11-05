@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) record the provenance of items in a new source field
+
 ## [v0.27.0] - 2026-11-09
 
 ### Added
