@@ -11,6 +11,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(backend) keep the file on a WOPI rename to its current name
+- ♿️(frontend) associate file list headers with their cells
 
 ## [v0.26.0] - 2026-11-04
 
@@ -33,6 +34,7 @@ and this project adheres to
 
 ### Fixed
 
+- ♿️(frontend) identify the current page in the browser title
 - 🐛(frontend) show the full item title in a tooltip when truncated
 - 🐛(backend) fix the upload mimetype allowlist
 

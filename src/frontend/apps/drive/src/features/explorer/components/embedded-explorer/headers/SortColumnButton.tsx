@@ -9,12 +9,14 @@ type SortColumnId = NonNullable<SortState>["columnId"];
 
 type SortColumnButtonProps<TColumnId extends SortColumnId> = {
   columnId: TColumnId;
+  columnLabel: string;
   sortState: SortState;
   onSort: (columnId: TColumnId) => void;
 };
 
 export const SortColumnButton = <TColumnId extends SortColumnId>({
   columnId,
+  columnLabel,
   sortState,
   onSort,
 }: SortColumnButtonProps<TColumnId>) => {
@@ -24,9 +26,13 @@ export const SortColumnButton = <TColumnId extends SortColumnId>({
   const direction = isActive ? sortState.direction : null;
 
   const nextTooltip = (() => {
-    if (!isActive) return t("explorer.grid.sort.ascending");
-    if (direction === "asc") return t("explorer.grid.sort.descending");
-    return t("explorer.grid.sort.reset");
+    if (!isActive) {
+      return t("explorer.grid.sort.ascending", { column: columnLabel });
+    }
+    if (direction === "asc") {
+      return t("explorer.grid.sort.descending", { column: columnLabel });
+    }
+    return t("explorer.grid.sort.reset", { column: columnLabel });
   })();
 
   const sortIcon = (() => {
