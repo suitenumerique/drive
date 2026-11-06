@@ -18,6 +18,14 @@ and this project adheres to
 
 - 💄(frontend) drop the beta badge from the DSFR logo
 
+### Removed
+
+- 🔥(backend) drop drive_storage_used_bytes, use the usage metrics endpoint
+
+### Fixed
+
+- ⚡️(backend) answer the business metrics counts from indexes
+
 ## [v0.27.0] - 2026-11-09
 
 ### Added

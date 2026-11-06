@@ -3,12 +3,15 @@
 from unittest import mock
 
 from django.core.cache import cache
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 import pytest
 from prometheus_client import CollectorRegistry
 
 from core import factories, models
+from core.metrics import business
 from core.metrics.business import CACHE_KEY, DriveBusinessCollector
 
 pytestmark = pytest.mark.django_db
@@ -45,7 +48,6 @@ def test_metrics_business_empty_database():
     assert samples[("drive_users_count", (("is_active", "false"),))] == 0
     assert samples[("drive_invitations_count", ())] == 0
     assert samples[("drive_accesses_count", ())] == 0
-    assert samples[("drive_storage_used_bytes", ())] == 0
 
 
 def _file(upload_state, **kwargs):
@@ -91,7 +93,6 @@ def test_metrics_business_values():
     assert samples[("drive_users_count", (("is_active", "false"),))] == 1
     assert samples[("drive_invitations_count", ())] == models.Invitation.objects.count()
     assert samples[("drive_accesses_count", ())] == models.ItemAccess.objects.count()
-    assert samples[("drive_storage_used_bytes", ())] == 120
 
 
 def test_metrics_business_cached(django_assert_num_queries):
@@ -118,3 +119,33 @@ def test_metrics_business_failing_family_is_skipped():
 
     assert samples == {("drive_invitations_count", ()): 3}
     assert cache.get(CACHE_KEY) is None
+
+
+def _plan(run):
+    """The plan of the query run() sends, with sequential scans ruled out."""
+    with CaptureQueriesContext(connection) as queries:
+        run()
+    with connection.cursor() as cursor:
+        cursor.execute("SET LOCAL enable_seqscan = off")
+        cursor.execute(f"EXPLAIN {queries[-1]['sql']}")
+        return "\n".join(row[0] for row in cursor.fetchall())
+
+
+@pytest.mark.parametrize(
+    "run, index",
+    [
+        (lambda: list(business.items_queryset()), "item_type_upload_state_idx"),
+        (lambda: list(business.users_queryset()), "user_is_active_idx"),
+    ],
+)
+def test_metrics_business_queries_use_their_index(run, index):
+    """
+    The counts over the large tables should be answerable from their index alone:
+    a query that no longer matches it (COUNT(id), another filter) reads the whole
+    item table, which takes minutes on a production sized database.
+    """
+    _file(models.ItemUploadStateChoices.READY, size=10)
+
+    plan = _plan(run)
+
+    assert f"Index Only Scan using {index}" in plan, plan

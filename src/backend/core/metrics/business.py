@@ -11,7 +11,7 @@ import logging
 
 from django.conf import settings
 from django.core.cache import cache
-from django.db.models import Count, Sum
+from django.db.models import Count
 
 from prometheus_client.core import GaugeMetricFamily
 
@@ -22,16 +22,30 @@ logger = logging.getLogger(__name__)
 CACHE_KEY = "metrics:business"
 
 
+def items_queryset():
+    """
+    The item counts, by type and by upload state.
+
+    COUNT(*) and not COUNT(id): the id is not in item_type_upload_state_idx, and
+    counting it would read the whole item table instead of the index.
+    """
+    return (
+        models.Item.objects.filter(hard_deleted_at__isnull=True)
+        .values("type", "upload_state")
+        .annotate(count=Count("*"))
+        .order_by()
+    )
+
+
+def users_queryset():
+    """The user counts, active or not, answered from user_is_active_idx."""
+    return models.User.objects.values("is_active").annotate(count=Count("*")).order_by()
+
+
 def _count_items():
     """Count the items that are not hard deleted, by type and by upload state."""
     counts = {"total": 0, "types": {}, "upload_states": {}}
-    rows = (
-        models.Item.objects.filter(hard_deleted_at__isnull=True)
-        .values("type", "upload_state")
-        .annotate(count=Count("id"))
-        .order_by()
-    )
-    for row in rows:
+    for row in items_queryset():
         counts["total"] += row["count"]
         counts["types"][row["type"]] = counts["types"].get(row["type"], 0) + row["count"]
         # folders have no upload state
@@ -43,8 +57,7 @@ def _count_items():
 
 def _count_users():
     """Count the users, active or not."""
-    rows = models.User.objects.values("is_active").annotate(count=Count("id")).order_by()
-    return {row["is_active"]: row["count"] for row in rows}
+    return {row["is_active"]: row["count"] for row in users_queryset()}
 
 
 def _count_invitations():
@@ -55,19 +68,11 @@ def _count_accesses():
     return models.ItemAccess.objects.count()
 
 
-def _storage_used():
-    """What counts in the quotas, the way CreatorStorageComputeBackend adds it up."""
-    return models.Item.objects.filter(hard_deleted_at__isnull=True, quota_excluded=False).aggregate(
-        total=Sum("size", default=0)
-    )["total"]
-
-
 FAMILIES = {
     "items": _count_items,
     "users": _count_users,
     "invitations": _count_invitations,
     "accesses": _count_accesses,
-    "storage": _storage_used,
 }
 
 
@@ -133,10 +138,3 @@ class DriveBusinessCollector:
 
         if (accesses := values.get("accesses")) is not None:
             yield _gauge("drive_accesses_count", "Accesses granted on items", accesses)
-
-        if (storage := values.get("storage")) is not None:
-            yield _gauge(
-                "drive_storage_used_bytes",
-                "Size of the items counted in the quotas, not hard deleted",
-                storage,
-            )
