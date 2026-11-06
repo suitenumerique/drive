@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 import { getRowItem } from "./utils-embedded-grid";
 import { getItemTree, openTreeNode } from "./utils-tree";
+import { moveConfirmationDialog } from "./utils/move-utils";
 import {
   findItem,
   itemUrl,
@@ -66,7 +67,7 @@ for (const path of [
     // 4. Drop onto the restriction entry: moving into a folder with different
     //    accesses asks for confirmation.
     await pointerDrop(page, source, destination);
-    const modal = page.getByRole("dialog", { name: "Move confirmation modal" });
+    const modal = moveConfirmationDialog(page);
     await expect(modal).toBeVisible();
     // 5. Confirm, listening to one move request per dragged item to check
     //    where each one is sent.
@@ -142,9 +143,7 @@ for (const destination of [names.denied, names.deleted, names.readOnly]) {
       await pointerDrop(page, source, target);
       // 4. The drop is ignored: no confirmation, the drag ends cleanly and
       //    the folder is still listed in the parent.
-      await expect(
-        page.getByRole("dialog", { name: "Move confirmation modal" }),
-      ).toHaveCount(0);
+      await expect(moveConfirmationDialog(page)).toHaveCount(0);
       await expect(page.locator(".explorer__drag-overlay")).toHaveCount(0);
       const children = await listItems(
         page,
@@ -184,9 +183,7 @@ test("a restriction entry cannot be dropped into its own target or descendant", 
     );
     // 4. Nothing happens: no confirmation, no request, and the entry stays
     //    in the parent.
-    await expect(
-      page.getByRole("dialog", { name: "Move confirmation modal" }),
-    ).toHaveCount(0);
+    await expect(moveConfirmationDialog(page)).toHaveCount(0);
     const children = await listItems(
       page,
       `items/${folders.parent.id}/children/`,
