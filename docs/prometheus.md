@@ -41,7 +41,8 @@ scrape_configs:
 | `PROMETHEUS_DB_METRICS_ENABLED` | Count and time the SQL queries | `True` |
 | `PROMETHEUS_CELERY_QUEUE_METRICS_ENABLED` | Report the length of the Celery queue | `True` |
 | `PROMETHEUS_BUSINESS_METRICS_ENABLED` | Report the business metrics | `True` |
-| `PROMETHEUS_BUSINESS_METRICS_CACHE_TTL` | Seconds the business metrics are kept in the cache | `300` |
+| `PROMETHEUS_BUSINESS_METRICS_CACHE_TTL` | Seconds after which the business metrics are computed again | `300` |
+| `PROMETHEUS_BUSINESS_METRICS_STATEMENT_TIMEOUT` | Seconds after which Postgres cancels a business metrics query | `10` |
 | `PROMETHEUS_MULTIPROC_DIR` | Directory the gunicorn workers share their metrics through | `<tmp>/drive-prometheus-<uid>` |
 
 ## What is measured
@@ -71,9 +72,22 @@ asked to the broker at scrape time (Redis brokers only).
 
 ### Business metrics
 
-Computed from the database at scrape time and kept in the shared cache for
-`PROMETHEUS_BUSINESS_METRICS_CACHE_TTL` seconds. Hard deleted items are never
-counted.
+Computed from the database and kept in the shared cache. Hard deleted items are
+never counted.
+
+- Once the values are older than `PROMETHEUS_BUSINESS_METRICS_CACHE_TTL`, the
+  scrape that takes a refresh lock in the cache computes them again, for every
+  replica. All the other scrapes answer right away with the values they have,
+  however old: a slow computation never runs twice at once.
+- Postgres cancels any of these queries after
+  `PROMETHEUS_BUSINESS_METRICS_STATEMENT_TIMEOUT` seconds. The family keeps its
+  previous values, and is tried again after the cache ttl.
+- The counts are answered from small partial indexes (migration
+  `0036_business_metrics_indexes`, built `CONCURRENTLY`): on 4M items, 26MB
+  and 1MB are read instead of the whole 1.5GB item table. Expect the migration
+  to take a few minutes on a large database.
+- The values lag behind the database by up to the cache ttl, plus the
+  computation time. Before the first computation, the families are absent.
 
 | Metric | Description |
 |---|---|
@@ -83,7 +97,8 @@ counted.
 | `drive_users_count{is_active}` | Users, active or not |
 | `drive_invitations_count` | Invitations to items |
 | `drive_accesses_count` | Accesses granted on items |
-| `drive_storage_used_bytes` | Size of the items counted in the quotas |
+| `drive_business_metrics_age_seconds{family}` | Time since a family (`items`, `users`, `invitations`, `accesses`) was computed |
+| `drive_business_metrics_duration_seconds{family}` | Time its last computation took |
 
 No label ever carries a path, a user or an item identifier. Every sample
 carries a `hostname` label (the pod name in Kubernetes).
