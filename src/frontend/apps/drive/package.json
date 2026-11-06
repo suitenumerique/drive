@@ -51,6 +51,7 @@
     "eslint-config-next": "15.1.7",
     "jest": "29.7.0",
     "ts-jest": "29.2.5",
+    "ts-node": "10.9.2",
     "deepmerge": "4.3.1",
     "typescript": "5.4.5"
   }
