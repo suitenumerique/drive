@@ -3,14 +3,22 @@ import { expect } from "@playwright/test";
 import { PageOrLocator } from "./types-utils";
 import { getRowItem } from "../utils-embedded-grid";
 
+// Dialogs are named after their visible title, their aria-label is ignored.
+// The move modal title is followed by the moved item ("Move" + "Choose…").
+export const moveFolderDialog = (page: PageOrLocator) =>
+  page.getByRole("dialog", { name: /^Move/ });
+
+export const moveConfirmationDialog = (page: PageOrLocator) =>
+  page.getByRole("dialog", { name: "Transfer rights" });
+
 export const getMoveFolderModal = async (page: PageOrLocator) => {
-  const moveFolderModal = page.getByLabel("Move folder modal");
+  const moveFolderModal = moveFolderDialog(page);
   await expect(moveFolderModal).toBeVisible();
   return moveFolderModal;
 };
 
 export const getMoveConfirmationModal = async (page: PageOrLocator) => {
-  const moveConfirmationModal = page.getByLabel("Move confirmation modal");
+  const moveConfirmationModal = moveConfirmationDialog(page);
   await expect(moveConfirmationModal).toBeVisible();
   return moveConfirmationModal;
 };

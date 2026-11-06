@@ -52,6 +52,7 @@ export type ItemBreadcrumb = {
   path: string;
   depth: number;
   main_workspace: boolean;
+  is_restricted?: boolean;
 };
 
 export type Item = {

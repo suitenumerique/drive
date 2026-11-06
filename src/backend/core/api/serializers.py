@@ -851,8 +851,8 @@ class BreadcrumbItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Item
-        fields = ["id", "title", "path", "depth", "main_workspace"]
-        read_only_fields = ["id", "title", "path", "depth", "main_workspace"]
+        fields = ["id", "title", "path", "depth", "main_workspace", "is_restricted"]
+        read_only_fields = fields
 
 
 class UserMeSerializer(UserSerializer):
