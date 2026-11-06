@@ -1,6 +1,5 @@
 minio:
   enabled: true
-  image: quay.io/minio/minio
   name: minio
   # serviceNameOverride: drive-minio
   ingress:
@@ -15,8 +14,6 @@ minio:
     tls:
       enabled: true
       secretName: drive-tls
-  api:
-    port: 80
   username: dinum
   password: password
   bucket: drive-media-storage
