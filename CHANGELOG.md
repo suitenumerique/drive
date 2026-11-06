@@ -25,6 +25,7 @@ and this project adheres to
 ### Fixed
 
 - ⚡️(backend) answer the business metrics counts from indexes
+- 🐛(backend) compute the business metrics once for all the scrapes
 
 ## [v0.27.0] - 2026-11-09
 
