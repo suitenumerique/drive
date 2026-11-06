@@ -1,6 +1,6 @@
 {
   "name": "main",
-  "version": "0.25.3",
+  "version": "0.26.0",
   "private": true,
   "workspaces": [
     "apps/*",

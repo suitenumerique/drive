@@ -57,6 +57,7 @@ This document lists all configurable environment variables for the Drive applica
 | `EXTERNAL_API_AUD_ITEM_ATTRIBUTES` | Extra attributes applied to items created through the external API, keyed by the token audience of the request, e.g. `{"some_audience": {"quota_excluded": true}}` | `{}` |
 | `FEATURES_ALPHA` | Enable alpha features | `False` |
 | `FEATURES_INDEXED_SEARCH` | Enable the search of indexed files through the API | `True` |
+| `FEATURES_RESTRICTED_FOLDERS_USERS` | Emails of the users allowed to activate and deactivate folder restrictions, in lowercase and separated by commas | `[]` |
 | `FILE_EXTENSIONS_ALLOWED` | List of file extension allowed to be uploaded | See in the settings.py file |
 | `FILE_EXTENSIONS_DENIED` | List of file extension refused at upload in `denylist` mode | See in the settings.py file |
 | `FILE_MIMETYPE_ALLOWED` | List of file mimetype allowed to be uploaded | See in the setings.py file |

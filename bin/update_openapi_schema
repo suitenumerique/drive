@@ -4,9 +4,6 @@ source "$(dirname "${BASH_SOURCE[0]}")/_config.sh"
 
 _dc_run \
     -e DJANGO_CONFIGURATION=Test \
+    -e UPDATE_OPENAPI_SCHEMA=1 \
     app-dev \
-    python manage.py spectacular \
-    --api-version 'v1.0' \
-    --urlconf 'drive.api_urls' \
-    --format openapi-json \
-    --file /app/core/tests/swagger/swagger.json
+    pytest core/tests/swagger

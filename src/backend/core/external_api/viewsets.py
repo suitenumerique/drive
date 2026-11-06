@@ -32,13 +32,17 @@ class ResourceServerRestrictionMixin:
         external_api_config = settings.EXTERNAL_API.get(resource_name, {})
         return list(external_api_config.get("actions", []))
 
+    def get_permissions(self):
+        """Apply the resource server checks to every action, whatever its permission classes."""
+        return [ResourceServerClientPermission(), *super().get_permissions()]
+
 
 class ResourceServerItemViewSet(ResourceServerRestrictionMixin, ItemViewSet):
     """Resource Server Viewset for the Drive app."""
 
     authentication_classes = [ResourceServerAuthentication]
 
-    permission_classes = [ResourceServerClientPermission & ItemPermission]
+    permission_classes = [ItemPermission]
 
     @property
     def resource_server_actions(self):
@@ -56,7 +60,7 @@ class ResourceServerUserViewSet(ResourceServerRestrictionMixin, UserViewSet):
 
     authentication_classes = [ResourceServerAuthentication]
 
-    permission_classes = [ResourceServerClientPermission & IsSelf]
+    permission_classes = [IsSelf]
 
     @property
     def resource_server_actions(self):
@@ -69,7 +73,7 @@ class ResourceServerItemAccessViewSet(ResourceServerRestrictionMixin, ItemAccess
 
     authentication_classes = [ResourceServerAuthentication]
 
-    permission_classes = [ResourceServerClientPermission & ItemAccessPermission]
+    permission_classes = [ItemAccessPermission]
 
     @property
     def resource_server_actions(self):
@@ -82,7 +86,7 @@ class ResourceServerInvitationViewSet(ResourceServerRestrictionMixin, Invitation
 
     authentication_classes = [ResourceServerAuthentication]
 
-    permission_classes = [ResourceServerClientPermission & InvitationPermission]
+    permission_classes = [InvitationPermission]
 
     @property
     def resource_server_actions(self):

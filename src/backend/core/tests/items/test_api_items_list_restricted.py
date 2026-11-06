@@ -109,7 +109,7 @@ def test_api_items_list_restricted_visible_when_restriction_deleted():
 
 
 def test_api_items_list_restricted_visible_when_restriction_trashed():
-    """A restriction under a soft deleted ancestor does not hide the restricted root."""
+    """Trashing the container lifts the restriction and shows the root to its members."""
     user = factories.UserFactory()
     parent = factories.ItemFactory(
         type=models.ItemTypeChoices.FOLDER,
@@ -125,8 +125,8 @@ def test_api_items_list_restricted_visible_when_restriction_trashed():
     assert str(folder.id) in _listed_ids(client)
 
 
-def test_api_items_list_restricted_hidden_again_after_restore():
-    """Restoring the trashed container hides the restricted root again."""
+def test_api_items_list_restricted_still_visible_after_restore():
+    """Restoring the trashed container does not bring back the lifted restriction."""
     user = factories.UserFactory()
     parent = factories.ItemFactory(
         type=models.ItemTypeChoices.FOLDER,
@@ -134,7 +134,7 @@ def test_api_items_list_restricted_hidden_again_after_restore():
     )
     folder = _create_restricted_folder(parent, factories.UserFactory())
     factories.UserItemAccessFactory(item=folder, user=user, role="reader")
-    parent.soft_delete()
+    parent.soft_delete(user)
     parent.restore()
 
     client = APIClient()
@@ -142,7 +142,7 @@ def test_api_items_list_restricted_hidden_again_after_restore():
 
     listed = _listed_ids(client)
     assert str(parent.id) in listed
-    assert str(folder.id) not in listed
+    assert str(folder.id) in listed
 
 
 @pytest.mark.parametrize("reach", ["public", "authenticated"])

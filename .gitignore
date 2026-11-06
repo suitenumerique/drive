@@ -54,9 +54,6 @@ node_modules
 # Mails
 src/backend/core/templates/mail/
 
-# Swagger
-**/swagger.json
-
 # Logs
 *.log
 

@@ -212,7 +212,7 @@ export const useItemActionMenuItems = ({
         label: item.is_favorite
           ? t("explorer.item.actions.unfavorite")
           : t("explorer.item.actions.favorite"),
-        isHidden: !item.abilities?.retrieve,
+        isHidden: !item.abilities?.favorite,
         callback: item.is_favorite
           ? () => handleUnfavorite(effectiveItemId)
           : () => handleFavorite(effectiveItemId, item),

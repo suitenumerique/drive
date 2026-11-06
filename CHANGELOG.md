@@ -8,11 +8,18 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛(backend) keep the file on a WOPI rename to its current name
+
+## [v0.26.0] - 2026-11-04
+
 ### Added
 
 - ✨(backend) allow to leave an item #826
 - ✨(frontend) allow to leave an item #826
 - ✨(frontend) restrict and reopen folder access from the share modal
+- ✨(backend) open folder restriction to a list of users
 - 🔊(backend) log rejected WOPI requests
 - ✨(backend) browse the item tree and its accesses from the admin
 - ✨(backend) list the root items of a user in the admin
@@ -653,7 +660,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.25.3...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.26.0...main
+[v0.26.0]: https://github.com/suitenumerique/drive/releases/v0.26.0
 [v0.25.3]: https://github.com/suitenumerique/drive/releases/v0.25.3
 [v0.25.2]: https://github.com/suitenumerique/drive/releases/v0.25.2
 [v0.25.1]: https://github.com/suitenumerique/drive/releases/v0.25.1

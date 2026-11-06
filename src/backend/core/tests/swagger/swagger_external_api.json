@@ -1,0 +1,4041 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "drive API",
+        "version": "1.0.0 (v1.0)",
+        "description": "This is the drive API schema."
+    },
+    "paths": {
+        "/external_api/v1.0/items/": {
+            "get": {
+                "operationId": "items_list",
+                "description": "List top level items with pagination and filtering.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "required": false,
+                        "in": "query",
+                        "description": "Number of results to return per page.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedListItemList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "items_create",
+                "description": "Resource Server Viewset for the Drive app.",
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateItemRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateItemRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CreateItem"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/": {
+            "get": {
+                "operationId": "items_retrieve",
+                "description": "Add a trace that the item was accessed by a user. This is used to list items\non a user's list view even though the user has no specific role in the item (link\naccess when the link reach configuration of the item allows it).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "items_update",
+                "description": "Resource Server Viewset for the Drive app.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "items_partial_update",
+                "description": "Resource Server Viewset for the Drive app.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedItemRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedItemRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "items_destroy",
+                "description": "Resource Server Viewset for the Drive app.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/batch-share/": {
+            "post": {
+                "operationId": "items_batch_share_create",
+                "description": "Share an item with a list of contacts in a single request.\n\nEmails matching an existing user get an access, unknown emails get an\ninvitation. All rows are validated before any database write so a\nrejected batch never creates a partial share state.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BatchShareRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BatchShareRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BatchShareResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/breadcrumb/": {
+            "get": {
+                "operationId": "items_breadcrumb_retrieve",
+                "description": "Reconnect accessible parent chains across nested restriction boundaries.\n\nFor Root -> Projects -> Restricted -> Current, restriction splits storage\ninto Root -> Projects -> Entry and a separate Restricted -> Current tree.\nFollow Entry's target relationship backwards to rebuild the displayed\n[Root, Projects, Restricted, Current] chain, without including Entry or\nchanging any stored paths/depths.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BreadcrumbItem"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/children/": {
+            "get": {
+                "operationId": "items_children_retrieve",
+                "description": "Handle listing and creating children of a item",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ListItem"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "items_children_create",
+                "description": "Handle listing and creating children of a item",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ListItemRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ListItemRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ListItem"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/convert/": {
+            "post": {
+                "operationId": "items_convert_create",
+                "description": "Queue a legacy Office file conversion.\n\nCreates a placeholder Item in CONVERTING state in the destination folder\nand dispatches the celery task that will attach the converted bytes.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/download/": {
+            "get": {
+                "operationId": "items_download_retrieve",
+                "description": "Permalink endpoint for downloading an item's file.\n\nReturns a redirect to the current media URL for the item, so this link\nremains valid even after the item is renamed. Authentication is still\nenforced by the existing media-auth mechanism on the redirected URL.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/duplicate/": {
+            "post": {
+                "operationId": "items_duplicate_create",
+                "description": "Duplicate an item of type File. The item is duplicated in the folder where the original\nitem is.\nThe user who duplicates becomes the creator of the duplicate",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/export/": {
+            "get": {
+                "operationId": "items_export_retrieve",
+                "description": "Stream a recursive ZIP archive of a folder's content.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/favorite/": {
+            "post": {
+                "operationId": "items_favorite_create",
+                "description": "Mark or unmark the item as a favorite for the logged-in user based on the HTTP method.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "items_favorite_destroy",
+                "description": "Mark or unmark the item as a favorite for the logged-in user based on the HTTP method.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/hard-delete/": {
+            "delete": {
+                "operationId": "items_hard_delete_destroy",
+                "description": "Hard delete an item.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/leave/": {
+            "post": {
+                "operationId": "items_leave_create",
+                "description": "Remove item_accesses if exists and the link_trace related to the current item\nfor the connected user.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/link-configuration/": {
+            "put": {
+                "operationId": "items_link_configuration_update",
+                "description": "Update link configuration with specific rights (cf get_abilities).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/move/": {
+            "post": {
+                "operationId": "items_move_create",
+                "description": "Move an item to another location within the item tree.\n\nThe user must be an administrator or owner of both the item being moved\nand the target parent item.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/restore/": {
+            "post": {
+                "operationId": "items_restore_create",
+                "description": "Restore a soft-deleted item if it was deleted less than x days ago.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/restrict/": {
+            "post": {
+                "operationId": "items_restrict_create",
+                "description": "Activate or deactivate restriction on the folder based on the HTTP method.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "items_restrict_destroy",
+                "description": "Activate or deactivate restriction on the folder based on the HTTP method.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/tree/": {
+            "get": {
+                "operationId": "items_tree_retrieve",
+                "description": "List ancestors tree above the item\nWhat we need to display is the tree structure opened for the current document.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ListItem"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/unlock/": {
+            "post": {
+                "operationId": "items_unlock_create",
+                "description": "Unlock the item share link with its password for the current session.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/upload-ended/": {
+            "post": {
+                "operationId": "items_upload_ended_create",
+                "description": "Start the analysis of an item after a successful upload.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{id}/wopi/": {
+            "get": {
+                "operationId": "items_wopi_retrieve",
+                "description": "This view is used to generate an access token and access token ttl in order to start\na WOPI session for the item and the current user.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{resource_id}/accesses/": {
+            "get": {
+                "operationId": "items_accesses_list",
+                "description": "List item accesses for an item and its ancestors.\n\nReturns the deepest access per target (user/team) with computed max_ancestors_role.\nFor inherited accesses (not on current item), max_ancestors_role equals the access's role.\n\nNon-privileged users only see privileged roles to prevent information leakage.\nResults are ordered by item depth and creation date.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ItemAccess"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "items_accesses_create",
+                "description": "Resource Server Viewset for ItemAccess.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemAccessRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemAccessRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ItemAccess"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{resource_id}/accesses/{id}/": {
+            "get": {
+                "operationId": "items_accesses_retrieve",
+                "description": "Resource Server Viewset for ItemAccess.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ItemAccess"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "items_accesses_update",
+                "description": "We not use the update mixin to apply a specific behavior we can't implement using\nperform_update method.\n\nIf the role is updated and is the same role as the max ancestors role,\nwe don't want to have two consecutive explicit accesses with the same role.\nWe have to delete the current access, this item will have an inherited access\nwith the correct role.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemAccessRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemAccessRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ItemAccess"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "items_accesses_partial_update",
+                "description": "Partial update the item access.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedItemAccessRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedItemAccessRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ItemAccess"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "items_accesses_destroy",
+                "description": "Resource Server Viewset for ItemAccess.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{resource_id}/invitations/": {
+            "get": {
+                "operationId": "items_invitations_list",
+                "description": "Resource Server Viewset for Invitations.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "required": false,
+                        "in": "query",
+                        "description": "Number of results to return per page.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedInvitationList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "items_invitations_create",
+                "description": "Resource Server Viewset for Invitations.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/InvitationRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/InvitationRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Invitation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/{resource_id}/invitations/{id}/": {
+            "get": {
+                "operationId": "items_invitations_retrieve",
+                "description": "Resource Server Viewset for Invitations.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Invitation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "items_invitations_update",
+                "description": "Resource Server Viewset for Invitations.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/InvitationRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/InvitationRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Invitation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "items_invitations_partial_update",
+                "description": "Resource Server Viewset for Invitations.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedInvitationRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedInvitationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Invitation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "items_invitations_destroy",
+                "description": "Resource Server Viewset for Invitations.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/deletion-info/": {
+            "post": {
+                "operationId": "items_deletion_info_create",
+                "description": "Return deletion metadata for an entire selection without changing items.",
+                "tags": [
+                    "items"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemsDeletionInfoRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ItemsDeletionInfoRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "object",
+                                        "properties": {
+                                            "hasRestrictedDescendent": {
+                                                "type": "boolean"
+                                            }
+                                        },
+                                        "required": [
+                                            "hasRestrictedDescendent"
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/favorites/": {
+            "get": {
+                "operationId": "items_favorites_retrieve",
+                "description": "Get list of favorite items for the current user.",
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ListItemLight"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/media-auth/": {
+            "get": {
+                "operationId": "items_media_auth_retrieve",
+                "description": "This view is used by an Nginx subrequest to control access to an item's\nattachment file.\n\nWhen we let the request go through, we compute authorization headers that will be added to\nthe request going through thanks to the nginx.ingress.kubernetes.io/auth-response-headers\nannotation. The request will then be proxied to the object storage backend who will\nrespond with the file after checking the signature included in headers.",
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Item"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/recents/": {
+            "get": {
+                "operationId": "items_recents_retrieve",
+                "description": "Get list of recents items for the current user.",
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ListItemLight"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/search/": {
+            "get": {
+                "operationId": "items_search_retrieve",
+                "description": "Returns a DRF response containing the filtered, annotated and ordered items.\n\nApplies filtering based on request parameter 'q' from `SearchItemFilter`.\nDepending of the configuration it can be:\n - A fulltext search through the opensearch indexation app \"find\" if the backend is\n   enabled (see SEARCH_INDEXER_CLASS) and the feature flag INDEXED_SEARCH_ENABLED is True\n - A filtering by the model fields 'title' & 'type'.",
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SearchItem"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/items/trashbin/": {
+            "get": {
+                "operationId": "items_trashbin_retrieve",
+                "description": "Retrieve soft-deleted items for which the current user has the owner role.\n\nThe selected items are those deleted within the cutoff period defined in the\nsettings (see TRASHBIN_CUTOFF_DAYS), before they are considered permanently deleted.\n\nOwner access on items or their ancestors is resolved from the subtrees the user\nowns, see `trashed_owned_by`.",
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ListItem"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/metrics/usage/": {
+            "get": {
+                "operationId": "metrics_usage_list",
+                "description": "Handle listing with account_type branching.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "account_email",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "account_id_key",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "account_id_value",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "account_type",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "organization",
+                                "user"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "required": false,
+                        "in": "query",
+                        "description": "Number of results to return per page.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "metrics"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedUsageMetricList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/users/": {
+            "get": {
+                "operationId": "users_list",
+                "description": "Resource Server Viewset for the Drive app.",
+                "tags": [
+                    "users"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/User"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/users/{id}/": {
+            "put": {
+                "operationId": "users_update",
+                "description": "Resource Server Viewset for the Drive app.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "users"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UserRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UserRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "users_partial_update",
+                "description": "Resource Server Viewset for the Drive app.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "users"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedUserRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedUserRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/users/contacts/": {
+            "get": {
+                "operationId": "users_contacts_retrieve",
+                "description": "Return the people involved in sharing with the current user, in either\ndirection, most frequent first.\n\nA contact either holds an access on one of the user's items (\"shared\nwith\") or created one of them (\"shared by\"). Frequency is the number of\nsuch items they hold an access on, so a contact's own private items do\nnot inflate their ranking.",
+                "tags": [
+                    "users"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserLight"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/external_api/v1.0/users/me/": {
+            "get": {
+                "operationId": "users_me_retrieve",
+                "description": "Return information on currently logged user",
+                "tags": [
+                    "users"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserMe"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "BatchShareRequest": {
+                "type": "object",
+                "description": "Validate the payload of the item batch-share action.",
+                "properties": {
+                    "rows": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BatchShareRowRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "rows"
+                ]
+            },
+            "BatchShareResponse": {
+                "type": "object",
+                "properties": {
+                    "accesses_created": {
+                        "type": "integer"
+                    },
+                    "invitations_created": {
+                        "type": "integer"
+                    },
+                    "skipped": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    }
+                },
+                "required": [
+                    "accesses_created",
+                    "invitations_created",
+                    "skipped"
+                ]
+            },
+            "BatchShareRowRequest": {
+                "type": "object",
+                "description": "One row of a batch share payload: a contact email and the role to grant.",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "minLength": 1
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/RoleEnum"
+                    }
+                },
+                "required": [
+                    "email",
+                    "role"
+                ]
+            },
+            "BlankEnum": {
+                "enum": [
+                    ""
+                ]
+            },
+            "BreadcrumbItem": {
+                "type": "object",
+                "description": "Serialize breadcrumb items.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "description": "primary key for the record as UUID"
+                    },
+                    "title": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "path": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "depth": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "main_workspace": {
+                        "type": "boolean",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "depth",
+                    "id",
+                    "main_workspace",
+                    "path",
+                    "title"
+                ]
+            },
+            "CreateItem": {
+                "type": "object",
+                "description": "Serializer used to create a new item",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "primary key for the record as UUID"
+                    },
+                    "abilities": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "Return abilities of the logged-in user on the instance.",
+                        "readOnly": true
+                    },
+                    "ancestors_link_reach": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "ancestors_link_role": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "computed_link_reach": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "computed_link_role": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Created on",
+                        "description": "date and time at which a record was created"
+                    },
+                    "creator": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/UserLight"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "depth": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "is_favorite": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "link_role": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/LinkRoleEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "link_reach": {
+                        "readOnly": true,
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/LinkReachEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "link_expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Link expiration date"
+                    },
+                    "has_link_password": {
+                        "type": "boolean",
+                        "description": "Return whether the item link is protected by a password.",
+                        "readOnly": true
+                    },
+                    "nb_accesses": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "numchild": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "numchild_folder": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "path": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Updated on",
+                        "description": "date and time at which a record was last updated"
+                    },
+                    "user_role": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "type": {
+                        "$ref": "#/components/schemas/TypeEnum"
+                    },
+                    "upload_state": {
+                        "readOnly": true,
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/UploadStateEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "url_permalink": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "filename": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
+                    "policy": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "main_workspace": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "size": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "hard_delete_at": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "abilities",
+                    "ancestors_link_reach",
+                    "ancestors_link_role",
+                    "computed_link_reach",
+                    "computed_link_role",
+                    "created_at",
+                    "creator",
+                    "depth",
+                    "hard_delete_at",
+                    "has_link_password",
+                    "is_favorite",
+                    "link_expires_at",
+                    "link_reach",
+                    "link_role",
+                    "main_workspace",
+                    "nb_accesses",
+                    "numchild",
+                    "numchild_folder",
+                    "path",
+                    "policy",
+                    "updated_at",
+                    "upload_state",
+                    "url",
+                    "url_permalink",
+                    "user_role"
+                ]
+            },
+            "CreateItemRequest": {
+                "type": "object",
+                "description": "Serializer used to create a new item",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "primary key for the record as UUID"
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                    },
+                    "type": {
+                        "$ref": "#/components/schemas/TypeEnum"
+                    },
+                    "filename": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
+                    "size": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "extension": {
+                        "writeOnly": true,
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ExtensionEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    }
+                }
+            },
+            "ExtensionEnum": {
+                "enum": [
+                    "odt",
+                    "ods",
+                    "odp"
+                ],
+                "type": "string",
+                "description": "* `odt` - odt\n* `ods` - ods\n* `odp` - odp"
+            },
+            "Invitation": {
+                "type": "object",
+                "description": "Serialize invitations.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "description": "primary key for the record as UUID"
+                    },
+                    "abilities": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "Return abilities of the logged-in user on the instance.",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Created on",
+                        "description": "date and time at which a record was created"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "title": "Email address",
+                        "maxLength": 254
+                    },
+                    "item": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "primary key for the record as UUID",
+                        "readOnly": true
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/RoleEnum"
+                    },
+                    "issuer": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "primary key for the record as UUID",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "is_expired": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "abilities",
+                    "created_at",
+                    "email",
+                    "id",
+                    "is_expired",
+                    "issuer",
+                    "item"
+                ]
+            },
+            "InvitationRequest": {
+                "type": "object",
+                "description": "Serialize invitations.",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "minLength": 1,
+                        "title": "Email address",
+                        "maxLength": 254
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/RoleEnum"
+                    }
+                },
+                "required": [
+                    "email"
+                ]
+            },
+            "Item": {
+                "type": "object",
+                "description": "Serialize items with all fields for display in detail views.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "description": "primary key for the record as UUID"
+                    },
+                    "abilities": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "Return abilities of the logged-in user on the instance.",
+                        "readOnly": true
+                    },
+                    "ancestors_link_reach": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "ancestors_link_role": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "computed_link_reach": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "computed_link_role": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Created on",
+                        "description": "date and time at which a record was created"
+                    },
+                    "creator": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/UserLight"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "depth": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "is_favorite": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "link_role": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/LinkRoleEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "link_reach": {
+                        "readOnly": true,
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/LinkReachEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "is_restricted": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "link_expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Link expiration date"
+                    },
+                    "has_link_password": {
+                        "type": "boolean",
+                        "description": "Return whether the item link is protected by a password.",
+                        "readOnly": true
+                    },
+                    "nb_accesses": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "numchild": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "numchild_folder": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "path": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "target": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RestrictionTarget"
+                            }
+                        ],
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Updated on",
+                        "description": "date and time at which a record was last updated"
+                    },
+                    "user_role": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "type": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TypeEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "upload_state": {
+                        "readOnly": true,
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/UploadStateEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "url_permalink": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "url_preview": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "filename": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "mimetype": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "main_workspace": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "size": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "deleted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "hard_delete_at": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "is_wopi_supported": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "quota_excluded": {
+                        "type": "boolean",
+                        "readOnly": true,
+                        "description": "Exclude this item from its creator's storage quota computation."
+                    }
+                },
+                "required": [
+                    "abilities",
+                    "ancestors_link_reach",
+                    "ancestors_link_role",
+                    "computed_link_reach",
+                    "computed_link_role",
+                    "created_at",
+                    "creator",
+                    "deleted_at",
+                    "depth",
+                    "filename",
+                    "hard_delete_at",
+                    "has_link_password",
+                    "id",
+                    "is_favorite",
+                    "is_restricted",
+                    "is_wopi_supported",
+                    "link_expires_at",
+                    "link_reach",
+                    "link_role",
+                    "main_workspace",
+                    "mimetype",
+                    "nb_accesses",
+                    "numchild",
+                    "numchild_folder",
+                    "path",
+                    "quota_excluded",
+                    "size",
+                    "target",
+                    "title",
+                    "type",
+                    "updated_at",
+                    "upload_state",
+                    "url",
+                    "url_permalink",
+                    "url_preview",
+                    "user_role"
+                ]
+            },
+            "ItemAccess": {
+                "type": "object",
+                "description": "Serialize item accesses.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "description": "primary key for the record as UUID"
+                    },
+                    "user": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/User"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "team": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/RoleEnum"
+                    },
+                    "abilities": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "max_ancestors_role": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "max_ancestors_role_item_id": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "max_role": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "item": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ItemLight"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "is_explicit": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "abilities",
+                    "id",
+                    "is_explicit",
+                    "item",
+                    "max_ancestors_role",
+                    "max_ancestors_role_item_id",
+                    "max_role",
+                    "user"
+                ]
+            },
+            "ItemAccessRequest": {
+                "type": "object",
+                "description": "Serialize item accesses.",
+                "properties": {
+                    "user_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "primary key for the record as UUID",
+                        "writeOnly": true,
+                        "nullable": true
+                    },
+                    "team": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/RoleEnum"
+                    }
+                }
+            },
+            "ItemLight": {
+                "type": "object",
+                "description": "Minimal item serializer for nesting in item accesses.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "description": "primary key for the record as UUID"
+                    },
+                    "path": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "depth": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "depth",
+                    "id",
+                    "path"
+                ]
+            },
+            "ItemRequest": {
+                "type": "object",
+                "description": "Serialize items with all fields for display in detail views.",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "title"
+                ]
+            },
+            "ItemsDeletionInfoRequestRequest": {
+                "type": "object",
+                "description": "Validate and deduplicate the items in a deletion preflight.",
+                "properties": {
+                    "ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "maxItems": 100
+                    }
+                },
+                "required": [
+                    "ids"
+                ]
+            },
+            "LanguageEnum": {
+                "enum": [
+                    "en-us",
+                    "fr-fr",
+                    "de-de",
+                    "nl-nl"
+                ],
+                "type": "string",
+                "description": "* `en-us` - English\n* `fr-fr` - French\n* `de-de` - German\n* `nl-nl` - Dutch"
+            },
+            "LinkReachEnum": {
+                "enum": [
+                    "restricted",
+                    "authenticated",
+                    "public"
+                ],
+                "type": "string",
+                "description": "* `restricted` - Restricted\n* `authenticated` - Authenticated\n* `public` - Public"
+            },
+            "LinkRoleEnum": {
+                "enum": [
+                    "reader",
+                    "editor"
+                ],
+                "type": "string",
+                "description": "* `reader` - Reader\n* `editor` - Editor"
+            },
+            "ListItem": {
+                "type": "object",
+                "description": "Serialize items with limited fields for display in lists.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "description": "primary key for the record as UUID"
+                    },
+                    "abilities": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "Return abilities of the logged-in user on the instance.",
+                        "readOnly": true
+                    },
+                    "ancestors_link_reach": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "ancestors_link_role": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "computed_link_reach": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "computed_link_role": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Created on",
+                        "description": "date and time at which a record was created"
+                    },
+                    "creator": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/UserLight"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "depth": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "is_favorite": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "link_role": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/LinkRoleEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "link_reach": {
+                        "readOnly": true,
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/LinkReachEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "is_restricted": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "link_expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Link expiration date"
+                    },
+                    "has_link_password": {
+                        "type": "boolean",
+                        "description": "Return whether the item link is protected by a password.",
+                        "readOnly": true
+                    },
+                    "nb_accesses": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "numchild": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "numchild_folder": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "path": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "target": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RestrictionTarget"
+                            }
+                        ],
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Updated on",
+                        "description": "date and time at which a record was last updated"
+                    },
+                    "user_role": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "type": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TypeEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "upload_state": {
+                        "readOnly": true,
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/UploadStateEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "url_permalink": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "url_preview": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "filename": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
+                    "mimetype": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "main_workspace": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "size": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "deleted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "hard_delete_at": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "is_wopi_supported": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "quota_excluded": {
+                        "type": "boolean",
+                        "readOnly": true,
+                        "description": "Exclude this item from its creator's storage quota computation."
+                    }
+                },
+                "required": [
+                    "abilities",
+                    "ancestors_link_reach",
+                    "ancestors_link_role",
+                    "computed_link_reach",
+                    "computed_link_role",
+                    "created_at",
+                    "creator",
+                    "deleted_at",
+                    "depth",
+                    "description",
+                    "hard_delete_at",
+                    "has_link_password",
+                    "id",
+                    "is_favorite",
+                    "is_restricted",
+                    "is_wopi_supported",
+                    "link_expires_at",
+                    "link_reach",
+                    "link_role",
+                    "main_workspace",
+                    "mimetype",
+                    "nb_accesses",
+                    "numchild",
+                    "numchild_folder",
+                    "path",
+                    "quota_excluded",
+                    "size",
+                    "target",
+                    "title",
+                    "type",
+                    "updated_at",
+                    "upload_state",
+                    "url",
+                    "url_permalink",
+                    "url_preview",
+                    "user_role"
+                ]
+            },
+            "ListItemLight": {
+                "type": "object",
+                "description": "Serialize items with limited fields to avoid N+1 queries on the\nnb_accesses and compute_link_(reach|role) attributes.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "description": "primary key for the record as UUID"
+                    },
+                    "abilities": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "Return abilities of the logged-in user on the instance.",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Created on",
+                        "description": "date and time at which a record was created"
+                    },
+                    "creator": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/UserLight"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "depth": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "is_favorite": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "is_restricted": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "target": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RestrictionTarget"
+                            }
+                        ],
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "link_role": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/LinkRoleEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "link_reach": {
+                        "readOnly": true,
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/LinkReachEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "link_expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Link expiration date"
+                    },
+                    "has_link_password": {
+                        "type": "boolean",
+                        "description": "Return whether the item link is protected by a password.",
+                        "readOnly": true
+                    },
+                    "numchild": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "numchild_folder": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "path": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Updated on",
+                        "description": "date and time at which a record was last updated"
+                    },
+                    "user_role": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "type": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TypeEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "upload_state": {
+                        "readOnly": true,
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/UploadStateEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "url_permalink": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "url_preview": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "filename": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
+                    "mimetype": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "main_workspace": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "size": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "deleted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "hard_delete_at": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "is_wopi_supported": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "quota_excluded": {
+                        "type": "boolean",
+                        "readOnly": true,
+                        "description": "Exclude this item from its creator's storage quota computation."
+                    }
+                },
+                "required": [
+                    "abilities",
+                    "created_at",
+                    "creator",
+                    "deleted_at",
+                    "depth",
+                    "description",
+                    "hard_delete_at",
+                    "has_link_password",
+                    "id",
+                    "is_favorite",
+                    "is_restricted",
+                    "is_wopi_supported",
+                    "link_expires_at",
+                    "link_reach",
+                    "link_role",
+                    "main_workspace",
+                    "mimetype",
+                    "numchild",
+                    "numchild_folder",
+                    "path",
+                    "quota_excluded",
+                    "size",
+                    "target",
+                    "title",
+                    "type",
+                    "updated_at",
+                    "upload_state",
+                    "url",
+                    "url_permalink",
+                    "url_preview",
+                    "user_role"
+                ]
+            },
+            "ListItemRequest": {
+                "type": "object",
+                "description": "Serialize items with limited fields for display in lists.",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                    },
+                    "filename": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    }
+                },
+                "required": [
+                    "title"
+                ]
+            },
+            "NullEnum": {
+                "enum": [
+                    null
+                ]
+            },
+            "PaginatedInvitationList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Invitation"
+                        }
+                    }
+                }
+            },
+            "PaginatedListItemList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ListItem"
+                        }
+                    }
+                }
+            },
+            "PaginatedUsageMetricList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/UsageMetric"
+                        }
+                    }
+                }
+            },
+            "PatchedInvitationRequest": {
+                "type": "object",
+                "description": "Serialize invitations.",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "minLength": 1,
+                        "title": "Email address",
+                        "maxLength": 254
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/RoleEnum"
+                    }
+                }
+            },
+            "PatchedItemAccessRequest": {
+                "type": "object",
+                "description": "Serialize item accesses.",
+                "properties": {
+                    "user_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "primary key for the record as UUID",
+                        "writeOnly": true,
+                        "nullable": true
+                    },
+                    "team": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "$ref": "#/components/schemas/RoleEnum"
+                    }
+                }
+            },
+            "PatchedItemRequest": {
+                "type": "object",
+                "description": "Serialize items with all fields for display in detail views.",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "PatchedUserRequest": {
+                "type": "object",
+                "description": "Serialize users.",
+                "properties": {
+                    "language": {
+                        "nullable": true,
+                        "description": "The language in which the user wants to see the interface.\n\n* `en-us` - English\n* `fr-fr` - French\n* `de-de` - German\n* `nl-nl` - Dutch",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/LanguageEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "last_release_note_seen": {
+                        "type": "string",
+                        "nullable": true,
+                        "minLength": 1,
+                        "maxLength": 85,
+                        "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+                    },
+                    "column_preferences": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "RestrictionTarget": {
+                "type": "object",
+                "description": "Serialize the restricted folder a restriction points to.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "description": "primary key for the record as UUID"
+                    },
+                    "title": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "path": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "is_restricted": {
+                        "type": "boolean",
+                        "description": "Return True: the target of an existing restriction is restricted by definition.",
+                        "readOnly": true
+                    },
+                    "deleted": {
+                        "type": "boolean",
+                        "description": "Return whether the target is in the trash.",
+                        "readOnly": true
+                    },
+                    "can_access": {
+                        "type": "boolean",
+                        "description": "Return whether the request user can open the target.",
+                        "readOnly": true
+                    },
+                    "abilities": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "Expose the destination's permissions without using the restriction's roles.",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "abilities",
+                    "can_access",
+                    "deleted",
+                    "id",
+                    "is_restricted",
+                    "path",
+                    "title"
+                ]
+            },
+            "RoleEnum": {
+                "enum": [
+                    "reader",
+                    "editor",
+                    "administrator",
+                    "owner"
+                ],
+                "type": "string",
+                "description": "* `reader` - Reader\n* `editor` - Editor\n* `administrator` - Administrator\n* `owner` - Owner"
+            },
+            "SearchItem": {
+                "type": "object",
+                "description": "Serialize items for search.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "description": "primary key for the record as UUID"
+                    },
+                    "abilities": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "Return abilities of the logged-in user on the instance.",
+                        "readOnly": true
+                    },
+                    "ancestors_link_reach": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "ancestors_link_role": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "computed_link_reach": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "computed_link_role": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Created on",
+                        "description": "date and time at which a record was created"
+                    },
+                    "creator": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/UserLight"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "depth": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "is_favorite": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "link_role": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/LinkRoleEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "link_reach": {
+                        "readOnly": true,
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/LinkReachEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "is_restricted": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "link_expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Link expiration date"
+                    },
+                    "has_link_password": {
+                        "type": "boolean",
+                        "description": "Return whether the item link is protected by a password.",
+                        "readOnly": true
+                    },
+                    "nb_accesses": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "numchild": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "numchild_folder": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "path": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "target": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RestrictionTarget"
+                            }
+                        ],
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Updated on",
+                        "description": "date and time at which a record was last updated"
+                    },
+                    "user_role": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "type": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TypeEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "upload_state": {
+                        "readOnly": true,
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/UploadStateEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "url": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "url_permalink": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "url_preview": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "filename": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
+                    "mimetype": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "main_workspace": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "size": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "deleted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "hard_delete_at": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "is_wopi_supported": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "quota_excluded": {
+                        "type": "boolean",
+                        "readOnly": true,
+                        "description": "Exclude this item from its creator's storage quota computation."
+                    },
+                    "parents": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ListItem"
+                        },
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "abilities",
+                    "ancestors_link_reach",
+                    "ancestors_link_role",
+                    "computed_link_reach",
+                    "computed_link_role",
+                    "created_at",
+                    "creator",
+                    "deleted_at",
+                    "depth",
+                    "description",
+                    "hard_delete_at",
+                    "has_link_password",
+                    "id",
+                    "is_favorite",
+                    "is_restricted",
+                    "is_wopi_supported",
+                    "link_expires_at",
+                    "link_reach",
+                    "link_role",
+                    "main_workspace",
+                    "mimetype",
+                    "nb_accesses",
+                    "numchild",
+                    "numchild_folder",
+                    "parents",
+                    "path",
+                    "quota_excluded",
+                    "size",
+                    "target",
+                    "title",
+                    "type",
+                    "updated_at",
+                    "upload_state",
+                    "url",
+                    "url_permalink",
+                    "url_preview",
+                    "user_role"
+                ]
+            },
+            "TypeEnum": {
+                "enum": [
+                    "folder",
+                    "file",
+                    "restriction"
+                ],
+                "type": "string",
+                "description": "* `folder` - Folder\n* `file` - File\n* `restriction` - Restriction"
+            },
+            "UploadStateEnum": {
+                "enum": [
+                    "pending",
+                    "duplicating",
+                    "converting",
+                    "analyzing",
+                    "suspicious",
+                    "file_too_large_to_analyze",
+                    "ready"
+                ],
+                "type": "string",
+                "description": "* `pending` - Pending\n* `duplicating` - Duplicating\n* `converting` - Converting\n* `analyzing` - Analyzing\n* `suspicious` - Suspicious\n* `file_too_large_to_analyze` - File too large to analyze\n* `ready` - Ready"
+            },
+            "UsageMetric": {
+                "type": "object",
+                "properties": {
+                    "account": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "metrics": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "required": [
+                    "account",
+                    "metrics"
+                ]
+            },
+            "User": {
+                "type": "object",
+                "description": "Serialize users.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "description": "primary key for the record as UUID"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Identity email address"
+                    },
+                    "full_name": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "short_name": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "language": {
+                        "nullable": true,
+                        "description": "The language in which the user wants to see the interface.\n\n* `en-us` - English\n* `fr-fr` - French\n* `de-de` - German\n* `nl-nl` - Dutch",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/LanguageEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "last_release_note_seen": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 85,
+                        "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+                    },
+                    "column_preferences": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "email",
+                    "full_name",
+                    "id",
+                    "short_name"
+                ]
+            },
+            "UserLight": {
+                "type": "object",
+                "description": "Serialize users with limited fields.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "description": "primary key for the record as UUID"
+                    },
+                    "full_name": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "short_name": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "full_name",
+                    "id",
+                    "short_name"
+                ]
+            },
+            "UserMe": {
+                "type": "object",
+                "description": "Serialize users for me endpoint.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "description": "primary key for the record as UUID"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Identity email address"
+                    },
+                    "full_name": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "short_name": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "language": {
+                        "nullable": true,
+                        "description": "The language in which the user wants to see the interface.\n\n* `en-us` - English\n* `fr-fr` - French\n* `de-de` - German\n* `nl-nl` - Dutch",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/LanguageEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "last_release_note_seen": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 85,
+                        "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+                    },
+                    "column_preferences": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "email",
+                    "full_name",
+                    "id",
+                    "short_name"
+                ]
+            },
+            "UserRequest": {
+                "type": "object",
+                "description": "Serialize users.",
+                "properties": {
+                    "language": {
+                        "nullable": true,
+                        "description": "The language in which the user wants to see the interface.\n\n* `en-us` - English\n* `fr-fr` - French\n* `de-de` - German\n* `nl-nl` - Dutch",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/LanguageEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "last_release_note_seen": {
+                        "type": "string",
+                        "nullable": true,
+                        "minLength": 1,
+                        "maxLength": 85,
+                        "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+                    },
+                    "column_preferences": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            }
+        }
+    }
+}
