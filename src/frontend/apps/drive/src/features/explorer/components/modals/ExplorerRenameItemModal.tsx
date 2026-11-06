@@ -53,14 +53,15 @@ export const ExplorerRenameItemModal = (
           treeUtils.updateNodeByOriginalId(renamedId, {
             title: data.title,
           });
-          if (renamedId !== props.item.id) {
+          if (props.item.target && renamedId !== props.item.id) {
             // The mutation only refreshes the folder, the entry mirrors it.
-            treeUtils.updateNodeByOriginalId(props.item.id, {
+            // Drops on the entry read its target, so rename both.
+            const entryUpdate = {
               title: data.title,
-            });
-            updateItemInPaginatedList(["items"], props.item.id, {
-              title: data.title,
-            });
+              target: { ...props.item.target, title: data.title },
+            };
+            treeUtils.updateNodeByOriginalId(props.item.id, entryUpdate);
+            updateItemInPaginatedList(["items"], props.item.id, entryUpdate);
           }
 
           const selectedItem =

@@ -194,3 +194,47 @@ test("a restriction entry cannot be dropped into its own target or descendant", 
     expect(moves).toEqual([]);
   }
 });
+
+// Drops on a restriction entry read the folder it points to. After renaming
+// the entry, the move confirmation must name that folder with its new title,
+// from the grid and from the tree, without a reload.
+test("drops on a renamed restriction entry name the renamed folder", async ({
+  page,
+  folders,
+}) => {
+  // 1. Rename the entry from the parent listing.
+  await page.goto(itemUrl(folders.parent.id));
+  await (await getRowItem(page, names.accessible)).click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
+  await page.getByRole("textbox").fill("Renamed restricted");
+  await page.getByRole("button", { name: "Rename", exact: true }).click();
+  await getRowItem(page, "Renamed restricted");
+
+  // 2. Drop a folder on the entry, in the grid then in the tree (the entry is
+  //    starred). The confirmation is found by its title, which names it on
+  //    every ui-components version. The right click selected the entry:
+  //    select the source instead, or the drag would carry the entry itself.
+  await openTreeNode(page, "Starred", true);
+  await (await getRowItem(page, "Movable one")).click();
+  await expect(page.locator("tr.selected")).toHaveCount(1);
+  const source = (await getRowItem(page, "Movable one"))
+    .getByRole("cell")
+    .first();
+  const confirmationModal = page
+    .getByRole("dialog")
+    .filter({ hasText: "Transfer rights" });
+  for (const destination of [
+    (await getRowItem(page, "Renamed restricted")).getByRole("cell").first(),
+    (await getItemTree(page, "Renamed restricted")).getByTestId(
+      "tree_item_content",
+    ),
+  ]) {
+    await pointerDrop(page, source, destination);
+    // 3. The confirmation names the folder with its new title. Cancel it.
+    await expect(confirmationModal).toContainText(
+      "to the folder Renamed restricted",
+    );
+    await confirmationModal.getByRole("button", { name: "Cancel" }).click();
+    await expect(confirmationModal).toHaveCount(0);
+  }
+});
