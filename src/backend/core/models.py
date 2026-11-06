@@ -315,6 +315,10 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
         db_table = "drive_user"
         verbose_name = _("user")
         verbose_name_plural = _("users")
+        indexes = [
+            # Covers the user counts of the Prometheus business metrics.
+            models.Index(fields=["is_active"], name="user_is_active_idx"),
+        ]
 
     def __str__(self):
         return self.email or self.admin_email or str(self.id)
@@ -1447,6 +1451,14 @@ class Item(TreeModel, BaseModel):
                 include=["size"],
                 condition=models.Q(hard_deleted_at__isnull=True, quota_excluded=False),
                 name="item_creator_size_quota_idx",
+            ),
+            # Covers the item counts of the Prometheus business metrics: about 8
+            # distinct pairs, so the deduplicated index stays small (26MB for 4M
+            # items) and the counts are answered from it alone.
+            models.Index(
+                fields=["type", "upload_state"],
+                condition=models.Q(hard_deleted_at__isnull=True),
+                name="item_type_upload_state_idx",
             ),
         ]
 

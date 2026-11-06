@@ -10,6 +10,8 @@ and this project adheres to
 
 ### Fixed
 
+- ⚡️(backend) answer the business metrics counts from indexes
+- 🐛(backend) compute the business metrics once for all the scrapes
 - 🐛(backend) keep the file on a WOPI rename to its current name
 - ♿️(frontend) associate file list headers with their cells
 
