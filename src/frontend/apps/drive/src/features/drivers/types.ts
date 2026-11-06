@@ -123,10 +123,28 @@ export type Item = {
     update: boolean;
     upload_ended: boolean;
     convert?: boolean;
+    versions_view?: boolean;
+    versions_restore?: boolean;
+    versions_destroy?: boolean;
     restrict?: boolean;
     leave?: boolean;
   };
   policy?: string;
+};
+
+export type ItemVersion = {
+  id: string;
+  item: Item;
+  filename: string;
+  mimetype?: string;
+  size?: number;
+  version_number: number;
+  created_at: Date;
+  created_by?: {
+    id: string;
+    full_name: string;
+    short_name: string;
+  };
 };
 
 export type TreeItemData = Omit<Item, "children"> & {

@@ -177,7 +177,8 @@ export const GlobalExplorerProvider = ({
     }
   }, [rightPanelOpen]);
 
-  const { dropZone, cancelUploadsForDeletedItems } = useUploadZone({
+  const { dropZone, cancelUploadsForDeletedItems, nameConflictModal } =
+    useUploadZone({
     item: item!,
     onSingleFileUploaded: (uploadedItem, parentId) => {
       // Only select it if the user is still looking at the folder it was
@@ -283,15 +284,24 @@ export const GlobalExplorerProvider = ({
           {...dropZone.getInputProps({
             webkitdirectory: "true",
             id: "import-folders",
+            // The browser skips a second change event when the same path is
+            // chosen again. Clear first so the next import still starts.
+            onClick: (event: React.MouseEvent<HTMLInputElement>) => {
+              event.currentTarget.value = "";
+            },
           })}
         />
         <input
           {...dropZone.getInputProps({
             id: "import-files",
+            onClick: (event: React.MouseEvent<HTMLInputElement>) => {
+              event.currentTarget.value = "";
+            },
           })}
         />
 
         <Toaster />
+        {nameConflictModal}
         <CustomFilesPreview
           currentItem={previewItem}
           items={previewItems}

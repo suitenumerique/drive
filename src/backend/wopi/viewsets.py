@@ -21,6 +21,7 @@ from sentry_sdk import capture_exception
 
 from core.api.utils import get_item_file_head_object, is_extension_allowed
 from core.models import Item
+from core.services.item_versions import snapshot_version
 from core.utils.analytics import posthog_capture
 from wopi.authentication import WopiAccessTokenAuthentication, get_access_token
 from wopi.exceptions import WopiRequestSignatureError
@@ -265,6 +266,7 @@ class WopiViewSet(viewsets.ViewSet):
             return Response(status=413)
 
         s3_client = default_storage.connection.meta.client
+        snapshot_version(item, created_by=request.user)
         default_storage.save(item.file_key, file)
         item.size = file.size
         # Keep the item READY during re-analysis: non-creators cannot open

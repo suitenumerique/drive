@@ -74,6 +74,9 @@ def test_models_sub_item_abilities_downgraded():
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "versions_view": True,
+        "versions_restore": True,
+        "versions_destroy": True,
         "wopi": True,
         "convert": False,
     }
@@ -113,6 +116,9 @@ def test_models_sub_item_abilities_downgraded():
         "tree": True,
         "update": False,
         "upload_ended": False,
+        "versions_view": True,
+        "versions_restore": False,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }
@@ -172,6 +178,9 @@ def test_models_items_root_get_abilities_owner(
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "versions_view": item_type == models.ItemTypeChoices.FILE,
+        "versions_restore": item_type == models.ItemTypeChoices.FILE,
+        "versions_destroy": item_type == models.ItemTypeChoices.FILE,
         "wopi": True,
         "convert": False,
     }
@@ -207,6 +216,9 @@ def test_models_items_root_get_abilities_owner(
         "tree": False,
         "update": False,
         "upload_ended": False,
+        "versions_view": False,
+        "versions_restore": False,
+        "versions_destroy": False,
         "wopi": False,
         "convert": False,
     }
@@ -269,6 +281,9 @@ def test_models_items_root_get_abilities_administrator(
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "versions_view": item_type == models.ItemTypeChoices.FILE,
+        "versions_restore": item_type == models.ItemTypeChoices.FILE,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }
@@ -342,6 +357,9 @@ def test_models_items_root_get_abilities_editor_user(
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "versions_view": item_type == models.ItemTypeChoices.FILE,
+        "versions_restore": item_type == models.ItemTypeChoices.FILE,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }
@@ -400,6 +418,9 @@ def test_models_items_root_get_abilities_reader_user(
         "tree": True,
         "update": access_from_link,
         "upload_ended": access_from_link,
+        "versions_view": item_type == models.ItemTypeChoices.FILE,
+        "versions_restore": item_type == models.ItemTypeChoices.FILE and access_from_link,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }

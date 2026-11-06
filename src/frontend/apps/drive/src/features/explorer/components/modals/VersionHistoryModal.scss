@@ -1,0 +1,66 @@
+.c__modal:has(.version-history) {
+  width: 32rem;
+  max-width: calc(100vw - 2rem);
+
+  .c__modal__scroller {
+    overflow: visible;
+  }
+}
+
+.version-history {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--c--contextuals--border--surface--primary);
+  border-radius: 0.5rem;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+
+    & + & {
+      border-top: 1px solid var(--c--contextuals--border--surface--primary);
+    }
+  }
+
+  &__icon {
+    display: flex;
+    flex: 0 0 auto;
+  }
+
+  &__meta {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  &__name {
+    font-weight: 700;
+  }
+
+  &__file,
+  &__detail {
+    overflow: hidden;
+    color: var(--c--contextuals--content--semantic--neutral--secondary);
+    font-size: var(--c--globals--font--sizes--sm, 0.875rem);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+
+.version-confirm__text {
+  margin: 0 0 1rem;
+  color: var(--c--contextuals--content--semantic--neutral--secondary);
+}
+
+.version-confirm__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}

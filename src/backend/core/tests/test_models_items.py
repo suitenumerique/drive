@@ -328,6 +328,9 @@ def test_models_items_get_abilities_forbidden(
         "tree": False,
         "update": False,
         "upload_ended": False,
+        "versions_view": False,
+        "versions_restore": False,
+        "versions_destroy": False,
         "wopi": False,
         "convert": False,
     }
@@ -382,6 +385,9 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
         "tree": True,
         "update": False,
         "upload_ended": False,
+        "versions_view": item.type == models.ItemTypeChoices.FILE,
+        "versions_restore": False,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }
@@ -491,6 +497,9 @@ def test_models_items_get_abilities_editor(  # noqa: PLR0913, PLR0917
         "tree": True,
         "update": True,
         "upload_ended": is_authenticated,
+        "versions_view": item_type == models.ItemTypeChoices.FILE,
+        "versions_restore": item_type == models.ItemTypeChoices.FILE,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }
@@ -565,6 +574,9 @@ def test_models_items_not_root_get_abilities_owner(
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "versions_view": item_type == models.ItemTypeChoices.FILE,
+        "versions_restore": item_type == models.ItemTypeChoices.FILE,
+        "versions_destroy": item_type == models.ItemTypeChoices.FILE,
         "wopi": True,
         "convert": False,
     }
@@ -600,6 +612,9 @@ def test_models_items_not_root_get_abilities_owner(
         "tree": False,
         "update": False,
         "upload_ended": False,
+        "versions_view": False,
+        "versions_restore": False,
+        "versions_destroy": False,
         "wopi": False,
         "convert": False,
     }
@@ -663,6 +678,9 @@ def test_models_items_not_root_get_abilities_administrator(
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "versions_view": item_type == models.ItemTypeChoices.FILE,
+        "versions_restore": item_type == models.ItemTypeChoices.FILE,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }
@@ -740,6 +758,9 @@ def test_models_items_not_root_get_abilities_editor_user(
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "versions_view": item_type == models.ItemTypeChoices.FILE,
+        "versions_restore": item_type == models.ItemTypeChoices.FILE,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }
@@ -796,6 +817,9 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         "tree": True,
         "update": access_from_link,
         "upload_ended": access_from_link,
+        "versions_view": item.type == models.ItemTypeChoices.FILE,
+        "versions_restore": item.type == models.ItemTypeChoices.FILE and access_from_link,
+        "versions_destroy": False,
         "wopi": True,
         "convert": False,
     }
@@ -885,6 +909,9 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "versions_view": True,
+        "versions_restore": True,
+        "versions_destroy": True,
         "wopi": True,
         "convert": False,
     }
@@ -919,6 +946,9 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "tree": False,
         "update": False,
         "upload_ended": False,
+        "versions_view": False,
+        "versions_restore": False,
+        "versions_destroy": False,
         "wopi": False,
         "convert": False,
     }

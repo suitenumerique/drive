@@ -622,6 +622,7 @@
             "duplicate": "Duplicate",
             "duplicate_error": "An error occurred while duplicating the item.",
             "delete": "Delete",
+            "versions": "History",
             "leave": "Leave",
             "leave_toast": "You have left the item.",
             "leave_toast_error": "An error occurred while leaving the item.",
@@ -634,6 +635,54 @@
           },
           "duplicating": "duplication in progress",
           "converting": "conversion in progress"
+        },
+        "versions": {
+          "modal": {
+            "title": "Version history",
+            "subtitle": "Browse all versions of this document.",
+            "loading": "Loading versions…",
+            "current": "Current version",
+            "version": "Version {{n}}",
+            "empty": "No versions are available for this file.",
+            "preview": "Preview in a new tab",
+            "restore": "Restore",
+            "download": "Download",
+            "delete": "Delete",
+            "actions": "Actions",
+            "import": "Import a new version",
+            "importing": "Importing…",
+            "close": "Close",
+            "cancel": "Cancel"
+          },
+          "toast": {
+            "restored": "The version has been restored.",
+            "deleted": "The version has been deleted.",
+            "deleted_current": "The current version has been deleted.",
+            "imported": "The new version has been imported.",
+            "import_error": "The new version could not be imported."
+          },
+          "confirm_delete": {
+            "title": "Delete version {{n}}",
+            "description": "Version {{n}} will be permanently deleted."
+          },
+          "confirm_delete_current": {
+            "title": "Delete current version",
+            "description": "This version will be permanently deleted. Version {{n}} will become the current version."
+          },
+          "confirm_restore": {
+            "title": "Restore version {{n}}",
+            "description": "Version {{n}} will become the current version. All other versions will be kept."
+          },
+          "name_conflict": {
+            "title": "File already exists",
+            "subtitle": "How would you like to proceed?",
+            "replace": "Replace and create a new version",
+            "replace_hint": "The current file will be saved as a previous version",
+            "keep": "Keep both files",
+            "keep_hint": "The imported file will be renamed to {{name}}",
+            "import": "Import",
+            "cancel": "Cancel"
+          }
         }
       },
       "anonymous_cta": {
@@ -1349,6 +1398,7 @@
             "duplicate": "Dupliquer",
             "duplicate_error": "Une erreur est survenue lors de la duplication.",
             "delete": "Supprimer",
+            "versions": "Historique",
             "leave": "Quitter",
             "leave_toast": "Vous avez quitté l'élément.",
             "leave_toast_error": "Une erreur est survenue en quittant l'élément.",
@@ -1361,6 +1411,54 @@
           },
           "duplicating": "duplication en cours",
           "converting": "conversion en cours"
+        },
+        "versions": {
+          "modal": {
+            "title": "Historique des versions",
+            "subtitle": "Parcourez toutes les versions de ce document.",
+            "loading": "Chargement des versions…",
+            "current": "Version actuelle",
+            "version": "Version {{n}}",
+            "empty": "Aucune version n'est disponible pour ce fichier.",
+            "preview": "Prévisualiser dans un nouvel onglet",
+            "restore": "Restaurer",
+            "download": "Télécharger",
+            "delete": "Supprimer",
+            "actions": "Actions",
+            "import": "Importer une nouvelle version",
+            "importing": "Import en cours…",
+            "close": "Fermer",
+            "cancel": "Annuler"
+          },
+          "toast": {
+            "restored": "La version a été restaurée.",
+            "deleted": "La version a été supprimée.",
+            "deleted_current": "La version actuelle a été supprimée.",
+            "imported": "La nouvelle version a été importée.",
+            "import_error": "L'import de la nouvelle version a échoué."
+          },
+          "confirm_delete": {
+            "title": "Supprimer la version {{n}}",
+            "description": "La version {{n}} sera définitivement supprimée."
+          },
+          "confirm_delete_current": {
+            "title": "Supprimer la version actuelle",
+            "description": "Cette version sera définitivement supprimée. La version {{n}} deviendra la version actuelle."
+          },
+          "confirm_restore": {
+            "title": "Restaurer la version {{n}}",
+            "description": "La version {{n}} deviendra la version actuelle. Les autres versions seront conservées."
+          },
+          "name_conflict": {
+            "title": "Ce fichier existe déjà",
+            "subtitle": "Comment souhaitez-vous continuer ?",
+            "replace": "Remplacer et créer une nouvelle version",
+            "replace_hint": "Le fichier actuel sera conservé comme version précédente",
+            "keep": "Conserver les deux fichiers",
+            "keep_hint": "Le fichier importé sera renommé en « {{name}} »",
+            "import": "Importer",
+            "cancel": "Annuler"
+          }
         }
       },
       "anonymous_cta": {
@@ -2076,6 +2174,7 @@
             "duplicate": "Dupliceer",
             "duplicate_error": "Er is een fout opgetreden bij het dupliceren.",
             "delete": "Verwijder",
+            "versions": "Geschiedenis",
             "leave": "Verlaten",
             "leave_toast": "U heeft het item verlaten.",
             "leave_toast_error": "Er is een fout opgetreden bij het verlaten van het item.",
@@ -2088,6 +2187,54 @@
           },
           "duplicating": "duplicatie bezig",
           "converting": "conversie bezig"
+        },
+        "versions": {
+          "modal": {
+            "title": "Versiegeschiedenis",
+            "subtitle": "Bekijk alle versies van dit document.",
+            "loading": "Versies laden…",
+            "current": "Huidige versie",
+            "version": "Versie {{n}}",
+            "empty": "Er zijn geen versies beschikbaar voor dit bestand.",
+            "preview": "Bekijk in een nieuw tabblad",
+            "restore": "Herstellen",
+            "download": "Downloaden",
+            "delete": "Verwijderen",
+            "actions": "Acties",
+            "import": "Importeer een nieuwe versie",
+            "importing": "Importeren…",
+            "close": "Sluiten",
+            "cancel": "Annuleren"
+          },
+          "toast": {
+            "restored": "De versie is hersteld.",
+            "deleted": "De versie is verwijderd.",
+            "deleted_current": "De huidige versie is verwijderd.",
+            "imported": "De nieuwe versie is geïmporteerd.",
+            "import_error": "De nieuwe versie kon niet worden geïmporteerd."
+          },
+          "confirm_delete": {
+            "title": "Versie {{n}} verwijderen",
+            "description": "Versie {{n}} wordt definitief verwijderd."
+          },
+          "confirm_delete_current": {
+            "title": "Huidige versie verwijderen",
+            "description": "Deze versie wordt definitief verwijderd. Versie {{n}} wordt de huidige versie."
+          },
+          "confirm_restore": {
+            "title": "Versie {{n}} herstellen",
+            "description": "Versie {{n}} wordt de huidige versie. Alle andere versies blijven bewaard."
+          },
+          "name_conflict": {
+            "title": "Bestand bestaat al",
+            "subtitle": "Hoe wil je verdergaan?",
+            "replace": "Vervangen en een nieuwe versie maken",
+            "replace_hint": "Het huidige bestand wordt bewaard als vorige versie",
+            "keep": "Beide bestanden bewaren",
+            "keep_hint": "Het geïmporteerde bestand wordt hernoemd naar {{name}}",
+            "import": "Importeren",
+            "cancel": "Annuleren"
+          }
         }
       },
       "anonymous_cta": {
