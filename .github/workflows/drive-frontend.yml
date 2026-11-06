@@ -147,7 +147,8 @@ jobs:
         uses: actions/cache@v6
         with:
           path: "src/backend/core/templates/mail"
-          key: mail-templates-${{ hashFiles('src/mail/mjml') }}
+          key: ${{ needs.build-mails.outputs.key }}
+          fail-on-cache-miss: true
 
       - name: Build the drive SDK
         working-directory: src/frontend/packages/sdk

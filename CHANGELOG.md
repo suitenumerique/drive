@@ -17,6 +17,7 @@ and this project adheres to
 
 ### Added
 
+- ✨(backend) configure the branding of emails with settings
 - ✨(backend) allow to leave an item #826
 - ✨(frontend) allow to leave an item #826
 - ✨(frontend) restrict and reopen folder access from the share modal
@@ -27,6 +28,7 @@ and this project adheres to
 
 ### Changed
 
+- 💄(mail) adopt the new LaSuite email layout #926
 - ⬆️(ci) bump GitHub Actions to latest versions
 - ✨(backend) screen uploads with a denylist
 - ⬆️(backend) upgrade joserfc to 1.7.7
@@ -34,6 +36,8 @@ and this project adheres to
 
 ### Fixed
 
+- 🐛(mail) stop showing HTML entities in plain text emails
+- 🐛(backend) keep the case of names and titles in email subjects
 - 🐛(frontend) show the full item title in a tooltip when truncated
 - 🐛(backend) fix the upload mimetype allowlist
 

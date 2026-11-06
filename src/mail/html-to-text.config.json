@@ -6,6 +6,10 @@
       "options": {
         "uppercase": false
       }
+    },
+    {
+      "selector": "img",
+      "format": "skip"
     }
   ]
 }

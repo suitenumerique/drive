@@ -11,6 +11,19 @@ const nextConfig: NextConfig = {
   // that clashes with Next.js bundling. Instead we let SWC transpile the
   // clean ESM standard build so it works on all browsers.
   transpilePackages: ["pdfjs-dist"],
+  // Static exports ignore headers: production sets this one in nginx
+  // (conf/default.conf). In development, it lets mail clients such as
+  // Mailcatcher load the fonts used by emails.
+  ...(process.env.NODE_ENV === "development" && {
+    async headers() {
+      return [
+        {
+          source: "/assets/fonts/:path*",
+          headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
+        },
+      ];
+    },
+  }),
 };
 
 export default nextConfig;
