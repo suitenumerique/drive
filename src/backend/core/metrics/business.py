@@ -2,15 +2,23 @@
 Business metrics of Drive, computed from the database when the metrics are scraped.
 
 They describe the whole deployment, not the replica that answers: every replica
-reports the same values, which are to be read with max(), never summed. The
-values are kept in the shared cache for PROMETHEUS_BUSINESS_METRICS_CACHE_TTL
-seconds, so that the replicas and the scrapes share one set of queries.
+reports the same values, which are to be read with max(), never summed.
+
+Each family of values is kept in the shared cache with the time it was computed.
+Once older than PROMETHEUS_BUSINESS_METRICS_CACHE_TTL, the scrape that takes the
+refresh lock computes it again, for all the replicas; every other scrape answers
+right away with the values it has, however old. A computation that is slower
+than a scrape, or than the cache ttl, therefore never runs twice at once: on a
+large database, the scrapes that each started their own computation piled up
+queries until the database and every gunicorn worker were busy with them.
 """
 
 import logging
+import time
 
 from django.conf import settings
 from django.core.cache import cache
+from django.db import connection, transaction
 from django.db.models import Count
 
 from prometheus_client.core import GaugeMetricFamily
@@ -19,7 +27,11 @@ from core import models
 
 logger = logging.getLogger(__name__)
 
-CACHE_KEY = "metrics:business"
+CACHE_KEY_PREFIX = "metrics:business:"
+LOCK_KEY = "metrics:business:refresh-lock"
+# Values are answered until the next computation succeeds, however old: a day
+# outlives any refresh, and lets a family that is no longer computed go away.
+VALUES_TIMEOUT = 24 * 60 * 60
 
 
 def items_queryset():
@@ -76,27 +88,71 @@ FAMILIES = {
 }
 
 
-def compute_business_values():
-    """
-    Run the queries of every family, or take them from the cache.
+def _cache_key(name):
+    return f"{CACHE_KEY_PREFIX}{name}"
 
-    A family whose query fails is left out of the scrape, and the values are only
-    cached when none failed, so that the next scrape tries again.
-    """
-    cached = cache.get(CACHE_KEY)
-    if cached is not None:
-        return cached
 
-    results = {}
-    for name, compute in FAMILIES.items():
+def _compute(compute):
+    """
+    Run the queries of a family in a transaction of their own, cancelled by
+    Postgres after PROMETHEUS_BUSINESS_METRICS_STATEMENT_TIMEOUT seconds.
+    """
+    timeout_ms = int(settings.PROMETHEUS_BUSINESS_METRICS_STATEMENT_TIMEOUT * 1000)
+    with transaction.atomic():
+        with connection.cursor() as cursor:
+            # SET LOCAL takes no query parameter: set_config(..., true) does the same
+            cursor.execute("SELECT set_config('statement_timeout', %s, true)", [str(timeout_ms)])
+        return compute()
+
+
+def _refresh(names, entries):
+    """
+    Compute the given families again. A family that fails keeps its previous
+    value, and is only tried again after the cache ttl: a query that times out
+    must not run at every scrape.
+    """
+    for name in names:
+        entry = dict(entries.get(name) or {})
+        started = time.monotonic()
         try:
-            results[name] = compute()
+            entry["value"] = _compute(FAMILIES[name])
         except Exception:  # pylint: disable=broad-exception-caught
             logger.exception("could not compute the %s business metrics", name)
+        else:
+            entry["computed_at"] = time.time()
+            entry["duration"] = time.monotonic() - started
+        entry["attempted_at"] = time.time()
+        entries[name] = entry
+        cache.set(_cache_key(name), entry, VALUES_TIMEOUT)
 
-    if len(results) == len(FAMILIES):
-        cache.set(CACHE_KEY, results, settings.PROMETHEUS_BUSINESS_METRICS_CACHE_TTL)
-    return results
+
+def compute_business_values():
+    """
+    The latest values of every family, refreshed first when they are too old and
+    no other scrape is already refreshing them.
+
+    Returns {family: {"value", "computed_at", "duration", "attempted_at"}} for the
+    families that were computed at least once.
+    """
+    cached = cache.get_many([_cache_key(name) for name in FAMILIES])
+    entries = {name: cached.get(_cache_key(name)) for name in FAMILIES}
+    now = time.time()
+    stale = [
+        name
+        for name, entry in entries.items()
+        if now - (entry or {}).get("attempted_at", 0)
+        >= settings.PROMETHEUS_BUSINESS_METRICS_CACHE_TTL
+    ]
+
+    # The lock outlives the slowest refresh: every query cancelled at the timeout
+    lock_timeout = int(settings.PROMETHEUS_BUSINESS_METRICS_STATEMENT_TIMEOUT * len(stale)) + 60
+    if stale and cache.add(LOCK_KEY, True, lock_timeout):
+        try:
+            _refresh(stale, entries)
+        finally:
+            cache.delete(LOCK_KEY)
+
+    return {name: entry for name, entry in entries.items() if entry and "value" in entry}
 
 
 def _gauge(name, documentation, value, labels=None):
@@ -110,7 +166,26 @@ class DriveBusinessCollector:
 
     def collect(self):
         """Yield one gauge per metric of the families that could be computed."""
-        values = compute_business_values()
+        entries = compute_business_values()
+        values = {name: entry["value"] for name, entry in entries.items()}
+
+        age = GaugeMetricFamily(
+            "drive_business_metrics_age_seconds",
+            "Time since the values of a family of business metrics were computed",
+            labels=["family"],
+        )
+        duration = GaugeMetricFamily(
+            "drive_business_metrics_duration_seconds",
+            "Time the last computation of a family of business metrics took",
+            labels=["family"],
+        )
+        now = time.time()
+        for name, entry in entries.items():
+            if "computed_at" in entry:
+                age.add_metric([name], now - entry["computed_at"])
+                duration.add_metric([name], entry["duration"])
+        yield age
+        yield duration
 
         if (items := values.get("items")) is not None:
             yield _gauge("drive_items_count", "Items that are not hard deleted", items["total"])
