@@ -1,4 +1,5 @@
 import { expect, Page } from "@playwright/test";
+import { login } from "./utils-common";
 import { getRowItem, getRowItemActions } from "./utils-embedded-grid";
 import {
   confirmation,
@@ -147,6 +148,20 @@ test("breadcrumbs mark restricted folders", async ({ page, folders }) => {
     page
       .locator(".explorer__content__breadcrumbs--mobile")
       .getByRole("img", { name: "Restricted access", exact: true }),
+  ).toBeVisible();
+
+  // 5. A user invited directly on a restricted folder, without access to its
+  //    parent, has it as the only breadcrumb item: the mobile root layout
+  //    must mark it too.
+  const readOnly = findItem(folders.items, names.readOnly);
+  await login(page, "other-owner@example.com");
+  await page.goto(itemUrl(readOnly.target!.id));
+  const mobileRoot = page.locator(
+    ".explorer__content__breadcrumbs--mobile__workspace",
+  );
+  await expect(mobileRoot).toContainText(names.readOnly);
+  await expect(
+    mobileRoot.getByRole("img", { name: "Restricted access", exact: true }),
   ).toBeVisible();
 });
 

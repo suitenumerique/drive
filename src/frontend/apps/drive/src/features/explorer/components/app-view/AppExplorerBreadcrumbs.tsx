@@ -6,7 +6,7 @@ import {
   IconSize,
   useDropdownMenu,
 } from "@gouvfr-lasuite/ui-components";
-import { FolderRestricted } from "@gouvfr-lasuite/ui-components/icons";
+import { RestrictedBreadcrumbIcon } from "@/features/ui/components/breadcrumbs/RestrictedBreadcrumbIcon";
 import {
   NavigationEventType,
   useGlobalExplorer,
@@ -200,6 +200,7 @@ export const ExplorerBreadcrumbsMobile = () => {
               size={IconSize.SMALL}
             />
             <span>{workspaceTitle}</span>
+            <RestrictedBreadcrumbIcon item={workspace} />
           </div>
         ) : (
           <div className="explorer__content__breadcrumbs--mobile__container">
@@ -237,17 +238,11 @@ export const ExplorerBreadcrumbsMobile = () => {
                   size={IconSize.SMALL}
                 />
                 <span>{workspaceTitle}</span>
+                <RestrictedBreadcrumbIcon item={workspace} />
               </div>
               <div className="explorer__content__breadcrumbs--mobile__container__info__folder">
                 <span>{current.title}</span>
-                {current.is_restricted && (
-                  <FolderRestricted
-                    size={IconSize.SMALL}
-                    className="c__breadcrumbs__restricted"
-                    role="img"
-                    aria-label={t("explorer.breadcrumbs.restricted")}
-                  />
-                )}
+                <RestrictedBreadcrumbIcon item={current} />
               </div>
             </div>
           </div>
