@@ -279,6 +279,12 @@ export const FileUploadToast = (
                     <ChevronDown size={16} aria-hidden="true" />
                   )
                 }
+                aria-expanded={isOpen}
+                aria-label={t(
+                  isOpen
+                    ? "explorer.actions.upload.collapse"
+                    : "explorer.actions.upload.expand",
+                )}
                 onClick={() => setIsOpen(!isOpen)}
               ></Button>
             )}
@@ -289,6 +295,7 @@ export const FileUploadToast = (
                 variant="tertiary"
                 size="small"
                 icon={<XMark size={16} aria-hidden="true" />}
+                aria-label={t("explorer.actions.upload.close")}
               ></Button>
             ) : (
               <Button
@@ -296,6 +303,7 @@ export const FileUploadToast = (
                 variant="tertiary"
                 size="small"
                 icon={<XMark size={16} aria-hidden="true" />}
+                aria-label={t("explorer.actions.upload.cancel")}
               ></Button>
             )}
           </div>

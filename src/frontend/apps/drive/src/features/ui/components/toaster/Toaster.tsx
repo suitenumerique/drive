@@ -1,6 +1,7 @@
 import { Button } from "@gouvfr-lasuite/ui-components";
 import { XMark } from "@gouvfr-lasuite/ui-components/icons";
 import clsx from "clsx";
+import { useTranslation } from "react-i18next";
 import { ToastContainer, ToastContentProps, toast } from "react-toastify";
 
 export const Toaster = () => {
@@ -21,6 +22,8 @@ export const ToasterItem = ({
   type?: "error" | "info";
   onDrop?: (event: React.DragEvent<HTMLDivElement>) => void;
 } & Partial<ToastContentProps>) => {
+  const { t } = useTranslation();
+
   return (
     <div
       onDrop={(event) => onDrop?.(event)}
@@ -37,6 +40,7 @@ export const ToasterItem = ({
           variant="tertiary"
           size="small"
           icon={<XMark size={16} aria-hidden="true" />}
+          aria-label={t("explorer.rightPanel.close")}
         ></Button>
       )}
     </div>
