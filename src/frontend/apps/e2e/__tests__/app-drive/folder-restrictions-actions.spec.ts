@@ -81,6 +81,38 @@ test("renaming a restriction entry renames its folder", async ({
   );
 });
 
+// Renaming a folder that was never opened used to cache a fake folder holding
+// only its new title: the share modal then read its missing abilities and the
+// page crashed. Restricted and normal folders went through the same path.
+for (const title of [names.accessible, names.normal]) {
+  test(`sharing "${title}" right after renaming it opens the share modal`, async ({
+    page,
+    folders,
+  }) => {
+    // 1. Catch uncaught errors: the crash only shows as a blank page.
+    const pageErrors: Error[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error));
+    await page.goto(itemUrl(folders.parent.id));
+
+    // 2. Rename the folder from the parent listing, without opening it first.
+    const renamed = `${title} renamed`;
+    await openRowMenu(page, title);
+    await menuItem(page, "Rename").click();
+    await page.getByRole("textbox").fill(renamed);
+    await page.getByRole("button", { name: "Rename", exact: true }).click();
+    await getRowItem(page, renamed);
+
+    // 3. Share it from the same row: the modal opens on the renamed folder and
+    //    lists its members, and nothing crashed along the way.
+    await openRowMenu(page, renamed);
+    await menuItem(page, "Share").click();
+    await expect(shareModal(page)).toBeVisible();
+    await expect(shareModal(page)).toContainText(renamed);
+    await expect(shareModal(page).getByText("drive@example.com")).toBeVisible();
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 test("breadcrumbs mark restricted folders", async ({ page, folders }) => {
   const accessible = findItem(folders.items, names.accessible);
   const restrictedIcon = (page: Page) =>

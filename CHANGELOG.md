@@ -15,6 +15,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(frontend) offer folder actions on restricted folders from their parent
+- 🐛(frontend) fix the crash when sharing a folder renamed before being opened
 - 🐛(backend) keep the file on a WOPI rename to its current name
 - ♿️(frontend) associate file list headers with their cells
 
