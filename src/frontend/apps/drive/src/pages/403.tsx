@@ -1,12 +1,12 @@
-import { DocumentTitle } from "@/features/layouts/components/DocumentTitle";
+import { formatPageTitle } from "@/features/layouts/utils/pageTitle";
 import { getSimpleLayout } from "@/features/layouts/components/simple/SimpleLayout";
-import { GenericDisclaimer } from "@/features/ui/components/generic-disclaimer/GenericDisclaimer";
 import { errorToCode } from "@/features/api/APIError";
 import { fetchAPI } from "@/features/api/fetchApi";
-import { useMutationCreateAskForAccess } from "@/features/explorer/hooks/useMutationsAccesses";
-import { Icon, Button } from "@gouvfr-lasuite/ui-components";
+import { getDriver } from "@/features/config/Config";
+import { FilePreview, FilePreviewType } from "@gouvfr-lasuite/ui-components";
+import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 // Matches any item URL shape and captures the UUID:
@@ -33,87 +33,86 @@ export default function UnauthorizedPage() {
   const from = router.query.from;
   const itemId = itemIdFromFrom(from);
 
-  const [requestSent, setRequestSent] = useState(false);
-  const [alreadyRequested, setAlreadyRequested] = useState(false);
+  const [accessRequested, setAccessRequested] = useState(false);
 
-  const { mutate: createAskForAccess, isPending } =
-    useMutationCreateAskForAccess();
+  // Build the redirect from itemId (a validated UUID) + a static prefix.
+  // `from` is only used as a condition, never in the redirect URL,
+  // so no user-controlled value reaches router.replace.
+  const redirectIfAccessible = useCallback(async () => {
+    if (!itemId) return;
+    try {
+      await fetchAPI(`items/${itemId}/`, undefined, { redirectOn40x: false });
+      const raw = Array.isArray(from) ? from[0] : (from as string);
+      const decoded = decodeURIComponent(raw ?? "");
+      let safePath: string | undefined;
+      if (decoded.startsWith("/explorer/items/files/")) {
+        safePath = `/explorer/items/files/${itemId}`;
+      } else if (decoded.startsWith("/wopi/")) {
+        safePath = `/wopi/${itemId}`;
+      } else if (decoded.startsWith("/explorer/items/")) {
+        safePath = `/explorer/items/${itemId}`;
+      }
+      if (safePath !== undefined) void router.replace(safePath);
+    } catch {
+      // item not yet accessible, stay on this page
+    }
+  }, [itemId, from, router]);
 
   // If the item becomes accessible (e.g. access was granted), redirect to it.
   // redirectOn40x is disabled to avoid an infinite redirect loop: a 403 here
   // means the user still has no access, so we simply stay on this page.
   useEffect(() => {
-    if (!itemId) return;
-    fetchAPI(`items/${itemId}/`, undefined, { redirectOn40x: false })
-      .then(() => {
-        try {
-          const raw = Array.isArray(from) ? from[0] : (from as string);
-          const decoded = decodeURIComponent(raw ?? "");
-          // Build the redirect from itemId (a validated UUID) + a static prefix.
-          // `decoded` is only used as a condition, never in the redirect URL,
-          // so no user-controlled value reaches router.replace.
-          let safePath: string | undefined;
-          if (decoded.startsWith("/explorer/items/files/")) {
-            safePath = `/explorer/items/files/${itemId}`;
-          } else if (decoded.startsWith("/wopi/")) {
-            safePath = `/wopi/${itemId}`;
-          } else if (decoded.startsWith("/explorer/items/")) {
-            safePath = `/explorer/items/${itemId}`;
-          }
-          if (safePath !== undefined) void router.replace(safePath);
-        } catch {
-          // malformed encoding, stay on this page
-        }
-      })
-      .catch(() => {
-        // item not yet accessible, stay on this page
-      });
-  }, [itemId]); // No need for `from` here as `itemId` already depends on it.
+    void redirectIfAccessible();
+  }, [redirectIfAccessible]);
 
-  let askForAccessLabel = t("403.ask_for_access.button");
-  if (requestSent) askForAccessLabel = t("403.ask_for_access.success");
-  else if (alreadyRequested)
-    askForAccessLabel = t("403.ask_for_access.already_requested");
+  // Local mutation without a generic error toast: on the 403 page, any
+  // unexpected failure (e.g. the user was just granted access and the
+  // ask-for-access endpoint rejects) means we should redirect, not toast.
+  const { mutate: createAskForAccess } = useMutation({
+    meta: { noGlobalError: true },
+    mutationFn: (id: string) => getDriver().createAskForAccess({ itemId: id }),
+    onSuccess: () => setAccessRequested(true),
+    onError: (error) => {
+      if (errorToCode(error) === "already_requested") {
+        setAccessRequested(true);
+        return;
+      }
+      void redirectIfAccessible();
+    },
+  });
 
-  const handleAskForAccess = () => {
+  const handleRequestAccess = () => {
     if (!itemId) return;
-    createAskForAccess(
-      { itemId },
-      {
-        onSuccess: () => setRequestSent(true),
-        onError: (error) => {
-          if (errorToCode(error) === "already_requested") {
-            setAlreadyRequested(true);
-          }
-        },
-      },
-    );
+    createAskForAccess(itemId);
   };
 
+  const file: FilePreviewType = useMemo(
+    () => ({
+      id: itemId ?? "403",
+      // FilePreview owns document.title via useEffect([isOpen, openedFile]).
+      // Give it the formatted title so the tab title is correct from the start.
+      title: formatPageTitle(t("403.title"), t("app_title")),
+      mimetype: "",
+      size: 0,
+      url: "",
+      url_preview: "",
+      isFolderAccessDenied: true,
+    }),
+    [itemId, t],
+  );
+
   return (
-    <>
-      <DocumentTitle pageName={t("403.title")} />
-      <GenericDisclaimer
-        message={t("403.title")}
-        imageSrc="/assets/403-background.png"
-      >
-        <div className="drive__403__buttons">
-          <Button href="/" variant="tertiary">
-            <Icon name="home" />
-            {t("403.button")}
-          </Button>
-          {itemId && (
-            <Button
-              onClick={handleAskForAccess}
-              disabled={isPending || requestSent || alreadyRequested}
-              icon={<Icon name="mail" />}
-            >
-              {askForAccessLabel}
-            </Button>
-          )}
-        </div>
-      </GenericDisclaimer>
-    </>
+    <div className="drive-403-preview">
+      <FilePreview
+        isOpen={true}
+        files={[file]}
+        openedFileId={file.id}
+        onClose={() => void router.push("/")}
+        onRequestAccess={
+          itemId && !accessRequested ? handleRequestAccess : undefined
+        }
+      />
+    </div>
   );
 }
 

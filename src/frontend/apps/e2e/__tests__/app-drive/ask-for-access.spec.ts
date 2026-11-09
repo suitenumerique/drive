@@ -50,7 +50,7 @@ const requestAccessToFolder = async (userB: UserFixture, folderUrl: string) => {
   // User B visits the folder URL directly — gets redirected to /403.
   await userB.page.goto(folderUrl);
   await expect(
-    userB.page.getByText("You don't have the necessary permissions"),
+    userB.page.getByText("You do not have the necessary permissions"),
   ).toBeVisible();
 
   const requestButton = userB.page.getByRole("button", {
@@ -58,12 +58,9 @@ const requestAccessToFolder = async (userB: UserFixture, folderUrl: string) => {
   });
   await expect(requestButton).toBeVisible();
 
-  // Clicking sends the request; the button disappears and the success message shows.
+  // Clicking sends the request; the button disappears.
   await requestButton.click();
   await expect(requestButton).not.toBeVisible();
-  await expect(
-    userB.page.getByText("Your access request has been sent."),
-  ).toBeVisible();
 };
 
 /**
@@ -133,7 +130,7 @@ test("owner can deny a pending access request and user still gets a 403", async 
   // User B visits the folder again — still gets a 403.
   await userB.page.goto(folderUrl);
   await expect(
-    userB.page.getByText("You don't have the necessary permissions"),
+    userB.page.getByText("You do not have the necessary permissions"),
   ).toBeVisible();
 });
 
