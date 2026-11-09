@@ -117,8 +117,8 @@ bootstrap: \
 	data/media \
 	data/static \
 	create-dev-local-files \
-	build \
 	create-docker-network \
+	build \
 	migrate \
 	back-i18n-compile \
 	mails-install \
