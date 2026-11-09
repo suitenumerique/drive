@@ -737,3 +737,70 @@ def test_api_item_ask_for_access_accept_owner_can_accept_owner_role():
     assert response.status_code == 204
 
     assert not ItemAskForAccess.objects.filter(id=item_ask_for_access.id).exists()
+
+
+@pytest.mark.parametrize("existing_role", [RoleChoices.EDITOR, RoleChoices.ADMIN])
+def test_api_item_ask_for_access_accept_does_not_downgrade_existing_access(existing_role):
+    """Accepting a lower-role request must not downgrade a user who already holds a higher role."""
+    owner = UserFactory()
+    item = ItemFactory(users=[(owner, RoleChoices.OWNER)])
+    item_access = UserItemAccessFactory(item=item, role=existing_role)
+    item_ask_for_access = ItemAskForAccessFactory(
+        item=item, user=item_access.user, role=RoleChoices.READER
+    )
+
+    client = APIClient()
+    client.force_login(owner)
+
+    response = client.post(
+        f"/api/v1.0/items/{item.id}/ask-for-access/{item_ask_for_access.id}/accept/"
+    )
+    assert response.status_code == 204
+
+    assert not ItemAskForAccess.objects.filter(id=item_ask_for_access.id).exists()
+    item_access.refresh_from_db()
+    assert item_access.role == existing_role
+
+
+@pytest.mark.parametrize("existing_role", [RoleChoices.READER, RoleChoices.EDITOR])
+def test_api_item_ask_for_access_accept_synchronizes_descendants(existing_role):
+    """Accepting an access request removes lower-role descendant accesses for the requester."""
+    owner = UserFactory()
+    item = ItemFactory(type="folder", users=[(owner, RoleChoices.OWNER)])
+    child = ItemFactory(parent=item, type="folder")
+    requester = UserFactory()
+    UserItemAccessFactory(item=child, user=requester, role=existing_role)
+    item_ask_for_access = ItemAskForAccessFactory(item=item, user=requester, role=RoleChoices.ADMIN)
+
+    client = APIClient()
+    client.force_login(owner)
+
+    response = client.post(
+        f"/api/v1.0/items/{item.id}/ask-for-access/{item_ask_for_access.id}/accept/"
+    )
+    assert response.status_code == 204
+
+    assert not ItemAccess.objects.filter(item=child, user=requester).exists()
+
+
+def test_api_item_ask_for_access_accept_sends_invitation_email():
+    """Accepting an access request sends an invitation email to the requester."""
+    owner = UserFactory(language="en-us")
+    item = ItemFactory(users=[(owner, RoleChoices.OWNER)])
+    requester = UserFactory(language="en-us")
+    item_ask_for_access = ItemAskForAccessFactory(
+        item=item, user=requester, role=RoleChoices.READER
+    )
+
+    client = APIClient()
+    client.force_login(owner)
+
+    assert len(mail.outbox) == 0
+
+    response = client.post(
+        f"/api/v1.0/items/{item.id}/ask-for-access/{item_ask_for_access.id}/accept/"
+    )
+    assert response.status_code == 204
+
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].to == [requester.email]

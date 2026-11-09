@@ -2699,14 +2699,26 @@ class ItemAskForAccess(BaseModel):
         }
 
     def accept(self, role=None):
-        """Grant access to the item and delete the request."""
-        ItemAccess.objects.update_or_create(
+        """Grant access to the item and delete the request.
+
+        Returns the ItemAccess, or None if the user already holds an equal or
+        higher role (request is removed but the existing access is left untouched).
+        """
+        target_role = role or self.role
+        existing = ItemAccess.objects.filter(item=self.item, user=self.user).first()
+        if existing and RoleChoices.get_priority(existing.role) >= RoleChoices.get_priority(
+            target_role
+        ):
+            self.delete()
+            return None
+        access, _ = ItemAccess.objects.update_or_create(
             item=self.item,
             user=self.user,
-            defaults={"role": role or self.role},
-            create_defaults={"role": role or self.role},
+            defaults={"role": target_role},
+            create_defaults={"role": target_role},
         )
         self.delete()
+        return access
 
     def send_ask_for_access_email(self, recipient_email, language=None):
         """Notify a single recipient (admin/owner) that a user requested access."""

@@ -53,6 +53,7 @@ from rest_framework_api_key.permissions import HasAPIKey
 from core import enums, models
 from core.entitlements import get_entitlements_backend
 from core.services.accesses import (
+    apply_item_access,
     batch_share_process_rows,
     synchronize_descendants_accesses,
 )
@@ -2515,14 +2516,7 @@ class ItemAccessViewSet(
             )
 
         access = serializer.save(item_id=self.kwargs["resource_id"])
-        synchronize_descendants_accesses(self.item, access)
-        if access.user:
-            access.item.send_invitation_email(
-                access.user.email,
-                access.role,
-                self.request.user,
-                self.request.user.language or settings.LANGUAGE_CODE,
-            )
+        apply_item_access(self.item, access, self.request.user)
 
         posthog_capture(
             "item_access_created",
@@ -2948,7 +2942,9 @@ class ItemAskForAccessViewSet(
                 code="role_too_high",
             )
 
-        ask_for_access.accept(role=target_role)
+        access = ask_for_access.accept(role=target_role)
+        if access:
+            apply_item_access(self.item, access, request.user)
         return drf.response.Response(status=drf.status.HTTP_204_NO_CONTENT)
 
 
