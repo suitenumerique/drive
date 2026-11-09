@@ -43,14 +43,25 @@ This document lists all configurable environment variables for the Drive applica
 | `DB_USER` | Database user | `dinum` |
 | `DJANGO_CELERY_BROKER_URL` | Celery broker URL for task queue | `redis://redis:6379/0` |
 | `DJANGO_CELERY_TASK_ROUTES` | Celery task routing configuration. Use this to route specific tasks to dedicated queues, e.g. `{"core.tasks.item.duplicate_file": {"queue": "duplicate_file"}}` | `{}` |
+| `EMAIL_APP_NAME` | Application name used in the pitch and signature of emails | `Drive` |
 | `EMAIL_BACKEND` | Email backend for sending emails | `django.core.mail.backends.smtp.EmailBackend` |
 | `EMAIL_BRAND_NAME` | Brand name for email templates | `None` |
+| `EMAIL_FONT_BOLD_URL` | Public URL of the bold font file (woff2) used in emails | `None` |
+| `EMAIL_FONT_FAMILY` | Font family used in emails, before the fallback fonts. Shown only by email clients that support web fonts or when it is installed on the reader's computer | `Marianne` |
+| `EMAIL_FONT_REGULAR_URL` | Public URL of the regular font file (woff2) used in emails | `None` |
 | `EMAIL_FROM` | Default sender email address | `from@example.com` |
+| `EMAIL_GOVERNMENT_LOGO_IMG` | Public URL of the government logo shown at the bottom of emails, hidden when not set | `None` |
 | `EMAIL_HOST` | SMTP host for email sending | `None` |
 | `EMAIL_HOST_PASSWORD` | SMTP password for email sending | `None` |
 | `EMAIL_HOST_USER` | SMTP username for email sending | `None` |
 | `EMAIL_LOGO_IMG` | Logo image URL for email templates | `None` |
+| `EMAIL_NEWSLETTER_URL` | Newsletter subscription link in the email footer, hidden when not set | `None` |
 | `EMAIL_PORT` | SMTP port for email sending | `None` |
+| `EMAIL_PRODUCT_ICONS` | Icons linking to the other products of the suite, shown above the email footer, keyed by product name, e.g. `{"Docs": {"img": "https://example.com/docs.png", "href": "https://docs.example.com"}}`. Hidden when empty | `{}` |
+| `EMAIL_SUITE_LOGO_IMG` | Public URL of the suite logo shown at the bottom of emails, hidden when not set | `None` |
+| `EMAIL_SUITE_URL` | Link of the suite logo at the bottom of emails | `None` |
+| `EMAIL_SUPPORT_URL` | Support link in the email footer. Defaults to `supportEmail` of `FRONTEND_HELP_MENU_CONFIG`, hidden when neither is set | `None` |
+| `EMAIL_TERMS_OF_SERVICE_URL` | Terms of use link in the email footer. Defaults to `legal.termsOfUseUrl` of `FRONTEND_HELP_MENU_CONFIG`, hidden when neither is set | `None` |
 | `EMAIL_URL_APP` | URL used in emails to link back to the app | `None` |
 | `EMAIL_USE_SSL` | Use SSL for SMTP connection | `False` |
 | `EMAIL_USE_TLS` | Use TLS for SMTP connection | `False` |

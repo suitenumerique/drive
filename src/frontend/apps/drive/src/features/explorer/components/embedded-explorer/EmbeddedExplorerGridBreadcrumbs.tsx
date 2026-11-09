@@ -12,6 +12,7 @@ import {
 } from "@/features/ui/components/breadcrumbs/Breadcrumbs";
 import { useTranslation } from "react-i18next";
 import { Icon, IconSize, Button } from "@gouvfr-lasuite/ui-components";
+import { RestrictedBreadcrumbIcon } from "@/features/ui/components/breadcrumbs/RestrictedBreadcrumbIcon";
 import { NavigationItem } from "../GlobalExplorerContext";
 import { useItemActionMenuItems } from "../../hooks/useItemActionMenuItems";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
@@ -292,6 +293,7 @@ export const BreadcrumbItemButton = ({
       onClick={onClick}
     >
       {item.title}
+      <RestrictedBreadcrumbIcon item={item} />
       {rightIcon}
     </button>
   );

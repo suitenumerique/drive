@@ -43,7 +43,7 @@ for (const source of ["row", "selection bar"]) {
       else
         await dialog(page)
           .getByRole("button", {
-            name: dismissal === "Close" ? "close" : dismissal,
+            name: dismissal,
             exact: true,
           })
           .click();

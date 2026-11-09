@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 import { getRowItem } from "./utils-embedded-grid";
 import { getItemTree, openTreeNode } from "./utils-tree";
+import { moveConfirmationDialog } from "./utils/move-utils";
 import {
   findItem,
   itemUrl,
@@ -66,7 +67,7 @@ for (const path of [
     // 4. Drop onto the restriction entry: moving into a folder with different
     //    accesses asks for confirmation.
     await pointerDrop(page, source, destination);
-    const modal = page.getByRole("dialog", { name: "Move confirmation modal" });
+    const modal = moveConfirmationDialog(page);
     await expect(modal).toBeVisible();
     // 5. Confirm, listening to one move request per dragged item to check
     //    where each one is sent.
@@ -142,9 +143,7 @@ for (const destination of [names.denied, names.deleted, names.readOnly]) {
       await pointerDrop(page, source, target);
       // 4. The drop is ignored: no confirmation, the drag ends cleanly and
       //    the folder is still listed in the parent.
-      await expect(
-        page.getByRole("dialog", { name: "Move confirmation modal" }),
-      ).toHaveCount(0);
+      await expect(moveConfirmationDialog(page)).toHaveCount(0);
       await expect(page.locator(".explorer__drag-overlay")).toHaveCount(0);
       const children = await listItems(
         page,
@@ -184,9 +183,7 @@ test("a restriction entry cannot be dropped into its own target or descendant", 
     );
     // 4. Nothing happens: no confirmation, no request, and the entry stays
     //    in the parent.
-    await expect(
-      page.getByRole("dialog", { name: "Move confirmation modal" }),
-    ).toHaveCount(0);
+    await expect(moveConfirmationDialog(page)).toHaveCount(0);
     const children = await listItems(
       page,
       `items/${folders.parent.id}/children/`,
@@ -195,5 +192,49 @@ test("a restriction entry cannot be dropped into its own target or descendant", 
       findItem(folders.items, names.accessible).id,
     );
     expect(moves).toEqual([]);
+  }
+});
+
+// Drops on a restriction entry read the folder it points to. After renaming
+// the entry, the move confirmation must name that folder with its new title,
+// from the grid and from the tree, without a reload.
+test("drops on a renamed restriction entry name the renamed folder", async ({
+  page,
+  folders,
+}) => {
+  // 1. Rename the entry from the parent listing.
+  await page.goto(itemUrl(folders.parent.id));
+  await (await getRowItem(page, names.accessible)).click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
+  await page.getByRole("textbox").fill("Renamed restricted");
+  await page.getByRole("button", { name: "Rename", exact: true }).click();
+  await getRowItem(page, "Renamed restricted");
+
+  // 2. Drop a folder on the entry, in the grid then in the tree (the entry is
+  //    starred). The confirmation is found by its title, which names it on
+  //    every ui-components version. The right click selected the entry:
+  //    select the source instead, or the drag would carry the entry itself.
+  await openTreeNode(page, "Starred", true);
+  await (await getRowItem(page, "Movable one")).click();
+  await expect(page.locator("tr.selected")).toHaveCount(1);
+  const source = (await getRowItem(page, "Movable one"))
+    .getByRole("cell")
+    .first();
+  const confirmationModal = page
+    .getByRole("dialog")
+    .filter({ hasText: "Transfer rights" });
+  for (const destination of [
+    (await getRowItem(page, "Renamed restricted")).getByRole("cell").first(),
+    (await getItemTree(page, "Renamed restricted")).getByTestId(
+      "tree_item_content",
+    ),
+  ]) {
+    await pointerDrop(page, source, destination);
+    // 3. The confirmation names the folder with its new title. Cancel it.
+    await expect(confirmationModal).toContainText(
+      "to the folder Renamed restricted",
+    );
+    await confirmationModal.getByRole("button", { name: "Cancel" }).click();
+    await expect(confirmationModal).toHaveCount(0);
   }
 });

@@ -39,3 +39,8 @@
     color: var(--c--contextuals--content--semantic--neutral--primary);
   }
 }
+
+.c__breadcrumbs__restricted {
+  flex-shrink: 0;
+  color: var(--c--contextuals--content--semantic--neutral--tertiary);
+}

@@ -2087,11 +2087,17 @@
                     "main_workspace": {
                         "type": "boolean",
                         "readOnly": true
+                    },
+                    "is_restricted": {
+                        "type": "boolean",
+                        "description": "Return whether a restriction targets this folder.",
+                        "readOnly": true
                     }
                 },
                 "required": [
                     "depth",
                     "id",
+                    "is_restricted",
                     "main_workspace",
                     "path",
                     "title"
@@ -2499,7 +2505,8 @@
                         ]
                     },
                     "is_restricted": {
-                        "type": "string",
+                        "type": "boolean",
+                        "description": "Return whether a restriction targets this folder.",
                         "readOnly": true
                     },
                     "link_expires_at": {
@@ -2914,7 +2921,8 @@
                         ]
                     },
                     "is_restricted": {
-                        "type": "string",
+                        "type": "boolean",
+                        "description": "Return whether a restriction targets this folder.",
                         "readOnly": true
                     },
                     "link_expires_at": {
@@ -3124,7 +3132,8 @@
                         "readOnly": true
                     },
                     "is_restricted": {
-                        "type": "string",
+                        "type": "boolean",
+                        "description": "Return whether a restriction targets this folder.",
                         "readOnly": true
                     },
                     "target": {
@@ -3640,7 +3649,8 @@
                         ]
                     },
                     "is_restricted": {
-                        "type": "string",
+                        "type": "boolean",
+                        "description": "Return whether a restriction targets this folder.",
                         "readOnly": true
                     },
                     "link_expires_at": {
