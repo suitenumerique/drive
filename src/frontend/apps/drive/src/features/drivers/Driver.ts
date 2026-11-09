@@ -171,7 +171,7 @@ export abstract class Driver {
   abstract deleteAskForAccess(payload: DTODeleteAskForAccess): Promise<void>;
   abstract acceptAskForAccess(payload: DTOAcceptAskForAccess): Promise<void>;
   // Invitations
-  abstract getItemInvitations(itemId: string): Promise<APIList<Invitation>>;
+  abstract getItemInvitations(itemId: string, page?: number): Promise<APIList<Invitation>>;
   abstract createInvitation(data: DTOCreateInvitation): Promise<Invitation>;
   abstract deleteInvitation(payload: DTODeleteInvitation): Promise<void>;
   abstract updateInvitation(payload: DTOUpdateInvitation): Promise<Invitation>;

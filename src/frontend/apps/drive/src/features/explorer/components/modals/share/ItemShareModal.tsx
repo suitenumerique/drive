@@ -98,8 +98,11 @@ export const ItemShareModal = ({
   const canViewAccesses = isOpen && !!item?.abilities.accesses_view;
   const { data } = useItemAccesses(itemId, canViewAccesses);
 
-  const { data: invitations, hasNextPage: hasNextInvitations } =
-    useInfiniteItemInvitations(itemId, canViewAccesses);
+  const {
+    data: invitations,
+    hasNextPage: hasNextInvitations,
+    fetchNextPage: fetchNextInvitations,
+  } = useInfiniteItemInvitations(itemId, canViewAccesses);
   const { mutateAsync: createAccess } = useMutationCreateAccess();
   const { mutateAsync: createInvitation } = useMutationCreateInvitation();
   const { mutateAsync: updateAccess } = useMutationUpdateAccess();
@@ -435,6 +438,7 @@ export const ItemShareModal = ({
         onSearchUsers={onSearch}
         hasNextMembers={false}
         hasNextInvitations={hasNextInvitations}
+        onLoadNextInvitations={fetchNextInvitations}
         searchUsersResult={queryValue === "" ? undefined : users}
         onInviteUser={(users, role) => onInviteUser(users, role as Role)}
         accessRoleTopMessage={(access) => {

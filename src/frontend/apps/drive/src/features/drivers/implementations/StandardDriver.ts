@@ -329,8 +329,8 @@ export class StandardDriver extends Driver {
     );
   }
 
-  async getItemInvitations(itemId: string): Promise<APIList<Invitation>> {
-    const response = await fetchAPI(`items/${itemId}/invitations/`);
+  async getItemInvitations(itemId: string, page = 1): Promise<APIList<Invitation>> {
+    const response = await fetchAPI(`items/${itemId}/invitations/?page=${page}`);
     const data = await response.json();
     return data;
   }

@@ -38,7 +38,7 @@ export const useInfiniteItemInvitations = (itemId: string, enabled = true) => {
   const driver = getDriver();
   return useInfiniteQuery({
     queryKey: ["itemInvitations", itemId],
-    queryFn: () => driver.getItemInvitations(itemId),
+    queryFn: ({ pageParam }) => driver.getItemInvitations(itemId, pageParam as number),
     enabled,
     initialPageParam: 1,
     getNextPageParam(lastPage, allPages) {
