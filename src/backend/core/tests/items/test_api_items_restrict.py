@@ -1,5 +1,7 @@
 """Tests for items API endpoint: restrict / unrestrict actions."""
 
+from unittest import mock
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -92,6 +94,74 @@ def test_api_items_restrict_owner_can_deactivate(settings):
     assert folder.is_restricted is False
     assert str(folder.path) == f"{parent.id!s}.{folder.id!s}"
     assert not models.Item.objects.filter(target=folder).exists()
+
+
+def test_api_items_restrict_activate_posthog_event(settings, posthog_capture_mock):
+    """Restricting a folder should send an 'item_restricted' event."""
+    user = factories.UserFactory()
+    settings.FEATURES_RESTRICTED_FOLDERS_USERS = [user.email]
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, link_reach="authenticated")
+    folder = factories.ItemFactory(
+        parent=parent,
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=None,
+        users=[(user, "owner")],
+    )
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(f"/api/v1.0/items/{folder.id!s}/restrict/")
+
+    assert response.status_code == 200
+    posthog_capture_mock.assert_called_once_with(
+        "item_restricted", distinct_id=user.email, properties=mock.ANY
+    )
+    properties = posthog_capture_mock.call_args.kwargs["properties"]
+    assert (
+        properties.items()
+        >= {
+            "item_id": folder.id,
+            "item_type": "folder",
+            "item_size": None,
+            "link_reach": "restricted",
+        }.items()
+    )
+
+
+def test_api_items_restrict_deactivate_posthog_event(settings, posthog_capture_mock):
+    """Lifting the restriction of a folder should send an 'item_unrestricted' event."""
+    user = factories.UserFactory()
+    settings.FEATURES_RESTRICTED_FOLDERS_USERS = [user.email]
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach="authenticated",
+        users=[(user, "owner")],
+    )
+    folder = factories.ItemFactory(
+        parent=parent, type=models.ItemTypeChoices.FOLDER, link_reach=None
+    )
+    folder = folder.restrict(user)
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.delete(f"/api/v1.0/items/{folder.id!s}/restrict/")
+
+    assert response.status_code == 200
+    posthog_capture_mock.assert_called_once_with(
+        "item_unrestricted", distinct_id=user.email, properties=mock.ANY
+    )
+    properties = posthog_capture_mock.call_args.kwargs["properties"]
+    assert (
+        properties.items()
+        >= {
+            "item_id": folder.id,
+            "item_type": "folder",
+            "item_size": None,
+            "link_reach": "authenticated",
+        }.items()
+    )
 
 
 def test_api_items_restrict_excluded_owner_cannot_deactivate(settings):

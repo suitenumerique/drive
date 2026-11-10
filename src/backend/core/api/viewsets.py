@@ -724,6 +724,10 @@ class ItemViewSet(
         data = serializer.validated_data.copy()
         extension = data.pop("extension", None)
         attributes = self.get_create_extra_attributes()
+        attributes.setdefault(
+            "source",
+            models.ItemSourceChoices.TEMPLATE if extension else models.ItemSourceChoices.UPLOAD,
+        )
         if parent is not None:
             attributes["parent"] = parent
         else:
@@ -743,6 +747,29 @@ class ItemViewSet(
             if extension:
                 self._create_file_from_template(serializer.instance, extension)
 
+    def _get_live_restrictions_under(self, path, pk):
+        """Return the live restrictions with a live target found under the given item."""
+        return models.Item.objects.filter(
+            type=models.ItemTypeChoices.RESTRICTION,
+            path__descendants=path,
+            deleted_at__isnull=True,
+            ancestors_deleted_at__isnull=True,
+            hard_deleted_at__isnull=True,
+            target__isnull=False,
+            target__deleted_at__isnull=True,
+            target__ancestors_deleted_at__isnull=True,
+            target__hard_deleted_at__isnull=True,
+        ).exclude(pk=pk)
+
+    def _capture_restriction_event(self, event_name, item):
+        """Track a restriction change along with the link reach left on the folder."""
+        posthog_capture(
+            event_name,
+            self.request.user,
+            {"link_reach": item.computed_link_reach},
+            item=item,
+        )
+
     def perform_destroy(self, instance):
         """Override to implement a soft delete instead of dumping the record in database."""
         if instance.type == models.ItemTypeChoices.RESTRICTION:
@@ -750,10 +777,21 @@ class ItemViewSet(
             # anyone else only lifts the restriction out of their folder
             if instance.target.get_role(self.request.user) != models.RoleChoices.OWNER:
                 instance.detach()
+                self._capture_restriction_event("item_unrestricted", instance.target)
                 return
             instance = instance.target
+        # Computed before the deletion trashes or lifts the restrictions
+        has_restricted_descendant = (
+            instance.type == models.ItemTypeChoices.FOLDER
+            and self._get_live_restrictions_under(instance.path, instance.pk).exists()
+        )
         instance.soft_delete(self.request.user)
-        posthog_capture("item_deleted", self.request.user, {}, item=instance)
+        posthog_capture(
+            "item_deleted",
+            self.request.user,
+            {"has_restricted_descendant": has_restricted_descendant},
+            item=instance,
+        )
 
     def perform_update(self, serializer):
         """Override to check if a file is renamed in order to rename file on storage."""
@@ -914,7 +952,7 @@ class ItemViewSet(
         if item.size is None:
             can_upload = get_entitlements_backend().can_upload(item.creator)
             if not can_upload["result"]:
-                self._complete_item_deletion(item)
+                self._reject_upload(item, can_upload.get("reason") or "permission_denied")
                 raise drf.exceptions.PermissionDenied(
                     detail=can_upload.get("message", "You do not have permission to upload files."),
                     code=can_upload.get("reason"),
@@ -944,7 +982,7 @@ class ItemViewSet(
         mimetype = utils.detect_mimetype(file_head, filename=item.filename)
 
         if not utils.is_mimetype_allowed(mimetype):
-            self._complete_item_deletion(item)
+            self._reject_upload(item, "file_type_not_allowed", mimetype=mimetype, size=file_size)
             logger.info(
                 "upload_ended: mimetype not allowed %s for filename %s",
                 mimetype,
@@ -1011,6 +1049,8 @@ class ItemViewSet(
                 "title": item.title,
                 "size": item.size,
                 "mimetype": item.mimetype,
+                "quota_excluded": item.quota_excluded,
+                "source": item.source,
             },
         )
 
@@ -1019,14 +1059,14 @@ class ItemViewSet(
     def _validate_uploaded_size(self, item, file_size):
         """Verify storage metadata even though the PUT has a signed length."""
         if item.size is not None and file_size != item.size:
-            self._complete_item_deletion(item)
+            self._reject_upload(item, "file_size_mismatch", size=file_size)
             raise drf.exceptions.ValidationError(
                 detail="The uploaded file size does not match the reserved size.",
                 code="file_size_mismatch",
             )
 
         if file_size > settings.DATA_UPLOAD_MAX_MEMORY_SIZE:
-            self._complete_item_deletion(item)
+            self._reject_upload(item, "file_size_exceeded", size=file_size)
             logger.info(
                 "upload_ended: file size (%s) for file %s higher than the allowed max size",
                 file_size,
@@ -1042,6 +1082,20 @@ class ItemViewSet(
         item.soft_delete()
         item.hard_delete()
         process_item_purge.delay(item.id)
+
+    def _reject_upload(self, item, reason, mimetype=None, size=None):
+        """Delete a refused upload and track the reason of the refusal."""
+        self._complete_item_deletion(item)
+        posthog_capture(
+            "item_upload_rejected",
+            self.request.user,
+            {
+                "reason": reason,
+                "mimetype": mimetype,
+                "size": size,
+                "source": item.source,
+            },
+        )
 
     @drf.decorators.action(
         detail=False,
@@ -1181,6 +1235,7 @@ class ItemViewSet(
             self._check_restriction_moved_to_root(item, user)
             item.move(None)
             posthog_capture("item_moved", user, {}, item=item.target)
+            self._capture_restriction_event("item_unrestricted", item.target)
             return drf.response.Response(
                 {"message": "item moved successfully."}, status=status.HTTP_200_OK
             )
@@ -1473,17 +1528,7 @@ class ItemViewSet(
         payload = deletion_serializers.ItemsDeletionInfoRequestSerializer(data=request.data)
         payload.is_valid(raise_exception=True)
         ids = payload.validated_data["ids"]
-        restrictions = models.Item.objects.filter(
-            type=models.ItemTypeChoices.RESTRICTION,
-            path__descendants=db.OuterRef("path"),
-            deleted_at__isnull=True,
-            ancestors_deleted_at__isnull=True,
-            hard_deleted_at__isnull=True,
-            target__isnull=False,
-            target__deleted_at__isnull=True,
-            target__ancestors_deleted_at__isnull=True,
-            target__hard_deleted_at__isnull=True,
-        ).exclude(pk=db.OuterRef("pk"))
+        restrictions = self._get_live_restrictions_under(db.OuterRef("path"), db.OuterRef("pk"))
         items = list(
             self.queryset.filter(pk__in=ids)
             .annotate_user_roles(request.user)
@@ -1992,8 +2037,10 @@ class ItemViewSet(
 
         if request.method == "POST":
             item = item.restrict(request.user)
+            self._capture_restriction_event("item_restricted", item)
         else:
             item = item.unrestrict()
+            self._capture_restriction_event("item_unrestricted", item)
 
         serializer = self.get_serializer(item)
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
@@ -2245,6 +2292,7 @@ class ItemViewSet(
                 type=models.ItemTypeChoices.FILE,
                 size=item_to_duplicate.size,
                 upload_state=models.ItemUploadStateChoices.DUPLICATING,
+                source=models.ItemSourceChoices.DUPLICATE,
                 mimetype=item_to_duplicate.mimetype,
                 filename=item_to_duplicate.filename,
                 description=item_to_duplicate.description,

@@ -158,6 +158,39 @@ def test_api_item_upload_ended_success(django_capture_on_commit_callbacks):
     assert response.json()["mimetype"] == "text/plain"
 
 
+def test_api_item_upload_ended_posthog_event(posthog_capture_mock):
+    """Ending an upload should send an 'item_uploaded' event."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=ItemTypeChoices.FILE, filename="my_file.txt", source=models.ItemSourceChoices.UPLOAD
+    )
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"my prose"),
+    )
+
+    response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    assert response.status_code == 200
+    posthog_capture_mock.assert_called_once_with(
+        "item_uploaded",
+        distinct_id=user.email,
+        properties={
+            "id": item.id,
+            "title": item.title,
+            "size": 8,
+            "mimetype": "text/plain",
+            "source": "drive_upload",
+            "quota_excluded": False,
+        },
+    )
+
+
 def test_api_item_upload_ended_empty_file(django_capture_on_commit_callbacks):
     """Upload an empty file should not raise an error."""
     user = factories.UserFactory()
@@ -305,6 +338,74 @@ def test_api_item_upload_ended_mimetype_not_allowed(settings, caplog):
 
     assert not models.Item.objects.filter(id=item.id).exists()
     assert not default_storage.exists(item.file_key)
+
+
+def test_api_item_upload_ended_mimetype_not_allowed_posthog_event(settings, posthog_capture_mock):
+    """Refusing a file type should send an 'item_upload_rejected' event."""
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "allowlist"
+    settings.FILE_MIMETYPE_ALLOWED = ["application/pdf"]
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=ItemTypeChoices.FILE, filename="my_file.txt", source=models.ItemSourceChoices.UPLOAD
+    )
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"my prose"),
+    )
+
+    response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    assert response.status_code == 400
+    posthog_capture_mock.assert_called_once_with(
+        "item_upload_rejected",
+        distinct_id=user.email,
+        properties={
+            "reason": "file_type_not_allowed",
+            "source": "drive_upload",
+            "mimetype": "text/plain",
+            "size": 8,
+        },
+    )
+
+
+@pytest.mark.parametrize("reason", [None, "user_quota_exceeded"])
+@mock.patch("core.api.viewsets.get_entitlements_backend")
+def test_api_item_upload_ended_entitlements_backend_returns_falsy_posthog_event(
+    mock_get_entitlements_backend, reason, posthog_capture_mock
+):
+    """Refusing an upload on entitlements should send an 'item_upload_rejected' event."""
+    return_value = {"result": False}
+    if reason:
+        return_value["reason"] = reason
+    mock_get_entitlements_backend.return_value.can_upload.return_value = return_value
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=ItemTypeChoices.FILE, filename="my_file.txt", source=models.ItemSourceChoices.UPLOAD
+    )
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    assert response.status_code == 403
+    posthog_capture_mock.assert_called_once_with(
+        "item_upload_rejected",
+        distinct_id=user.email,
+        properties={
+            "reason": reason or "permission_denied",
+            "source": "drive_upload",
+            "mimetype": None,
+            "size": None,
+        },
+    )
 
 
 def test_api_item_upload_ended_mimetype_not_allowed_not_checking_mimetype(
@@ -471,3 +572,36 @@ def test_api_upload_ended_file_size_exceeded(settings, caplog):
         in caplog.text
     )
     assert response.status_code == 400
+
+
+def test_api_upload_ended_file_size_exceeded_posthog_event(settings, posthog_capture_mock):
+    """Refusing a file too big should send an 'item_upload_rejected' event."""
+    settings.DATA_UPLOAD_MAX_MEMORY_SIZE = 0
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=ItemTypeChoices.FILE, filename="my_file.txt", source=models.ItemSourceChoices.UPLOAD
+    )
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"my prose"),
+    )
+
+    response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    assert response.status_code == 400
+    posthog_capture_mock.assert_called_once_with(
+        "item_upload_rejected",
+        distinct_id=user.email,
+        properties={
+            "reason": "file_size_exceeded",
+            "source": "drive_upload",
+            "mimetype": None,
+            "size": 8,
+        },
+    )

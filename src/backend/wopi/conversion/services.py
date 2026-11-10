@@ -111,6 +111,7 @@ def prepare_conversion(source_item, user):
             type=models.ItemTypeChoices.FILE,
             filename=target_filename,
             upload_state=models.ItemUploadStateChoices.CONVERTING,
+            source=models.ItemSourceChoices.CONVERT,
         )
         if placeholder.is_root:
             models.ItemAccess.objects.create(
