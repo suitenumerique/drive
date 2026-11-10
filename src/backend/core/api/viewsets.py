@@ -747,6 +747,15 @@ class ItemViewSet(
             if extension:
                 self._create_file_from_template(serializer.instance, extension)
 
+    def _capture_restriction_event(self, event_name, item):
+        """Track a restriction change along with the link reach left on the folder."""
+        posthog_capture(
+            event_name,
+            self.request.user,
+            {"link_reach": item.computed_link_reach},
+            item=item,
+        )
+
     def perform_destroy(self, instance):
         """Override to implement a soft delete instead of dumping the record in database."""
         if instance.type == models.ItemTypeChoices.RESTRICTION:
@@ -754,6 +763,7 @@ class ItemViewSet(
             # anyone else only lifts the restriction out of their folder
             if instance.target.get_role(self.request.user) != models.RoleChoices.OWNER:
                 instance.detach()
+                self._capture_restriction_event("item_unrestricted", instance.target)
                 return
             instance = instance.target
         instance.soft_delete(self.request.user)
@@ -1201,6 +1211,7 @@ class ItemViewSet(
             self._check_restriction_moved_to_root(item, user)
             item.move(None)
             posthog_capture("item_moved", user, {}, item=item.target)
+            self._capture_restriction_event("item_unrestricted", item.target)
             return drf.response.Response(
                 {"message": "item moved successfully."}, status=status.HTTP_200_OK
             )
@@ -2012,8 +2023,10 @@ class ItemViewSet(
 
         if request.method == "POST":
             item = item.restrict(request.user)
+            self._capture_restriction_event("item_restricted", item)
         else:
             item = item.unrestrict()
+            self._capture_restriction_event("item_unrestricted", item)
 
         serializer = self.get_serializer(item)
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)

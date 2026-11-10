@@ -13,6 +13,7 @@ and this project adheres to
 - ✨(backend) record the provenance of items in a new source field
 - 📈(backend) track the source of uploads in posthog
 - 📈(backend) track rejected uploads in posthog
+- 📈(backend) track folder restriction changes in posthog
 
 ## [v0.27.0] - 2026-11-09
 
