@@ -1018,6 +1018,8 @@ class ItemViewSet(
                 "title": item.title,
                 "size": item.size,
                 "mimetype": item.mimetype,
+                "quota_excluded": item.quota_excluded,
+                "source": item.source,
             },
         )
 
