@@ -769,8 +769,19 @@ class ItemViewSet(
                 self._capture_restriction_event("item_unrestricted", instance.target)
                 return
             instance = instance.target
+        # Computed before the deletion trashes or lifts the restrictions
+        has_restricted_descendant = (
+            bool(settings.POSTHOG_KEY)
+            and instance.type == models.ItemTypeChoices.FOLDER
+            and models.Item.objects.live_restrictions_under(instance.path, instance.pk).exists()
+        )
         instance.soft_delete(self.request.user)
-        posthog_capture("item_deleted", self.request.user, {}, item=instance)
+        posthog_capture(
+            "item_deleted",
+            self.request.user,
+            {"has_restricted_descendant": has_restricted_descendant},
+            item=instance,
+        )
 
     def perform_update(self, serializer):
         """Override to check if a file is renamed in order to rename file on storage."""
@@ -1508,17 +1519,9 @@ class ItemViewSet(
         payload = deletion_serializers.ItemsDeletionInfoRequestSerializer(data=request.data)
         payload.is_valid(raise_exception=True)
         ids = payload.validated_data["ids"]
-        restrictions = models.Item.objects.filter(
-            type=models.ItemTypeChoices.RESTRICTION,
-            path__descendants=db.OuterRef("path"),
-            deleted_at__isnull=True,
-            ancestors_deleted_at__isnull=True,
-            hard_deleted_at__isnull=True,
-            target__isnull=False,
-            target__deleted_at__isnull=True,
-            target__ancestors_deleted_at__isnull=True,
-            target__hard_deleted_at__isnull=True,
-        ).exclude(pk=db.OuterRef("pk"))
+        restrictions = models.Item.objects.live_restrictions_under(
+            db.OuterRef("path"), db.OuterRef("pk")
+        )
         items = list(
             self.queryset.filter(pk__in=ids)
             .annotate_user_roles(request.user)

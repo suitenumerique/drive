@@ -1014,6 +1014,20 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
             has_restriction=models.Exists(self.model.objects.filter(target=models.OuterRef("pk")))
         )
 
+    def live_restrictions_under(self, path, pk):
+        """Return the live restrictions with a live target found under the given item."""
+        return self.filter(
+            type=ItemTypeChoices.RESTRICTION,
+            path__descendants=path,
+            deleted_at__isnull=True,
+            ancestors_deleted_at__isnull=True,
+            hard_deleted_at__isnull=True,
+            target__isnull=False,
+            target__deleted_at__isnull=True,
+            target__ancestors_deleted_at__isnull=True,
+            target__hard_deleted_at__isnull=True,
+        ).exclude(pk=pk)
+
     def with_restriction_target(self, user):
         """Load restriction targets along with the accesses the user holds on them."""
         queryset = self.select_related("target")
