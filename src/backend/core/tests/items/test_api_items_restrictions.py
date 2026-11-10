@@ -1,5 +1,7 @@
 """Tests for the restriction target details in the items API."""
 
+from unittest import mock
+
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
@@ -180,6 +182,35 @@ def test_api_items_restrictions_delete_detaches_the_target():
     assert models.ItemAccess.objects.filter(item=folder, user=owner, role="owner").exists()
 
 
+def test_api_items_restrictions_delete_posthog_event(posthog_capture_mock):
+    """Deleting a restriction without owning its target should send 'item_unrestricted'."""
+    parent_owner = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(parent_owner, "owner")],
+    )
+    folder = _create_restricted_folder(parent, factories.UserFactory())
+
+    client = APIClient()
+    client.force_login(parent_owner)
+
+    response = client.delete(f"/api/v1.0/items/{folder.restriction.id!s}/")
+
+    assert response.status_code == 204
+    posthog_capture_mock.assert_called_once_with(
+        "item_unrestricted", distinct_id=parent_owner.email, properties=mock.ANY
+    )
+    properties = posthog_capture_mock.call_args.kwargs["properties"]
+    assert (
+        properties.items()
+        >= {
+            "item_id": folder.id,
+            "item_type": "folder",
+            "link_reach": "restricted",
+        }.items()
+    )
+
+
 def test_api_items_restrictions_delete_by_target_owner_trashes_the_target():
     """Deleting a restriction as owner of the target sends the target to the trash."""
     owner = factories.UserFactory()
@@ -291,6 +322,35 @@ def test_api_items_restrictions_move_to_root_lifts_the_restriction():
         str(parent.id),
         str(folder.id),
     }
+
+
+def test_api_items_restrictions_move_to_root_posthog_event(posthog_capture_mock):
+    """Moving a restriction to the root should send an 'item_unrestricted' event."""
+    owner = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(owner, "owner")],
+    )
+    folder = _create_restricted_folder(parent, owner)
+
+    client = APIClient()
+    client.force_login(owner)
+
+    response = client.post(f"/api/v1.0/items/{folder.restriction.id!s}/move/", data={})
+
+    assert response.status_code == 200
+    posthog_capture_mock.assert_any_call(
+        "item_unrestricted", distinct_id=owner.email, properties=mock.ANY
+    )
+    properties = posthog_capture_mock.call_args_list[-1].kwargs["properties"]
+    assert (
+        properties.items()
+        >= {
+            "item_id": folder.id,
+            "item_type": "folder",
+            "link_reach": "restricted",
+        }.items()
+    )
 
 
 def test_api_items_restrictions_move_to_root_forbidden_without_target_ownership():
