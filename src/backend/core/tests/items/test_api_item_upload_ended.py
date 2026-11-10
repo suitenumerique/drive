@@ -158,6 +158,39 @@ def test_api_item_upload_ended_success(django_capture_on_commit_callbacks):
     assert response.json()["mimetype"] == "text/plain"
 
 
+def test_api_item_upload_ended_posthog_event(posthog_capture_mock):
+    """Ending an upload should send an 'item_uploaded' event."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=ItemTypeChoices.FILE, filename="my_file.txt", source=models.ItemSourceChoices.UPLOAD
+    )
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"my prose"),
+    )
+
+    response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    assert response.status_code == 200
+    posthog_capture_mock.assert_called_once_with(
+        "item_uploaded",
+        distinct_id=user.email,
+        properties={
+            "id": item.id,
+            "title": item.title,
+            "size": 8,
+            "mimetype": "text/plain",
+            "source": "drive_upload",
+            "quota_excluded": False,
+        },
+    )
+
+
 def test_api_item_upload_ended_empty_file(django_capture_on_commit_callbacks):
     """Upload an empty file should not raise an error."""
     user = factories.UserFactory()

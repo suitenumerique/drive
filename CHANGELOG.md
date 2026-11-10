@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(backend) record the provenance of items in a new source field
+- 📈(backend) track the source of uploads in posthog
 
 ## [v0.27.0] - 2026-11-09
 

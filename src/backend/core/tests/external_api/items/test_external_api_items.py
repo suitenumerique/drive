@@ -8,6 +8,7 @@ because the resource server viewsets inherit from the api viewsets.
 
 from datetime import timedelta
 from io import BytesIO
+from unittest import mock
 
 from django.core.files.storage import default_storage
 from django.test import override_settings
@@ -249,6 +250,44 @@ def test_api_items_create_children_resource_server_applies_aud_attributes(
     assert response.status_code == 201
     child = models.Item.objects.get(id=response.json()["id"])
     assert child.quota_excluded is True
+
+
+@override_settings(
+    EXTERNAL_API_AUD_ITEM_ATTRIBUTES={
+        "some_service_provider": {"quota_excluded": True, "source": "migrator"}
+    }
+)
+def test_api_items_upload_ended_resource_server_posthog_event(
+    user_token, resource_server_backend, user_specific_sub, posthog_capture_mock
+):
+    """Ending an upload on a resource server should send the source of the item."""
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+
+    response = client.post(
+        "/external_api/v1.0/items/",
+        {
+            "size": 8,
+            "type": models.ItemTypeChoices.FILE,
+            "filename": "file.txt",
+        },
+    )
+    assert response.status_code == 201
+    child = models.Item.objects.get(id=response.json()["id"])
+
+    default_storage.save(
+        child.file_key,
+        BytesIO(b"my prose"),
+    )
+
+    response = client.post(f"/external_api/v1.0/items/{child.id!s}/upload-ended/")
+
+    assert response.status_code == 200
+    posthog_capture_mock.assert_called_once_with(
+        "item_uploaded", distinct_id=user_specific_sub.email, properties=mock.ANY
+    )
+    properties = posthog_capture_mock.call_args.kwargs["properties"]
+    assert properties.items() >= {"source": "migrator", "quota_excluded": True}.items()
 
 
 @override_settings(EXTERNAL_API_AUD_ITEM_ATTRIBUTES={"other_audience": {"quota_excluded": True}})
