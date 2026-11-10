@@ -285,4 +285,24 @@ def test_api_items_delete_posthog_event(posthog_capture_mock):
         "item_deleted", distinct_id=user.email, properties=mock.ANY
     )
     properties = posthog_capture_mock.call_args.kwargs["properties"]
-    assert properties.items() >= {"item_id": item.id}.items()
+    assert properties.items() >= {"item_id": item.id, "has_restricted_descendant": False}.items()
+
+
+def test_api_items_delete_posthog_event_restricted_descendant(posthog_capture_mock):
+    """Deleting a folder holding a restricted folder should say so in 'item_deleted'."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    child = factories.ItemFactory(parent=item, type=models.ItemTypeChoices.FOLDER)
+    factories.ItemFactory(parent=child, type=models.ItemTypeChoices.FOLDER).restrict(user)
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.delete(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 204
+    posthog_capture_mock.assert_called_once_with(
+        "item_deleted", distinct_id=user.email, properties=mock.ANY
+    )
+    properties = posthog_capture_mock.call_args.kwargs["properties"]
+    assert properties.items() >= {"item_id": item.id, "has_restricted_descendant": True}.items()

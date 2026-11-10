@@ -14,6 +14,7 @@ and this project adheres to
 - 📈(backend) track the source of uploads in posthog
 - 📈(backend) track rejected uploads in posthog
 - 📈(backend) track folder restriction changes in posthog
+- 📈(backend) flag deletions holding restricted folders in posthog
 
 ## [v0.27.0] - 2026-11-09
 
