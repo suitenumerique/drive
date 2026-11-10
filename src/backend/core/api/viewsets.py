@@ -918,7 +918,7 @@ class ItemViewSet(
         if item.size is None:
             can_upload = get_entitlements_backend().can_upload(item.creator)
             if not can_upload["result"]:
-                self._complete_item_deletion(item)
+                self._reject_upload(item, can_upload.get("reason") or "permission_denied")
                 raise drf.exceptions.PermissionDenied(
                     detail=can_upload.get("message", "You do not have permission to upload files."),
                     code=can_upload.get("reason"),
@@ -948,7 +948,7 @@ class ItemViewSet(
         mimetype = utils.detect_mimetype(file_head, filename=item.filename)
 
         if not utils.is_mimetype_allowed(mimetype):
-            self._complete_item_deletion(item)
+            self._reject_upload(item, "file_type_not_allowed", mimetype=mimetype, size=file_size)
             logger.info(
                 "upload_ended: mimetype not allowed %s for filename %s",
                 mimetype,
@@ -1025,14 +1025,14 @@ class ItemViewSet(
     def _validate_uploaded_size(self, item, file_size):
         """Verify storage metadata even though the PUT has a signed length."""
         if item.size is not None and file_size != item.size:
-            self._complete_item_deletion(item)
+            self._reject_upload(item, "file_size_mismatch", size=file_size)
             raise drf.exceptions.ValidationError(
                 detail="The uploaded file size does not match the reserved size.",
                 code="file_size_mismatch",
             )
 
         if file_size > settings.DATA_UPLOAD_MAX_MEMORY_SIZE:
-            self._complete_item_deletion(item)
+            self._reject_upload(item, "file_size_exceeded", size=file_size)
             logger.info(
                 "upload_ended: file size (%s) for file %s higher than the allowed max size",
                 file_size,
@@ -1048,6 +1048,20 @@ class ItemViewSet(
         item.soft_delete()
         item.hard_delete()
         process_item_purge.delay(item.id)
+
+    def _reject_upload(self, item, reason, mimetype=None, size=None):
+        """Delete a refused upload and track the reason of the refusal."""
+        self._complete_item_deletion(item)
+        posthog_capture(
+            "item_upload_rejected",
+            self.request.user,
+            {
+                "reason": reason,
+                "mimetype": mimetype,
+                "size": size,
+                "source": item.source,
+            },
+        )
 
     @drf.decorators.action(
         detail=False,

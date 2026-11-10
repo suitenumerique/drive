@@ -284,6 +284,33 @@ def test_api_upload_reservations_upload_ended_size_mismatch(actual_size):
     assert item.size == 10
 
 
+def test_api_upload_reservations_upload_ended_size_mismatch_posthog_event(posthog_capture_mock):
+    """Refusing a file that does not match its reservation should send an event."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    response = create_upload(client, 10)
+    item = models.Item.objects.get(pk=response.data["id"])
+
+    default_storage.save(item.file_key, BytesIO(b"x" * 9))
+
+    with mock.patch("core.api.viewsets.process_item_purge.delay"):
+        response = client.post(f"/api/v1.0/items/{item.pk!s}/upload-ended/")
+
+    assert response.status_code == 400
+    posthog_capture_mock.assert_called_once_with(
+        "item_upload_rejected",
+        distinct_id=user.email,
+        properties={
+            "reason": "file_size_mismatch",
+            "source": "drive_upload",
+            "mimetype": None,
+            "size": 9,
+        },
+    )
+
+
 @pytest.mark.parametrize("allowed", [True, False])
 @pytest.mark.parametrize("cache_hit", [True, False])
 def test_api_upload_reservations_deploycenter_decision(settings, allowed, cache_hit):
