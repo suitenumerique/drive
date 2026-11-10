@@ -13,6 +13,7 @@ and this project adheres to
 - ✨(backend) record the provenance of items in a new source field
 - ✨(backend) show every item attribute in the admin change view
 - 📈(backend) track the source of uploads in posthog
+- 📈(backend) track rejected uploads in posthog
 
 ## [v1.0.1] - 2026-11-20
 
