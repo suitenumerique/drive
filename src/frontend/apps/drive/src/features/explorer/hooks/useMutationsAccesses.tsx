@@ -126,6 +126,9 @@ export const useMutationCreateAskForAccess = () => {
       queryClient.invalidateQueries({
         queryKey: ["itemAskForAccesses", variables.itemId],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["itemMyAskForAccess", variables.itemId],
+      });
     },
     onError: (error) => {
       // already_requested is handled at the call site; all other errors get a toast

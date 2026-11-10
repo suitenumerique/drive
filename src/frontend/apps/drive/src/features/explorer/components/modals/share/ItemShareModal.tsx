@@ -30,6 +30,7 @@ import {
   useItem,
   useItemAccesses,
   useItemAskForAccesses,
+  useMyItemAskForAccess,
 } from "@/features/explorer/hooks/useQueries";
 import { useUsers } from "@/features/users/hooks/useUserQueries";
 import { useClipboard } from "@/hooks/useCopyToClipboard";
@@ -701,7 +702,7 @@ const ItemShareAskForAccessRequests = ({ itemId }: { itemId: string }) => {
 
 const ItemShareAskForAccessButton = ({ itemId }: { itemId: string }) => {
   const { t } = useTranslation();
-  const { data: requests } = useItemAskForAccesses(itemId);
+  const { data: requests } = useMyItemAskForAccess(itemId);
   const { mutate: createRequest, isPending } = useMutationCreateAskForAccess();
 
   const hasRequested = !!requests?.length;

@@ -34,6 +34,16 @@ export const useItemAskForAccesses = (itemId: string) => {
   });
 };
 
+// Separate key from useItemAskForAccesses (which is populated by the admin view
+// with all users' requests). The button must never see another user's request
+// from a stale admin-view cache and show "Access request sent" incorrectly.
+export const useMyItemAskForAccess = (itemId: string) => {
+  return useQuery({
+    queryKey: ["itemMyAskForAccess", itemId],
+    queryFn: () => getDriver().getItemAskForAccesses(itemId),
+  });
+};
+
 export const useInfiniteItemInvitations = (itemId: string, enabled = true) => {
   const driver = getDriver();
   return useInfiniteQuery({

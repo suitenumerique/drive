@@ -15,7 +15,7 @@ from core.factories import (
     UserFactory,
     UserItemAccessFactory,
 )
-from core.models import ItemAccess, ItemAskForAccess
+from core.models import ItemAccess, ItemAskForAccess, LinkReachChoices
 
 pytestmark = pytest.mark.django_db
 
@@ -364,6 +364,35 @@ def test_api_item_ask_for_access_list_authenticated_own_request():
                 },
             }
         ],
+    }
+
+
+def test_api_item_ask_for_access_list_via_link_no_own_request():
+    """
+    A user who accesses an item via a public link (no explicit membership) must get an
+    empty list when they have no pending request of their own, even if other users do.
+
+    This is the backend guarantee that the frontend "Request access" button in the share
+    modal relies on: the button uses an isolated React Query cache key so that the admin
+    view (which returns all requests) never pollutes it.  Without the correct empty
+    response here, the button would show "Access request sent" for a user who never
+    clicked it.
+    """
+    item = ItemFactory(link_reach=LinkReachChoices.PUBLIC)
+    # Three other users already have pending requests.
+    ItemAskForAccessFactory.create_batch(3, item=item, role=RoleChoices.READER)
+
+    user = UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.get(f"/api/v1.0/items/{item.id}/ask-for-access/")
+    assert response.status_code == 200
+    assert response.json() == {
+        "count": 0,
+        "next": None,
+        "previous": None,
+        "results": [],
     }
 
 
