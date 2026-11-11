@@ -14,7 +14,7 @@ and this project adheres to
 
 ### Fixed
 
-- 📝(readme) fix the instance and local development links
+- 📝(doc) fix the README links and the Find indexer docs
 
 ## [v0.27.0] - 2026-11-09
 
