@@ -86,12 +86,12 @@ For now we only have a documentation to install it on Kubernetes. We will be mor
 
 We hope to see many more, here is an incomplete list of public LaSuite Drive instances. Feel free to make a PR to add ones that are not listed below🙏
 
-| URL                              | Organisation | Accès                                                                                                                                               |
-| -------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [fichiers.numerique.gouv.fr](/)  | DINUM        | Réservé aux agents publics français travaillant pour l'administration centrale et la sphère publique élargie. Connexion via ProConnect requise.     |
-| [fichiers.suite.anct.gouv.fr](/) | ANCT         | Réservé aux agents publics français travaillant pour l'administration territoriale et la sphère publique élargie. Connexion via ProConnect requise. |
-| [fichiers.lasuite.coop](/)       | lasuite.coop | Démonstration gratuite et ouverte à tous. Les contenus et comptes sont réinitialisés après un mois.                                                 |
-| [mosacloud.cloud](/)             | mosa.cloud   | Instance de démonstration de mosa.cloud, une entreprise néerlandaise proposant des services autour des applications La Suite.                       |
+| URL                                                                 | Organisation | Accès                                                                                                                                               |
+| ------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [fichiers.numerique.gouv.fr](https://fichiers.numerique.gouv.fr/)   | DINUM        | Réservé aux agents publics français travaillant pour l'administration centrale et la sphère publique élargie. Connexion via ProConnect requise.     |
+| [fichiers.suite.anct.gouv.fr](https://fichiers.suite.anct.gouv.fr/) | ANCT         | Réservé aux agents publics français travaillant pour l'administration territoriale et la sphère publique élargie. Connexion via ProConnect requise. |
+| [fichiers.lasuite.coop](https://fichiers.lasuite.coop/)             | lasuite.coop | Démonstration gratuite et ouverte à tous. Les contenus et comptes sont réinitialisés après un mois.                                                 |
+| [drive.mosa.cloud](https://drive.mosa.cloud/)                       | mosa.cloud   | Instance de démonstration de mosa.cloud, une entreprise néerlandaise proposant des services autour des applications La Suite.                       |
 
 ### Local Development (for contributors)
 
@@ -222,7 +222,7 @@ This project is community-driven and PRs are welcome. Do not hesitate to get in 
 - [Contribution guide](https://github.com/suitenumerique/drive/blob/main/CONTRIBUTING.md)
 - [Translations](https://crowdin.com/project/lasuite-drive)
 - [Chat with us!](https://matrix.to/#/#drive-official:matrix.org)
-- Open a PR (see our instructions on [developing La Suite Drive locally](https://github.com/suitenumerique/drive/blob/main/docs/installation/README.md))
+- Open a PR (see our instructions on [developing La Suite Drive locally](#local-development-for-contributors))
 - Submit a [feature request](https://github.com/suitenumerique/drive/issues/new?assignees=&labels=enhancement&template=Feature_request.md) or [bug report](https://github.com/suitenumerique/drive/issues/new?assignees=&labels=bug&template=Bug_report.md)
 
 #### Gov ❤️ open source
