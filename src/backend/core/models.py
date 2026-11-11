@@ -2266,6 +2266,61 @@ class Item(TreeModel, BaseModel):
         return item
 
 
+class ItemVersion(BaseModel):
+    """Snapshot of a file's content at a given point in time.
+
+    A version stores the bytes that a file contained before it was overwritten
+    (or the initial content of the file). Only items of type FILE can have
+    versions; folders never do.
+    """
+
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        related_name="versions",
+    )
+    filename = models.CharField(max_length=255)
+    mimetype = models.CharField(max_length=255, null=True, blank=True)
+    size = models.BigIntegerField(null=True, blank=True)
+    version_number = models.PositiveIntegerField()
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name="item_versions_created",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        db_table = "drive_item_version"
+        verbose_name = _("Item version")
+        verbose_name_plural = _("Item versions")
+        ordering = ("version_number",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["item", "version_number"],
+                name="unique_item_version_number",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(version_number__gt=0),
+                name="item_version_number_positive",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.item} (version {self.version_number})"
+
+    @property
+    def key_base(self):
+        """Key base of the location where the version is stored in object storage."""
+        return f"{self.item.key_base}/versions/{self.version_number}"
+
+    @property
+    def file_key(self):
+        """Key used to store the versioned file in object storage."""
+        return f"{self.key_base}/{self.filename}"
+
+
 class MirrorItemTask(BaseModel):
     """Model managing a status for a mirroring task."""
 

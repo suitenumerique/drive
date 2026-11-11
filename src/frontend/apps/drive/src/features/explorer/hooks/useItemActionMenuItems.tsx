@@ -19,6 +19,7 @@ import {
   Edit,
   ArrowRight,
   Info,
+  History,
   Trash,
   Leave,
 } from "@gouvfr-lasuite/ui-components/icons";
@@ -33,6 +34,7 @@ import { ConfirmationLeaveModal } from "../components/modals/ConfirmationLeaveMo
 import { ExplorerRenameItemModal } from "../components/modals/ExplorerRenameItemModal";
 import { ExplorerCreateFolderModal } from "../components/modals/ExplorerCreateFolderModal";
 import { ItemShareModal } from "../components/modals/share/ItemShareModal";
+import { VersionHistoryModal } from "../components/modals/VersionHistoryModal";
 import { useDeleteItem } from "./useDeleteItem";
 import { ExplorerMoveFolder } from "../components/modals/move/ExplorerMoveFolderModal";
 import {
@@ -95,6 +97,7 @@ export const useItemActionMenuItems = ({
   const renameModal = useModal();
   const moveModal = useModal();
   const createFolderModal = useModal();
+  const versionsModal = useModal();
 
   const [sharedItem, setSharedItem] = useState<Item>();
   const [currentItem, setCurrentItem] = useState<Item | null>(null);
@@ -105,6 +108,7 @@ export const useItemActionMenuItems = ({
     !!sharedItem ||
     moveModal.isOpen ||
     createFolderModal.isOpen ||
+    versionsModal.isOpen ||
     leaveModal.isOpen;
 
   useEffect(() => {
@@ -209,27 +213,6 @@ export const useItemActionMenuItems = ({
         },
       },
       {
-        icon: <Copy />,
-        label: t("explorer.item.actions.duplicate"),
-        isHidden: !item.abilities?.duplicate || item.type === ItemType.FOLDER,
-        callback: async () => {
-          try {
-            await duplicateItem(effectiveItemId);
-          } catch (err) {
-            addToast(
-              <ToasterItem type="error">
-                <span className="material-icons">content_copy</span>
-                <span>
-                  {getCanUploadErrorDescription(err) ??
-                    t("explorer.item.actions.duplicate_error")}
-                </span>
-              </ToasterItem>,
-            );
-          }
-        },
-      },
-
-      {
         icon: <Star />,
         label: item.is_favorite
           ? t("explorer.item.actions.unfavorite")
@@ -257,6 +240,35 @@ export const useItemActionMenuItems = ({
         callback: () => {
           setCurrentItem(effectiveItem);
           moveModal.open();
+        },
+      },
+      {
+        icon: <Copy />,
+        label: t("explorer.item.actions.duplicate"),
+        isHidden: !item.abilities?.duplicate || item.type === ItemType.FOLDER,
+        callback: async () => {
+          try {
+            await duplicateItem(effectiveItemId);
+          } catch (err) {
+            addToast(
+              <ToasterItem type="error">
+                <span className="material-icons">content_copy</span>
+                <span>
+                  {getCanUploadErrorDescription(err) ??
+                    t("explorer.item.actions.duplicate_error")}
+                </span>
+              </ToasterItem>,
+            );
+          }
+        },
+      },
+      {
+        icon: <History />,
+        label: t("explorer.item.actions.versions"),
+        isHidden: !item.abilities?.versions_view || item.type === ItemType.FOLDER,
+        callback: () => {
+          setCurrentItem(effectiveItem);
+          versionsModal.open();
         },
       },
       { type: "separator" },
@@ -323,6 +335,13 @@ export const useItemActionMenuItems = ({
         <ExplorerCreateFolderModal
           {...createFolderModal}
           parentId={currentItem.id}
+        />
+      )}
+      {currentItem && versionsModal.isOpen && (
+        <VersionHistoryModal
+          {...versionsModal}
+          item={currentItem}
+          key={currentItem.id}
         />
       )}
       {currentItem && leaveModal.isOpen && (

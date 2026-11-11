@@ -1,6 +1,7 @@
 """Test the PUT file content viewset."""
 
 import logging
+from io import BytesIO
 from unittest import mock
 
 from django.core.files.storage import default_storage
@@ -467,6 +468,55 @@ def test_put_file_content_with_no_lock_header_and_body_size_0(data):
     )
     assert file["Body"].read() == data
     assert response.headers.get("X-WOPI-ItemVersion") == file["ETag"].strip('"')
+
+
+def test_put_file_content_snapshots_previous_content_as_version():
+    """Saving new content via WOPI snapshots the previous content as a version."""
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    item = factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.EDITOR,
+        size=0,
+    )
+    # Give the file pre-existing content so a snapshot can be taken.
+    default_storage.save(item.file_key, BytesIO(b"old content"))
+    item.size = 11
+    item.save(update_fields=["size"])
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
+
+    service = AccessUserItemService()
+    access_token, _ = service.insert_new_access(item, user)
+
+    lock_service = LockService(item)
+    lock_service.lock("1234567890")
+
+    client = APIClient()
+    with mock.patch.object(malware_detection, "analyse_file"):
+        with mock.patch("core.services.item_versions._s3") as mock_s3:
+            response = client.post(
+                f"/api/v1.0/wopi/files/{item.id}/contents/",
+                data=b"new content",
+                content_type="text/plain",
+                HTTP_AUTHORIZATION=f"Bearer {access_token}",
+                headers={
+                    "X-WOPI-Override": "PUT",
+                    "X-WOPI-Lock": "1234567890",
+                },
+            )
+
+    assert response.status_code == 200
+    version = item.versions.first()
+    assert version is not None
+    assert version.version_number == 1
+    assert version.filename == item.filename
+    mock_s3().copy_object.assert_called_once()
 
 
 @pytest.mark.usefixtures("configure_wopi_clients")

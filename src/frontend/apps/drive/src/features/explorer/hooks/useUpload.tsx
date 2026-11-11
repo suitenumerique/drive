@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { toast } from "react-toastify";
-import { Item } from "@/features/drivers/types";
+import { Item, ItemType } from "@/features/drivers/types";
 import { FileWithPath, useDropzone } from "react-dropzone";
 import { useMutationCreateFolder } from "./useMutations";
 import { useState } from "react";
@@ -22,6 +22,7 @@ import {
   useRefreshQueryCacheAfterMutation,
 } from "./useRefreshItems";
 import { isIdInItemTree } from "../utils/utils";
+import { NameConflictModal } from "../components/modals/NameConflictModal";
 
 type ActiveUpload = {
   file: FileUpload;
@@ -237,6 +238,67 @@ const pathNicefy = (path: string) => {
   return path.replace(/^[./]+/, "");
 };
 
+const NO_NAME_CONFLICTS: Item[] = [];
+
+type NameConflictChoice =
+  | { action: "version"; itemId: string }
+  | { action: "copy"; filename: string }
+  | { action: "cancel" };
+
+const splitFilename = (filename: string) => {
+  const dot = filename.lastIndexOf(".");
+  if (dot <= 0) {
+    return { base: filename, ext: "" };
+  }
+  return { base: filename.slice(0, dot), ext: filename.slice(dot) };
+};
+
+const nextDuplicateFilename = (filename: string, taken: Set<string>) => {
+  const { base, ext } = splitFilename(filename);
+  const stem = base.replace(/_\d+$/, "");
+  let number = 1;
+  let candidate = filename;
+  do {
+    candidate = `${stem}_${String(number).padStart(2, "0")}${ext}`;
+    number += 1;
+  } while (taken.has(candidate) && number < 100);
+  return candidate;
+};
+
+const findNameConflicts = async (
+  parentId: string | undefined,
+  filename: string,
+) => {
+  const { base } = splitFilename(filename);
+  const filters = { title: base, page_size: 50 };
+  const { children } = parentId
+    ? await getDriver().getChildren(parentId, filters)
+    : await getDriver().getItems(filters);
+  const siblings = children.filter((child) => {
+    if (child.deleted_at) {
+      return false;
+    }
+    // Root uploads land next to other root files. A same name deeper in
+    // the tree is a different file.
+    if (!parentId && child.path?.includes(".")) {
+      return false;
+    }
+    return true;
+  });
+  const exact = siblings.filter(
+    (child) =>
+      child.type === ItemType.FILE &&
+      (child.title === filename || child.filename === filename),
+  );
+  return {
+    exact,
+    copyName: nextDuplicateFilename(
+      filename,
+      new Set(siblings.map((child) => child.title)),
+    ),
+  };
+};
+
 export const useUploadZone = ({
   item,
   onSingleFileUploaded,
@@ -261,6 +323,31 @@ export const useUploadZone = ({
     step: UploadingStep.NONE,
     filesMeta: {},
   });
+  const [nameConflict, setNameConflict] = useState<{
+    filename: string;
+    copyName: string;
+    matches: Item[];
+  } | null>(null);
+  const nameConflictResolver = useRef<
+    ((choice: NameConflictChoice) => void) | null
+  >(null);
+  const askNameConflictRef = useRef<
+    (
+      filename: string,
+      copyName: string,
+      matches: Item[],
+    ) => Promise<NameConflictChoice>
+  >(async (_filename, copyName) => ({ action: "copy", filename: copyName }));
+  askNameConflictRef.current = (filename, copyName, matches) =>
+    new Promise((resolve) => {
+      nameConflictResolver.current = resolve;
+      setNameConflict({ filename, copyName, matches });
+    });
+  const resolveNameConflict = (choice: NameConflictChoice) => {
+    nameConflictResolver.current?.(choice);
+    nameConflictResolver.current = null;
+    setNameConflict(null);
+  };
 
   // Single source of truth for queued + in-flight uploads. Map preserves
   // insertion order, giving us FIFO for free. An entry whose `abort` is
@@ -593,15 +680,13 @@ export const useUploadZone = ({
           singleFileDropPathRef.current = null;
         }
 
-        const { promise, abort } = driver.createFile({
-          filename: file.name,
+        const uploadOptions = {
           file,
-          parentId: file.parentId,
           uploadAcl:
             config.AWS_S3_UPLOAD_ACL === "default"
               ? undefined
               : config.AWS_S3_UPLOAD_ACL,
-          progressHandler: (progress) => {
+          progressHandler: (progress: number) => {
             setUploadingState((prev) => ({
               ...prev,
               filesMeta: {
@@ -617,7 +702,59 @@ export const useUploadZone = ({
               },
             }));
           },
-        });
+        };
+
+        let choice: NameConflictChoice = {
+          action: "copy",
+          filename: file.name,
+        };
+        // Files dropped inside a new folder have their own parent. Only files
+        // landing in the current folder (or at the root, on My files) can
+        // collide with an existing name.
+        const isNestedInDroppedFolder = Boolean(
+          file.parentId && file.parentId !== item?.id,
+        );
+        if (!isNestedInDroppedFolder) {
+          try {
+            const conflict = await findNameConflicts(file.parentId, file.name);
+            if (conflict.exact.length > 0) {
+              choice = await askNameConflictRef.current(
+                file.name,
+                conflict.copyName,
+                conflict.exact,
+              );
+            }
+          } catch {
+            choice = { action: "copy", filename: file.name };
+          }
+        }
+        if (!activeUploadsRef.current.has(filePath)) {
+          continue;
+        }
+        if (choice.action === "cancel") {
+          activeUploadsRef.current.delete(filePath);
+          setUploadingState((prev) => ({
+            ...prev,
+            filesMeta: {
+              ...prev.filesMeta,
+              [filePath]: {
+                file,
+                progress: 0,
+                status: FileUploadStatus.CANCELLED,
+              },
+            },
+          }));
+          continue;
+        }
+
+        const { promise, abort } =
+          choice.action === "version"
+            ? driver.replaceFile({ itemId: choice.itemId, ...uploadOptions })
+            : driver.createFile({
+                filename: choice.filename,
+                parentId: file.parentId,
+                ...uploadOptions,
+              });
 
         // Mark this entry as "in flight" so the loop won't pick it again.
         upload.abort = abort;
@@ -696,12 +833,14 @@ export const useUploadZone = ({
       const activeFiles = Object.values(uploadingState.filesMeta).filter(
         (meta) => meta.status !== FileUploadStatus.CANCELLED,
       );
-      // Dismiss toast if no active files remain during upload
-      if (
-        (uploadingState.step === UploadingStep.UPLOAD_FILES &&
-          activeFiles.length === 0) ||
-        uploadingState.step === UploadingStep.NONE
-      ) {
+      // Dismiss the toast when the queue is empty or every file was
+      // cancelled. A finished batch of cancellations would otherwise leave
+      // the collapsed bar up with no label.
+      const queueFinishedEmpty =
+        activeFiles.length === 0 &&
+        (uploadingState.step === UploadingStep.UPLOAD_FILES ||
+          uploadingState.step === UploadingStep.DONE);
+      if (queueFinishedEmpty || uploadingState.step === UploadingStep.NONE) {
         toast.dismiss(fileUploadsToastId.current);
         fileUploadsToastId.current = null;
       } else {
@@ -757,8 +896,26 @@ export const useUploadZone = ({
     [onCancelFile],
   );
 
+  const nameConflictModal = (
+    <NameConflictModal
+      isOpen={nameConflict !== null}
+      filename={nameConflict?.filename ?? ""}
+      copyName={nameConflict?.copyName ?? ""}
+      matches={nameConflict?.matches ?? NO_NAME_CONFLICTS}
+      onVersion={(itemId) => resolveNameConflict({ action: "version", itemId })}
+      onCopy={() =>
+        resolveNameConflict({
+          action: "copy",
+          filename: nameConflict?.copyName ?? "",
+        })
+      }
+      onCancel={() => resolveNameConflict({ action: "cancel" })}
+    />
+  );
+
   return {
     dropZone,
     cancelUploadsForDeletedItems,
+    nameConflictModal,
   };
 };

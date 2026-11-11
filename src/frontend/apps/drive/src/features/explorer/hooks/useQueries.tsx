@@ -75,3 +75,12 @@ export const useItem = (
     placeholderData: (previousData) => previousData,
   });
 };
+
+export const useItemVersions = (itemId: string) => {
+  return useQuery({
+    queryKey: ["itemVersions", itemId],
+    queryFn: () => getDriver().getItemVersions(itemId),
+    staleTime: 0,
+    gcTime: 0,
+  });
+};

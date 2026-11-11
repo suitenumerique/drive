@@ -210,6 +210,18 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods,too-many-instanc
         """Return whether the user can mark an upload on the item as ended."""
         return self.can_update() and self.user.is_authenticated
 
+    def can_versions_view(self) -> bool:
+        """Return whether the user can list stored versions of the file."""
+        return self.can_get() and self.item.type == models.ItemTypeChoices.FILE
+
+    def can_versions_restore(self) -> bool:
+        """Return whether the user can restore a stored version of the file."""
+        return self.can_update() and self.item.type == models.ItemTypeChoices.FILE
+
+    def can_versions_destroy(self) -> bool:
+        """Return whether the user can delete a stored version of the file."""
+        return self.can_destroy() and self.item.type == models.ItemTypeChoices.FILE
+
     def as_dict(self) -> dict[str, bool | dict[str, list[str]]]:
         """Return the ability mapping exposed by the API."""
         return {
@@ -238,6 +250,9 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods,too-many-instanc
             "partial_update": self.can_update(),
             "update": self.can_update(),
             "upload_ended": self.can_upload_ended(),
+            "versions_view": self.can_versions_view(),
+            "versions_restore": self.can_versions_restore(),
+            "versions_destroy": self.can_versions_destroy(),
             "wopi": self.can_get(),
             "convert": self.can_convert(),
         }

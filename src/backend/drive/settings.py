@@ -271,6 +271,12 @@ class Base(Configuration):
         environ_name="RESTRICT_UPLOAD_FILE_TYPE",
         environ_prefix=None,
     )
+    MAX_ITEM_VERSIONS = values.PositiveIntegerValue(
+        default=5,
+        environ_name="MAX_ITEM_VERSIONS",
+        environ_prefix=None,
+        help_text="Maximum number of stored versions kept per item.",
+    )
     FILE_EXTENSIONS_ALLOWED = values.ListValue(
         [
             ".001",
