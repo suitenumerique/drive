@@ -14,6 +14,7 @@ import {
   Download,
   Copy,
   FolderPlus,
+  FolderUp,
   Upload,
   Star,
   Edit,
@@ -46,12 +47,23 @@ import {
   useMutationDeleteFavoriteItem,
   useMutationDuplicateItem,
 } from "./useMutations";
-import { DefaultRoute } from "@/utils/defaultRoutes";
+import { DefaultRoute, getDefaultRouteId } from "@/utils/defaultRoutes";
 import { getCanUploadErrorDescription } from "@/utils/entitlements";
 import {
   addToast,
   ToasterItem,
 } from "@/features/ui/components/toaster/Toaster";
+
+/**
+ * Views that mix items coming from anywhere in the tree, so a row tells the
+ * user nothing about where its item actually lives. In a folder listing the
+ * parent folder is already the page being looked at.
+ */
+const FLAT_VIEW_ROUTES: DefaultRoute[] = [
+  DefaultRoute.RECENT,
+  DefaultRoute.SHARED_WITH_ME,
+  DefaultRoute.FAVORITES,
+];
 
 type UseItemActionMenuItemsOptions = {
   onModalOpenChange?: (isModalOpen: boolean) => void;
@@ -77,6 +89,8 @@ export const useItemActionMenuItems = ({
   onRestrictionUpdated,
 }: UseItemActionMenuItemsOptions = {}): UseItemActionMenuItemsReturn => {
   const router = useRouter();
+  const currentRoute = getDefaultRouteId(router.pathname);
+  const isFlatView = !!currentRoute && FLAT_VIEW_ROUTES.includes(currentRoute);
   const { setRightPanelForcedItem, setRightPanelOpen, ...explorerContext } =
     useGlobalExplorer();
   const { handleDownloadItem } = useDownloadItem();
@@ -141,6 +155,21 @@ export const useItemActionMenuItems = ({
     } else {
       router.push(`/explorer/items/my-files`);
     }
+  };
+
+  /**
+   * Navigates to the folder holding the item. Going through the router the
+   * same way the delete redirect does keeps the tree in sync and lets the
+   * breadcrumb offer the way back to the view the user came from.
+   */
+  const handleOpenParentFolder = (item: Item) => {
+    const parentId = getParentIdFromPath(item.path);
+    if (!parentId) {
+      return;
+    }
+
+    setManualNavigationItemId(parentId);
+    router.push(`/explorer/items/${parentId}`);
   };
 
   const getMenuItems = (
@@ -261,6 +290,13 @@ export const useItemActionMenuItems = ({
       },
       { type: "separator" },
 
+      {
+        icon: <FolderUp />,
+        label: t("explorer.item.actions.open_parent_folder"),
+        // An item at the root of a workspace has no parent folder to open.
+        isHidden: !isFlatView || minimal || !getParentIdFromPath(item.path),
+        callback: () => handleOpenParentFolder(item),
+      },
       {
         icon: <Info />,
         label: t("explorer.item.actions.view_info"),

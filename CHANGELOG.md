@@ -17,6 +17,7 @@ and this project adheres to
 ### Added
 
 - ✨(frontend) mark restricted folders in breadcrumbs
+- ✨(frontend) open the parent folder of a file #587
 
 ### Fixed
 
