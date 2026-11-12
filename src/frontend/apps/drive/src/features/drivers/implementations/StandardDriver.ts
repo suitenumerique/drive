@@ -7,6 +7,11 @@ import {
   PaginatedChildrenResult,
 } from "../Driver";
 import {
+  DTOAcceptAskForAccess,
+  DTOCreateAskForAccess,
+  DTODeleteAskForAccess,
+} from "../DTOs/AskForAccessDTO";
+import {
   DTODeleteInvitation,
   DTOCreateInvitation,
   DTOUpdateInvitation,
@@ -21,6 +26,7 @@ import {
   Access,
   ApiConfig,
   APIList,
+  AskForAccess,
   Invitation,
   Item,
   ItemBreadcrumb,
@@ -291,8 +297,40 @@ export class StandardDriver extends Driver {
     return data;
   }
 
-  async getItemInvitations(itemId: string): Promise<APIList<Invitation>> {
-    const response = await fetchAPI(`items/${itemId}/invitations/`);
+  async getItemAskForAccesses(itemId: string): Promise<AskForAccess[]> {
+    const response = await fetchAPI(`items/${itemId}/ask-for-access/`, {
+      params: { page_size: 200 },
+    });
+    const data = await response.json();
+    return data.results;
+  }
+
+  async createAskForAccess(data: DTOCreateAskForAccess): Promise<void> {
+    await fetchAPI(`items/${data.itemId}/ask-for-access/`, {
+      method: "POST",
+      body: JSON.stringify(data.role ? { role: data.role } : {}),
+    });
+  }
+
+  async deleteAskForAccess(payload: DTODeleteAskForAccess): Promise<void> {
+    await fetchAPI(
+      `items/${payload.itemId}/ask-for-access/${payload.askForAccessId}/`,
+      { method: "DELETE" },
+    );
+  }
+
+  async acceptAskForAccess(payload: DTOAcceptAskForAccess): Promise<void> {
+    await fetchAPI(
+      `items/${payload.itemId}/ask-for-access/${payload.askForAccessId}/accept/`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload.role ? { role: payload.role } : {}),
+      },
+    );
+  }
+
+  async getItemInvitations(itemId: string, page = 1): Promise<APIList<Invitation>> {
+    const response = await fetchAPI(`items/${itemId}/invitations/?page=${page}`);
     const data = await response.json();
     return data;
   }
