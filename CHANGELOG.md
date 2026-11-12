@@ -12,6 +12,10 @@ and this project adheres to
 
 - ✨(frontend) set an expiration date on item share links
 
+### Fixed
+
+- ♿️(frontend) describe file and folder type icons
+
 ## [v0.27.0] - 2026-11-09
 
 ### Added

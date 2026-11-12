@@ -235,6 +235,12 @@
         },
         "grid": {
           "name": "Name",
+          "item_icon_alt": {
+            "restricted_folder": "Restricted folder",
+            "suspicious": "Suspicious file",
+            "sqlite": "Database",
+            "grist": "Grist"
+          },
           "actions_column": "Actions",
           "last_update": "Last Update",
           "columns": {
@@ -975,6 +981,12 @@
         },
         "grid": {
           "name": "Nom",
+          "item_icon_alt": {
+            "restricted_folder": "Dossier restreint",
+            "suspicious": "Fichier suspect",
+            "sqlite": "Base de données",
+            "grist": "Grist"
+          },
           "actions_column": "Actions",
           "last_update": "Dernière modification",
           "columns": {
@@ -1715,6 +1727,12 @@
         },
         "grid": {
           "name": "Naam",
+          "item_icon_alt": {
+            "restricted_folder": "Beperkte map",
+            "suspicious": "Verdacht bestand",
+            "sqlite": "Database",
+            "grist": "Grist"
+          },
           "actions_column": "Acties",
           "last_update": "Laatste update",
           "columns": {
