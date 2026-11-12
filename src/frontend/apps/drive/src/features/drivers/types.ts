@@ -1,5 +1,6 @@
 import {
   FooterProps,
+  LaGaufreV2Props,
   TreeViewDataType,
 } from "@gouvfr-lasuite/ui-components";
 import { ColumnPreferences } from "../explorer/types/columns";
@@ -216,6 +217,7 @@ export type LocalizedThemeCustomization<T> = {
 
 export interface ThemeCustomization {
   footer?: LocalizedThemeCustomization<FooterProps>;
+  waffle?: LaGaufreV2Props;
 }
 
 export type ApiConfig = {
