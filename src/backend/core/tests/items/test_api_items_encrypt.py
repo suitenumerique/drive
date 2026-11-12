@@ -17,7 +17,7 @@ from core import factories, models
 from core.api import serializers
 from wopi.services.lock import LockService
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("encryption_enabled")]
 
 
 # ============================================================================
@@ -37,6 +37,27 @@ def test_api_items_encrypt_anonymous():
         format="json",
     )
     assert response.status_code == 401
+
+
+def test_api_items_encrypt_refused_when_the_feature_is_off(settings):
+    """An instance without encryption lets nothing become encrypted, hence unscanned."""
+    settings.ENCRYPTION_FEATURE_ENABLED = False
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE, users=[(user, models.RoleChoices.OWNER)]
+    )
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.patch(
+        f"/api/v1.0/items/{item.id!s}/encrypt/",
+        {"encrypted_symmetric_key_per_user": {}, "encrypted_keys_for_descendants": {}},
+        format="json",
+    )
+
+    assert response.status_code == 403
+    item.refresh_from_db()
+    assert item.is_encrypted is False
 
 
 def test_api_items_encrypt_authenticated_unrelated():

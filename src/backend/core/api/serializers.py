@@ -921,6 +921,7 @@ class CreateItemSerializer(ItemSerializer):
             "created_at",
             "creator",
             "depth",
+            "is_encrypted",
             "is_favorite",
             "link_role",
             "link_reach",

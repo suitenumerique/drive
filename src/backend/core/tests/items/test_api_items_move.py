@@ -17,7 +17,7 @@ from rest_framework.test import APIClient
 
 from core import factories, models
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("encryption_enabled")]
 
 LOCAL_BACKEND = "core.entitlements.backends.local.LocalEntitlementsBackend"
 

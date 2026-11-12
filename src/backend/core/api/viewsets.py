@@ -1384,6 +1384,7 @@ class ItemViewSet(
 
     def perform_create(self, serializer):
         """Set the current user as creator and owner of the newly created object."""
+        serializer.validated_data.pop("encrypted_symmetric_key", None)
         self._create_item(serializer)
         models.ItemAccess.objects.create(
             item=serializer.instance,
@@ -2571,6 +2572,9 @@ class ItemViewSet(
     @transaction.atomic
     def encrypt(self, request, *args, **kwargs):
         """Encrypt an item (standalone file) or an item subtree (folder + all descendants)."""
+        if not settings.ENCRYPTION_FEATURE_ENABLED:
+            raise drf.exceptions.PermissionDenied("Encryption is not enabled on this instance.")
+
         item = self.get_object()
 
         refusal = encryptable_item_refusal(item)

@@ -719,3 +719,23 @@ def test_api_items_children_create_related_invalid_filename(
 
     assert response.status_code == 400
     mock_sanitize_filename.assert_called_once_with("!@#$%^&*().txt")
+
+
+def test_api_items_children_create_ignores_is_encrypted_under_a_plain_parent():
+    """A child of a plain folder stays plain whatever its creator claims."""
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    parent = factories.ItemFactory(link_reach="restricted", type=ItemTypeChoices.FOLDER)
+    factories.UserItemAccessFactory(user=user, item=parent, role="owner")
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/children/",
+        {"size": 8, "type": ItemTypeChoices.FILE, "filename": "file.txt", "is_encrypted": True},
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert Item.objects.get(id=response.json()["id"]).is_encrypted is False

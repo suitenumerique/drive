@@ -35,6 +35,12 @@ def clear_cache():
     get_storage_compute_backend.cache_clear()
 
 
+@pytest.fixture
+def encryption_enabled(settings):
+    """Turn the encryption feature on, off by default like in a deployment."""
+    settings.ENCRYPTION_FEATURE_ENABLED = True
+
+
 @pytest.fixture(autouse=True)
 def posthog_capture_mock(settings):
     """Run the PostHog tracking code in every test without sending events."""

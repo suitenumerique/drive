@@ -617,3 +617,30 @@ def test_api_items_create_file_from_template_posthog_event(posthog_capture_mock)
     )
     properties = posthog_capture_mock.call_args.kwargs["properties"]
     assert properties.items() >= {"extension": "odt", "item_id": item.id}.items()
+
+
+def test_api_items_create_ignores_is_encrypted_and_a_wrapped_key():
+    """Only an encryption flow marks an item encrypted: a creator's flag would skip the
+    type and antivirus checks, and a wrapped key means nothing outside an encrypted parent."""
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "size": 8,
+            "type": ItemTypeChoices.FILE,
+            "filename": "file.txt",
+            "is_encrypted": True,
+            "encrypted_symmetric_key": "d3JhcHBlZA==",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+    item = Item.objects.get()
+    assert item.is_encrypted is False
+    assert item.encrypted_symmetric_key is None
+    assert response.json()["is_encrypted"] is False
