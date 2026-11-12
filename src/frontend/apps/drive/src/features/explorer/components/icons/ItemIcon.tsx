@@ -4,6 +4,8 @@ import folderRestrictedIcon from "@/assets/folder/folder-restricted.svg";
 import {
   FileIcon,
   FileIconContent,
+  getExtensionFromName,
+  getMimeCategory,
   ICONS,
   IconSize,
   MimeCategory,
@@ -14,6 +16,7 @@ type ItemIconProps = {
   item: Item;
   size?: IconSize;
   type?: "mini" | "normal";
+  alt?: string;
 };
 
 // Global icon component for all items, same logic as the one in the ui-kit ( FileIcon )
@@ -22,8 +25,28 @@ export const ItemIcon = ({
   item,
   size = IconSize.MEDIUM,
   type = "normal",
+  alt,
 }: ItemIconProps) => {
   const extendedIcon = getItemExtendedIcon(item, type);
+  if (alt) {
+    const preview = itemToPreviewFile(item);
+    const mimeCategory = preview.isFolderAccessDenied
+      ? MimeCategory.DENIED
+      : getMimeCategory(
+          preview.mimetype,
+          getExtensionFromName(preview.title),
+        );
+    const iconSrc = extendedIcon ?? ICONS[type][mimeCategory];
+
+    return (
+      <img
+        src={iconSrc}
+        alt={alt}
+        draggable={false}
+        className={`c__file-icon icon--${size}`}
+      />
+    );
+  }
   if (extendedIcon) {
     return <FileIconContent icon={extendedIcon} size={size} />;
   }

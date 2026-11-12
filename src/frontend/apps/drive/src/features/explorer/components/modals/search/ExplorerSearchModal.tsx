@@ -19,6 +19,7 @@ import {
 } from "@/features/drivers/utils";
 import { getDriver } from "@/features/config/Config";
 import { ItemIcon } from "../../icons/ItemIcon";
+import { getItemIconAltKey } from "@/features/explorer/utils/mimeTypes";
 import {
   NavigationEventType,
   useGlobalExplorer,
@@ -197,6 +198,8 @@ export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
 
 const SearchItem = ({ item }: { item: Item }) => {
   const { t } = useTranslation();
+  const title = getItemTitle(item);
+  const iconAltKey = getItemIconAltKey(item, title);
   const shouldShowAncestors =
     (item.parents && item.parents.length > 0) || item.deleted_at;
   return (
@@ -212,11 +215,14 @@ const SearchItem = ({ item }: { item: Item }) => {
           data-testid="search-item"
         >
           <div className="explorer__search__modal__item__icon">
-            <ItemIcon item={item} />
+            <ItemIcon
+              item={item}
+              alt={iconAltKey ? t(iconAltKey) : undefined}
+            />
           </div>
           <div className="explorer__search__modal__item__content">
             <div className="explorer__search__modal__item__content__title">
-              {getItemTitle(item)}
+              {title}
             </div>
             {shouldShowAncestors && (
               <div className="explorer__search__modal__item__content__ancestors">

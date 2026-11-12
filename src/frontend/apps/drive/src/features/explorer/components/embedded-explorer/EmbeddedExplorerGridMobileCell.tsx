@@ -2,6 +2,8 @@ import { CellContext } from "@tanstack/react-table";
 import { Item } from "@/features/drivers/types";
 import { memo } from "react";
 import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
+import { getItemIconAltKey } from "@/features/explorer/utils/mimeTypes";
+import { useTranslation } from "react-i18next";
 import { timeAgo } from "@/features/explorer/utils/utils";
 import { LoadingRing } from "@/features/ui/components/loading-ring/LoadingRing";
 import { useTransientItem } from "@/features/explorer/hooks/useTransientItem";
@@ -14,7 +16,9 @@ const EmbeddedExplorerGridMobileCellComponent = (
   params: EmbeddedExplorerGridMobileCellProps,
 ) => {
   const item = params.row.original;
+  const { t } = useTranslation();
   const { isTransient, label: transientLabel } = useTransientItem(item);
+  const iconAltKey = getItemIconAltKey(item, removeFileExtension(item.title));
 
   return (
     <div className="explorer__grid__item__mobile">
@@ -23,7 +27,11 @@ const EmbeddedExplorerGridMobileCellComponent = (
           <LoadingRing size="md" />
         </div>
       ) : (
-        <ItemIcon key={item.id} item={item} />
+        <ItemIcon
+          key={item.id}
+          item={item}
+          alt={iconAltKey ? t(iconAltKey) : undefined}
+        />
       )}
       <div className="explorer__grid__item__mobile__info">
         <div className="explorer__grid__item__mobile__info__title">
