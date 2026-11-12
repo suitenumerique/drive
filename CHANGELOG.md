@@ -20,6 +20,8 @@ and this project adheres to
 
 ### Fixed
 
+- ⚡️(backend) answer the business metrics counts from indexes
+- 🐛(backend) compute the business metrics once for all the scrapes
 - 🐛(frontend) offer folder actions on restricted folders from their parent
 - 🐛(frontend) fix the crash when sharing a folder renamed before being opened
 - 🐛(backend) keep the file on a WOPI rename to its current name

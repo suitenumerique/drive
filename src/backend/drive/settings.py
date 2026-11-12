@@ -1775,10 +1775,10 @@ class Base(Configuration):
         environ_name="PROMETHEUS_CELERY_QUEUE_METRICS_ENABLED",
         environ_prefix=None,
     )
-    # Report the business metrics of Drive (items, users, accesses, storage) on
-    # /metrics. They are computed from the database and kept in the shared cache
-    # for PROMETHEUS_BUSINESS_METRICS_CACHE_TTL seconds, so that the replicas
-    # and the scrapes share one set of queries.
+    # Report the business metrics of Drive (items, users, invitations, accesses) on
+    # /metrics. They are computed from the database at most every
+    # PROMETHEUS_BUSINESS_METRICS_CACHE_TTL seconds, by one scrape for all the
+    # replicas, and the other scrapes answer with the values in the shared cache.
     PROMETHEUS_BUSINESS_METRICS_ENABLED = values.BooleanValue(
         True,
         environ_name="PROMETHEUS_BUSINESS_METRICS_ENABLED",
@@ -1787,6 +1787,13 @@ class Base(Configuration):
     PROMETHEUS_BUSINESS_METRICS_CACHE_TTL = values.PositiveIntegerValue(
         300,
         environ_name="PROMETHEUS_BUSINESS_METRICS_CACHE_TTL",
+        environ_prefix=None,
+    )
+    # Postgres cancels a business metrics query running longer than this, in
+    # seconds: its family keeps its previous values until the next try.
+    PROMETHEUS_BUSINESS_METRICS_STATEMENT_TIMEOUT = values.FloatValue(
+        10.0,
+        environ_name="PROMETHEUS_BUSINESS_METRICS_STATEMENT_TIMEOUT",
         environ_prefix=None,
     )
     # gunicorn runs several worker processes, and a scrape is answered by one of
