@@ -227,6 +227,25 @@ def test_api_items_maintenance_key_needs_the_update_ability(role, status):
     assert item.maintenance_wrapped_item_key == expected
 
 
+@pytest.mark.parametrize("role", ["editor", "owner"])
+def test_api_items_maintenance_key_needs_the_key(role):
+    """A member still waiting for the root's key cannot wrap it: whatever they would store
+    leaves the custodians a copy that opens nothing."""
+    holder, waiting = factories.UserFactory(), factories.UserFactory()
+    item = _encrypted_root(holder)
+    factories.UserItemAccessFactory(item=item, user=waiting, role=role)
+
+    response = _client(waiting).patch(
+        f"/api/v1.0/items/{item.id!s}/maintenance-key/",
+        {"maintenance_key": _copy(b"garbage")},
+        format="json",
+    )
+
+    assert response.status_code == 403
+    item.refresh_from_db()
+    assert item.maintenance_wrapped_item_key is None
+
+
 def _replacement(key_id):
     return base64.b64encode(bytes([1]) + key_id + b"new").decode()
 

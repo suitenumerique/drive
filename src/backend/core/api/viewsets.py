@@ -2635,9 +2635,7 @@ class ItemViewSet(
                 )
             # Only who holds the key can write content the others can open: an editor
             # still waiting for it would only overwrite the file with what nobody reads.
-            if not models.ItemEncryptionKeyWrap.objects.filter(
-                db.Q(item=item) | db.Q(item__in=item.ancestors()), user=request.user
-            ).exists():
+            if not chain_key_wraps(item).filter(user=request.user).exists():
                 raise drf.exceptions.PermissionDenied(_("You do not hold this file's key yet."))
             key = item.file_key
 
@@ -3112,6 +3110,11 @@ class ItemViewSet(
                 status=drf.status.HTTP_400_BAD_REQUEST,
             )
 
+        # A copy wraps the root's key: whoever holds no wrap of it cannot make one, and
+        # would only leave the custodians a copy that opens nothing.
+        if not chain_key_wraps(item).filter(user=request.user).exists():
+            raise drf.exceptions.PermissionDenied(_("You do not hold this item's key."))
+
         serializer = serializers.MaintenanceKeySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         new_copy = serializer.validated_data["maintenance_key"]
@@ -3126,7 +3129,7 @@ class ItemViewSet(
                     },
                     status=drf.status.HTTP_409_CONFLICT,
                 )
-            # Filling an empty copy is a backfill any writer may run. Replacing one
+            # Filling an empty copy is a backfill any member holding the key may run. Replacing one
             # could swap a copy the custodians can open for one they cannot: an owner
             # or an administrator only, and on the record.
             if item.get_role(request.user) not in PRIVILEGED_ROLES:
