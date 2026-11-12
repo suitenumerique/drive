@@ -1761,3 +1761,33 @@ def test_api_items_move_refused_when_it_strands_pending_users():
     root.refresh_from_db()
     assert root.parent() == shared
     assert models.ItemEncryptionKeyWrap.objects.filter(item=root, user=holder).exists()
+
+
+@pytest.mark.parametrize("encrypted", ["root", "inside"])
+def test_api_items_move_encrypted_into_a_folder_shared_by_link(encrypted):
+    """Nothing encrypted may land under a folder open by link, moved on its own or
+    inside a plaintext folder: it would be reachable by anyone holding the link."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    shared = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.PUBLIC,
+        users=[(user, "owner")],
+    )
+    root = _encrypted_root(user)
+    moved = root
+    if encrypted == "inside":
+        moved = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+        root.move(moved)
+
+    response = client.post(
+        f"/api/v1.0/items/{moved.id!s}/move/",
+        data={"target_item_id": str(shared.id)},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "item_move_encrypted_into_shared"
+    moved.refresh_from_db()
+    assert moved.depth == 1

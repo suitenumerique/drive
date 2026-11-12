@@ -538,3 +538,32 @@ def test_api_items_link_configuration_sync_link_reach_descendants():
 
     assert folder3.link_reach is None
     assert folder3.computed_link_reach == models.LinkReachChoices.PUBLIC
+
+
+def test_api_items_link_configuration_refused_over_encrypted_content():
+    """A link opening a folder opens all it holds: refused while it holds anything
+    encrypted, which must stay restricted."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FOLDER,
+        is_encrypted=True,
+        encrypted_symmetric_key=None,
+    )
+
+    response = client.put(
+        f"/api/v1.0/items/{folder.id!s}/link-configuration/",
+        {"link_reach": models.LinkReachChoices.PUBLIC, "link_role": models.LinkRoleChoices.READER},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    folder.refresh_from_db()
+    assert folder.link_reach == models.LinkReachChoices.RESTRICTED

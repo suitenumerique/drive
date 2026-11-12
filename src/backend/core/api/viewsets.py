@@ -700,6 +700,20 @@ def apply_moved_encryption_state(item, data, *, moves_within_chain):
     return update_fields
 
 
+def check_encrypted_stays_restricted(item, target_item):
+    """Encrypted content is never reachable by link, wherever it moves: a target open by
+    link may receive nothing encrypted, nor anything holding something encrypted."""
+    if (
+        target_item
+        and target_item.computed_link_reach != LinkReachChoices.RESTRICTED
+        and models.Item.objects.filter(path__descendants=item.path, is_encrypted=True).exists()
+    ):
+        raise drf.exceptions.ValidationError(
+            {"target_item_id": _("Encrypted items cannot move into a folder shared by link.")},
+            code="item_move_encrypted_into_shared",
+        )
+
+
 def encryptable_item_refusal(item):
     """Why `item` cannot be encrypted, or None."""
     # The item must be RESTRICTED (computed_link_reach accounts for inheritance:
@@ -1985,6 +1999,8 @@ class ItemViewSet(
                     code=can_upload.get("reason"),
                 )
 
+        check_encrypted_stays_restricted(item, target_item)
+
         # Encryption-aware move. Five resolved shapes — see
         # `MoveItemSerializer` for the payload schema. We validate first
         # (so a malformed payload never moves the item) then apply the
@@ -2552,10 +2568,11 @@ class ItemViewSet(
         item = self.get_object()
         previous_link_reach = item.link_reach
 
-        # Block link configuration changes for encrypted items (must stay RESTRICTED)
-        if item.is_encrypted:
-            new_reach = request.data.get("link_reach")
-            if new_reach and new_reach != LinkReachChoices.RESTRICTED:
+        # Encrypted items must stay RESTRICTED, and a link opening a folder opens all
+        # it holds: blocked as soon as the subtree holds something encrypted.
+        new_reach = request.data.get("link_reach")
+        if new_reach and new_reach != LinkReachChoices.RESTRICTED:
+            if models.Item.objects.filter(path__descendants=item.path, is_encrypted=True).exists():
                 return drf.response.Response(
                     {
                         "detail": _(
