@@ -701,17 +701,43 @@ def apply_moved_encryption_state(item, data, *, moves_within_chain):
     return update_fields
 
 
+def holds_encrypted(item):
+    """Whether `item` or anything under it is encrypted."""
+    return models.Item.objects.filter(path__descendants=item.path, is_encrypted=True).exists()
+
+
+def team_accesses(**path_lookup):
+    """The team accesses on the items matching `path_lookup` (`item__path__...`)."""
+    return models.ItemAccess.objects.filter(**path_lookup).exclude(team="")
+
+
 def check_encrypted_stays_restricted(item, target_item):
-    """Encrypted content is never reachable by link, wherever it moves: a target open by
-    link may receive nothing encrypted, nor anything holding something encrypted."""
-    if (
-        target_item
-        and target_item.computed_link_reach != LinkReachChoices.RESTRICTED
-        and models.Item.objects.filter(path__descendants=item.path, is_encrypted=True).exists()
-    ):
+    """Encrypted content is reachable neither by link nor by a team, wherever it moves:
+    a key is wrapped for each person, and Drive knows a team's members only from their
+    own sign-ins, so none of them could ever be given one."""
+    if not target_item:
+        return
+
+    if holds_encrypted(item):
+        if target_item.computed_link_reach != LinkReachChoices.RESTRICTED:
+            raise drf.exceptions.ValidationError(
+                {"target_item_id": _("Encrypted items cannot move into a folder shared by link.")},
+                code="item_move_encrypted_into_shared",
+            )
+        if team_accesses(item__path__ancestors=target_item.path).exists():
+            raise drf.exceptions.ValidationError(
+                {
+                    "target_item_id": _(
+                        "Encrypted items cannot move into a folder shared with a team."
+                    )
+                },
+                code="item_move_encrypted_into_team",
+            )
+
+    if target_item.is_encrypted and team_accesses(item__path__descendants=item.path).exists():
         raise drf.exceptions.ValidationError(
-            {"target_item_id": _("Encrypted items cannot move into a folder shared by link.")},
-            code="item_move_encrypted_into_shared",
+            {"target_item_id": _("Items shared with a team cannot move into an encrypted folder.")},
+            code="item_move_team_into_encrypted",
         )
 
 
@@ -726,6 +752,13 @@ def encryptable_item_refusal(item):
         return _("Item is already encrypted.")
     if item.ancestors().filter(is_encrypted=True).exists():
         return _("Item is inside an already encrypted subtree.")
+    if (
+        team_accesses(item__path__ancestors=item.path).exists()
+        or team_accesses(item__path__descendants=item.path).exists()
+    ):
+        return _(
+            "Remove the team accesses of the item, its folders and its content before encrypting it."
+        )
     return None
 
 
@@ -3817,8 +3850,8 @@ class ItemAccessViewSet(
                 }
             )
 
-        # Block team-based access for encrypted items
-        if self.item.is_encrypted and serializer.validated_data.get("team"):
+        # A team's members cannot be given a key: no team access over encrypted content.
+        if serializer.validated_data.get("team") and holds_encrypted(self.item):
             raise drf.exceptions.ValidationError(
                 {"team": _("Team-based access is not supported for encrypted items.")}
             )

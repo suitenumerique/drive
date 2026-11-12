@@ -936,6 +936,57 @@ def test_api_items_team_access_blocked_for_encrypted():
     assert "team" in str(response.json()).lower()
 
 
+def test_api_items_team_access_refused_above_encrypted_content():
+    """A team shared a plaintext folder would inherit its encrypted content: refused."""
+    user = factories.UserFactory()
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    factories.ItemFactory(parent=folder, type=models.ItemTypeChoices.FOLDER, is_encrypted=True)
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        f"/api/v1.0/items/{folder.id!s}/accesses/",
+        {"team": "some_team", "role": "reader"},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert not models.ItemAccess.objects.filter(item=folder).exclude(team="").exists()
+
+
+@pytest.mark.parametrize("where", ["self", "folder", "content"])
+def test_api_items_encrypt_refused_with_a_team_access(where):
+    """A team's members could never be given the key: the team accesses go first,
+    on the item, its folders or its content."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    child = factories.ItemFactory(parent=item, type=models.ItemTypeChoices.FILE)
+    shared = {"self": item, "folder": parent, "content": child}[where]
+    factories.TeamItemAccessFactory(item=shared, team="some_team")
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.patch(
+        f"/api/v1.0/items/{item.id!s}/encrypt/",
+        {"encrypted_symmetric_key_per_user": {}, "encrypted_keys_for_descendants": {}},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert "team" in response.json()["detail"].lower()
+    item.refresh_from_db()
+    assert item.is_encrypted is False
+
+
 # ============================================================================
 # Children in encrypted folder
 # ============================================================================

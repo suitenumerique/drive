@@ -1791,3 +1791,47 @@ def test_api_items_move_encrypted_into_a_folder_shared_by_link(encrypted):
     assert response.json()["errors"][0]["code"] == "item_move_encrypted_into_shared"
     moved.refresh_from_db()
     assert moved.depth == 1
+
+
+def test_api_items_move_encrypted_into_a_folder_shared_with_a_team():
+    """A team's members could never be given the key of what lands under its folder."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    shared = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    factories.TeamItemAccessFactory(item=shared, team="some_team")
+    root = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{root.id!s}/move/",
+        data={"target_item_id": str(shared.id)},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "item_move_encrypted_into_team"
+
+
+def test_api_items_move_team_shared_into_an_encrypted_folder():
+    """What a team shares would become encrypted, out of its members' reach."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    folder = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    file_item = factories.ItemFactory(parent=folder, type=models.ItemTypeChoices.FILE)
+    factories.TeamItemAccessFactory(item=file_item, team="some_team")
+    dest_root = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{folder.id!s}/move/",
+        data={
+            "target_item_id": str(dest_root.id),
+            "encrypted_symmetric_key": "CHAIN-WRAP",
+            "encrypted_keys_for_descendants": {str(file_item.id): "wrap"},
+            "file_key_mapping": {str(file_item.id): "encrypted.bin"},
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "item_move_team_into_encrypted"
