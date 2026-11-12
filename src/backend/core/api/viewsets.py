@@ -2542,7 +2542,19 @@ class ItemViewSet(
 
         new_filename = request.data.get("filename")
         if new_filename:
+            # A staged copy, which a later step points the item at: encrypting, removing
+            # the encryption or encrypting on a move, all of them its managers' own.
+            if not item.get_abilities(request.user).get("encrypt"):
+                raise drf.exceptions.PermissionDenied(
+                    _("Only a manager of the item can stage its content.")
+                )
             key = f"{item.key_base}/{new_filename}"
+            # Staged beside the current content, never over it.
+            if key == item.file_key:
+                raise drf.exceptions.ValidationError(
+                    {"filename": _("A staged copy cannot replace the current content.")},
+                    code="item_staged_over_current",
+                )
         else:
             # An editor still open on a file switched back to plaintext (by its owner
             # or a batch recovery) would write ciphertext over the plaintext, or to a
@@ -2552,6 +2564,12 @@ class ItemViewSet(
                     {"item": _("This file is no longer encrypted.")},
                     code="item_not_encrypted",
                 )
+            # Only who holds the key can write content the others can open: an editor
+            # still waiting for it would only overwrite the file with what nobody reads.
+            if not models.ItemEncryptionKeyWrap.objects.filter(
+                db.Q(item=item) | db.Q(item__in=item.ancestors()), user=request.user
+            ).exists():
+                raise drf.exceptions.PermissionDenied(_("You do not hold this file's key yet."))
             key = item.file_key
 
         upload_url = utils.generate_upload_policy_for_key(

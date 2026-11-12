@@ -85,11 +85,68 @@ def test_api_items_encryption_upload_url_save_of_an_encrypted_file():
         users=[(user, models.RoleChoices.EDITOR)],
         is_encrypted=True,
     )
+    factories.ItemEncryptionKeyWrapFactory(item=item, user=user)
 
     response = request_upload_url(item, user, {"size": 42})
 
     assert response.status_code == 200
     assert response.json()["filename"] == item.filename
+
+
+def test_api_items_encryption_upload_url_save_with_the_key_of_an_encrypted_folder():
+    """The key of a file under an encrypted folder is held through the folder's wrap."""
+    user = factories.UserFactory()
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, models.RoleChoices.EDITOR)],
+        is_encrypted=True,
+    )
+    factories.ItemEncryptionKeyWrapFactory(item=folder, user=user)
+    item = factories.ItemFactory(parent=folder, type=models.ItemTypeChoices.FILE, is_encrypted=True)
+
+    response = request_upload_url(item, user, {"size": 42})
+
+    assert response.status_code == 200
+
+
+def test_api_items_encryption_upload_url_save_without_the_key_forbidden():
+    """An editor still waiting for the key cannot overwrite what the others read."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        users=[(user, models.RoleChoices.EDITOR)],
+        is_encrypted=True,
+    )
+    factories.ItemEncryptionKeyWrapFactory(item=item)
+
+    response = request_upload_url(item, user, {"size": 42})
+
+    assert response.status_code == 403
+
+
+def test_api_items_encryption_upload_url_staged_copy_by_an_editor_forbidden():
+    """Staging a copy belongs to the flows of the item's managers."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE, users=[(user, models.RoleChoices.EDITOR)]
+    )
+
+    response = request_upload_url(item, user, {"filename": "staged.bin", "size": 42})
+
+    assert response.status_code == 403
+
+
+def test_api_items_encryption_upload_url_staged_copy_over_the_current_content():
+    """A staged copy named like the current content would overwrite it: refused."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE, users=[(user, models.RoleChoices.OWNER)]
+    )
+
+    response = request_upload_url(item, user, {"filename": item.filename, "size": 42})
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "item_staged_over_current"
 
 
 def test_api_items_encryption_upload_url_reader_forbidden():
