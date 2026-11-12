@@ -1,8 +1,8 @@
 # Setup the Find search for Drive
 
 This configuration will enable the fulltext search feature for Drive :
-- Each save on **core.Item** or **core.Item** will trigger the indexer
-- Once indexer service configured, the `api/v1.0/item/search/` will work as a proxy with the Find API for fulltext search.
+- Each save on **core.Item**, and each update of an existing **core.ItemAccess**, will trigger the indexer
+- Once indexer service configured, the `api/v1.0/items/search/` will work as a proxy with the Find API for fulltext search.
 
 ## Create an index service for Drive
 
@@ -11,7 +11,7 @@ Configure a **Service** for Drive application with these settings
 - **Name**: `drive`<br>_request.auth.name of the Drive application._
 - **Client id**: `drive`<br>_Name of the token audience or client_id of the Drive application._
 
-See [how-to-use-indexer.md](how-to-use-indexer.md) for details.
+See [Setup indexation API](https://github.com/suitenumerique/find/blob/main/docs/setup-indexer.md#setup-indexation-api) in Find's documentation for details.
 
 ## Configure settings of Drive
 

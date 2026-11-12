@@ -140,9 +140,8 @@ This document lists all configurable environment variables for the Drive applica
 | `S3_TRANSFER_CONFIG_USE_THREADS` | `use_threads` value for the `TransfertConfig` configuration | `True` |
 | `SEARCH_INDEXER_ALLOWED_MIMETYPES` | Indexable files mimetypes | `["text/"]` |
 | `SEARCH_INDEXER_CLASS` | Class of the backend for item indexation & search ||
-| `SEARCH_INDEXER_BATCH_SIZE` | Size of each batch for indexation of all items | `1000` |
+| `SEARCH_INDEXER_BATCH_SIZE` | Size of each batch for indexation of all items | `100000` |
 | `SEARCH_INDEXER_COUNTDOWN` | Minimum debounce delay of indexation jobs (in seconds) | 1 |
-| `SEARCH_INDEXER_MIMETYPES` | Find application endpoint for search | `None` |
 | `SEARCH_INDEXER_QUERY_URL` | Find application endpoint for search | `None` |
 | `SEARCH_INDEXER_SECRET` | Token for indexation queries | `None` |
 | `SEARCH_INDEXER_CONTENT_MAX_SIZE` | Maximum size for an indexable file | `2097152` |
