@@ -1537,6 +1537,8 @@ def test_api_items_move_encrypt_on_move_folder_with_descendants():
         parent=nested_folder,
     )
     dest_root = _encrypted_root(user)
+    default_storage.save(f"{file_a.key_base}/encrypted_a.bin", ContentFile(b"ciphertext"))
+    default_storage.save(f"{file_b.key_base}/encrypted_b.bin", ContentFile(b"ciphertext"))
 
     response = client.post(
         f"/api/v1.0/items/{src_folder.id!s}/move/",

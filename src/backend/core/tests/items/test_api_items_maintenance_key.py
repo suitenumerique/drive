@@ -4,6 +4,9 @@ import base64
 import logging
 from uuid import uuid4
 
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -172,6 +175,7 @@ def test_api_items_remove_encryption_clears_the_maintenance_copy():
         is_encrypted=True,
         maintenance_wrapped_item_key=_copy(),
     )
+    default_storage.save(f"{item.key_base}/new_plaintext.txt", ContentFile(b"plaintext"))
 
     response = _client(user).patch(
         f"/api/v1.0/items/{item.id!s}/remove-encryption/",

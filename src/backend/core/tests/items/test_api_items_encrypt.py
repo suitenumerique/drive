@@ -128,6 +128,65 @@ def test_api_items_encrypt_standalone_file():
     assert wrap.wrapped_key == "encrypted_key_for_user"
 
 
+@pytest.mark.parametrize("staged", ["missing", "current"])
+def test_api_items_encrypt_refused_onto_a_staged_copy_not_stored(staged):
+    """Switched onto nothing, a file would lose its content once the cleanup deletes
+    what it pointed at: an older page staging elsewhere gets an error, the file intact."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    default_storage.save(item.file_key, ContentFile(b"plaintext"))
+    mapped = f"{uuid4()}/never-uploaded.txt" if staged == "missing" else item.filename
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.patch(
+        f"/api/v1.0/items/{item.id!s}/encrypt/",
+        {
+            "encrypted_symmetric_key_per_user": {user.sub: "encrypted_key_for_user"},
+            "encryption_public_key_version_per_user": {user.sub: 1},
+            "encrypted_keys_for_descendants": {},
+            "file_key_mapping": {str(item.pk): mapped},
+        },
+        format="json",
+    )
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "staged_copy_missing"
+    assert response.json()["missing"] == [str(item.pk)]
+    item.refresh_from_db()
+    assert item.is_encrypted is False
+    assert default_storage.exists(item.file_key)
+
+
+def test_api_items_remove_encryption_refused_onto_a_staged_copy_not_stored():
+    """The same guard when switching back to plaintext."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        users=[(user, models.RoleChoices.OWNER)],
+        is_encrypted=True,
+    )
+    factories.ItemEncryptionKeyWrapFactory(item=item, user=user)
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.patch(
+        f"/api/v1.0/items/{item.id!s}/remove-encryption/",
+        {"file_key_mapping": {str(item.pk): f"{uuid4()}/never-uploaded.txt"}},
+        format="json",
+    )
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "staged_copy_missing"
+    item.refresh_from_db()
+    assert item.is_encrypted is True
+
+
 def _versions(key):
     """Every version and delete marker the bucket keeps under exactly `key`."""
     listing = default_storage.connection.meta.client.list_object_versions(
@@ -341,6 +400,9 @@ def test_api_items_encrypt_refused_for_a_file_changed_since_it_was_read():
         },
         "source_etags": read,
     }
+    for file in (unchanged, edited):
+        staged = f"{file.key_base}/{payload['file_key_mapping'][str(file.pk)]}"
+        default_storage.save(staged, ContentFile(b"ciphertext"))
     client = APIClient()
     client.force_login(user)
     response = client.patch(f"/api/v1.0/items/{folder.id!s}/encrypt/", payload, format="json")
@@ -444,6 +506,7 @@ def test_api_items_remove_encryption():
     item.save()
 
     factories.ItemEncryptionKeyWrapFactory(item=item, user=user, wrapped_key="some_key")
+    default_storage.save(f"{item.key_base}/new_plaintext.txt", ContentFile(b"plaintext"))
 
     client = APIClient()
     client.force_login(user)

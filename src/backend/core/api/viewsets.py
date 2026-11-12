@@ -1013,6 +1013,50 @@ def clear_subtree_encryption(*, item, file_key_mapping, effective_descendants, f
     return old_s3_keys, files_to_scan
 
 
+def staged_copies_refusal(file_key_mapping):
+    """Refuse to point files at staged copies that are not stored, or at their current
+    content: they would point at nothing, and the cleanup that follows a switch deletes
+    every version of what they pointed at before. A client that staged elsewhere than
+    it says (an older page, a bug) gets an error, its files untouched."""
+    s3_client = default_storage.connection.meta.client
+    ids = []
+    for item_id in file_key_mapping:
+        try:
+            ids.append(uuid.UUID(str(item_id)))
+        except ValueError:
+            continue
+
+    def is_missing(item):
+        filename = file_key_mapping[str(item.pk)]
+        if filename == item.filename:
+            return True
+        try:
+            s3_client.head_object(
+                Bucket=default_storage.bucket_name, Key=f"{item.key_base}/{filename}"
+            )
+        except ClientError:
+            return True
+        return False
+
+    files = list(models.Item.objects.filter(pk__in=ids, type=models.ItemTypeChoices.FILE))
+    # One request per file, as for the ETags: storage offers no batched HEAD.
+    with ThreadPoolExecutor(max_workers=ETAG_CHECK_CONCURRENCY) as executor:
+        missing = [
+            str(item.pk)
+            for item, gone in zip(files, executor.map(is_missing, files), strict=True)
+            if gone
+        ]
+
+    if not missing:
+        return None
+
+    return {
+        "detail": _("Some staged content is not stored. Please retry."),
+        "code": "staged_copy_missing",
+        "missing": sorted(missing),
+    }
+
+
 def stored_file_metadata(file_key, filename):
     """The `mimetype` and `size` of a stored plaintext file, detected as `upload_ended`
     does, or None when it cannot be read."""
@@ -1862,6 +1906,9 @@ class ItemViewSet(
                 },
                 status=drf.status.HTTP_409_CONFLICT,
             )
+        refusal = staged_copies_refusal(file_key_mapping)
+        if refusal:
+            return drf.response.Response(refusal, status=drf.status.HTTP_409_CONFLICT)
         # Apply: move + write subtree encryption (chain-wrapped at
         # the root). No per-user wraps anywhere in this subtree —
         # decryption flows through the destination chain.
@@ -2673,6 +2720,9 @@ class ItemViewSet(
             )
 
         file_key_mapping = serializer.validated_data["file_key_mapping"]
+        refusal = staged_copies_refusal(file_key_mapping)
+        if refusal:
+            return drf.response.Response(refusal, status=drf.status.HTTP_409_CONFLICT)
 
         # Apply encryption to root + descendants. `root_chain_wrap=None`
         # because /encrypt/ produces a self-rooted item (per-user wraps
@@ -2802,7 +2852,7 @@ class ItemViewSet(
         # encrypted documents: its new ciphertext would be lost the same way.
         refusal = changed_since_read_refusal(
             [item, *effective_descendants_qs], serializer.validated_data["source_etags"]
-        )
+        ) or staged_copies_refusal(file_key_mapping)
         if refusal:
             return drf.response.Response(refusal, status=drf.status.HTTP_409_CONFLICT)
 
