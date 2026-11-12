@@ -22,3 +22,6 @@ the following command inside your docker container:
   rename the variable if you override it.
 - ⚠️ `RESTRICT_UPLOAD_FILE_TYPE` is no longer a boolean: replace `True` with
   `allowlist` and `False` with `off`. Any other value stops the startup.
+- ⚠️ Emails use a new layout. The product name in their text now comes from
+  `DJANGO_EMAIL_APP_NAME` (default `Drive`) instead of the translations: set it
+  to keep another name, e.g. `Fichiers`.

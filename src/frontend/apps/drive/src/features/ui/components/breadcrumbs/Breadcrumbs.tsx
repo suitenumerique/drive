@@ -1,4 +1,5 @@
 import { Button } from "@gouvfr-lasuite/ui-components";
+import { ArrowLeft, ChevronRight } from "@gouvfr-lasuite/ui-components/icons";
 import React, { ReactElement, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -23,7 +24,7 @@ export const Breadcrumbs = ({
     <div className="c__breadcrumbs" data-testid="explorer-breadcrumbs">
       {displayBack && (
         <Button
-          icon={<span className="material-icons">arrow_back</span>}
+          icon={<ArrowLeft aria-hidden="true" />}
           color="neutral"
           variant="tertiary"
           className="mr-t"
@@ -38,9 +39,10 @@ export const Breadcrumbs = ({
         return (
           <React.Fragment key={item.id}>
             {index > 0 && (
-              <span className="material-icons c__breadcrumbs__separator">
-                chevron_right
-              </span>
+              <ChevronRight
+                aria-hidden="true"
+                className="c__breadcrumbs__separator"
+              />
             )}
             {React.cloneElement(item.content as ReactElement<HTMLDivElement>, {
               className: `${

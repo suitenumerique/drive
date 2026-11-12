@@ -30,6 +30,7 @@ import {
 import { useUsers } from "@/features/users/hooks/useUserQueries";
 import { useClipboard } from "@/hooks/useCopyToClipboard";
 import {
+  CustomTranslations,
   HorizontalSeparator,
   removeFileExtension,
   ShareModal,
@@ -42,6 +43,10 @@ import { errorToString } from "@/features/api/APIError";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/features/auth/Auth";
 import { DragEventBarrier } from "@/features/ui/components/drag-event-barrier/DragEventBarrier";
+import {
+  canLinkExpire,
+  getLinkExpirationReset,
+} from "@/features/explorer/utils/linkExpiration";
 import posthog from "posthog-js";
 
 type WorkspaceShareModalProps = {
@@ -103,6 +108,31 @@ export const ItemShareModal = ({
         label: t(`roles.${role}`),
         value: role,
       })),
+    [t],
+  );
+
+  // The ui-kit copy speaks of items, only folders can be restricted here.
+  const restrictionTranslations = useMemo<CustomTranslations>(
+    () => ({
+      "components.share.restrict.description": t(
+        "explorer.actions.share.restriction.restrict.description",
+      ),
+      "components.share.restrict.confirmation": t(
+        "explorer.actions.share.restriction.restrict.confirmation",
+      ),
+      "components.share.restrict.details": t(
+        "explorer.actions.share.restriction.restrict.details",
+      ),
+      "components.share.unrestrict.description": t(
+        "explorer.actions.share.restriction.unrestrict.description",
+      ),
+      "components.share.unrestrict.confirmation": t(
+        "explorer.actions.share.restriction.unrestrict.confirmation",
+      ),
+      "components.share.unrestrict.details": t(
+        "explorer.actions.share.restriction.unrestrict.details",
+      ),
+    }),
     [t],
   );
 
@@ -324,10 +354,16 @@ export const ItemShareModal = ({
     };
   }, []);
 
+  // When the parents open the same link, a date would close nothing: the
+  // expiration is neither offered nor shown.
+  const isLinkExpirable = !!item && canLinkExpire(item);
+
   const updateLinkConfiguration = useMutationUpdateLinkConfiguration();
   const updateRestriction = useMutationUpdateRestriction(
     onRestrictionUpdated,
   );
+
+  const linkExpirationReset = item ? getLinkExpirationReset(item) : {};
 
   return (
     <DragEventBarrier>
@@ -345,6 +381,7 @@ export const ItemShareModal = ({
           !updateRestriction.isPending
         }
         isRestricted={item?.is_restricted ?? false}
+        customTranslations={restrictionTranslations}
         onRestrict={() =>
           updateRestriction.mutate({ id: itemId, is_restricted: true })
         }
@@ -511,6 +548,26 @@ export const ItemShareModal = ({
         showLinkRole={true}
         linkReach={item?.computed_link_reach ?? item?.link_reach}
         linkRole={item?.computed_link_role ?? item?.link_role}
+        linkExpiresAt={
+          isLinkExpirable && item?.link_expires_at
+            ? new Date(item.link_expires_at)
+            : null
+        }
+        onUpdateLinkExpiresAt={
+          isLinkExpirable
+            ? (value) => {
+                updateLinkConfiguration.mutate({
+                  itemId: itemId,
+                  // The backend requires the reach and role on every link
+                  // update, even partial ones, so the item's own ones are
+                  // sent back as is.
+                  link_reach: item?.link_reach ?? LinkReach.RESTRICTED,
+                  link_role: item?.link_role,
+                  link_expires_at: value?.toISOString() ?? null,
+                });
+              }
+            : undefined
+        }
         topLinkReachMessage={linkReachTopMessage}
         topLinkRoleMessage={linkRoleTopMessage}
         onUpdateLinkRole={(value) => {
@@ -521,6 +578,7 @@ export const ItemShareModal = ({
               item?.link_reach ??
               LinkReach.RESTRICTED,
             link_role: value as LinkRole,
+            ...linkExpirationReset,
           });
         }}
         onUpdateLinkReach={(value) => {
@@ -534,6 +592,7 @@ export const ItemShareModal = ({
             itemId: itemId,
             link_reach: value as LinkReach,
             link_role: linkRole,
+            ...linkExpirationReset,
           });
         }}
         allowFileImport={config.ALLOW_SHARE_IMPORT_FILE ?? false}

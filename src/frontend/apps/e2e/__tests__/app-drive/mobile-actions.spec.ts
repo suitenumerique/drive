@@ -1,8 +1,7 @@
 import test, { expect } from "@playwright/test";
 import { clearDb, login } from "./utils-common";
-import { clickToMyFiles } from "./utils-navigate";
+import { clickToMyFiles, navigateToFolder } from "./utils-navigate";
 import { createFolderInCurrentFolder } from "./utils-item";
-import { getRowItem } from "./utils-embedded-grid";
 
 const MOBILE_VIEWPORT = { width: 375, height: 667 };
 
@@ -18,7 +17,7 @@ test.describe("Mobile actions menu", () => {
     await page.setViewportSize(MOBILE_VIEWPORT);
     await page.goto("/explorer/items/my-files");
 
-    const moreButton = page.getByRole("button", { name: "more_vert" });
+    const moreButton = page.getByRole("button", { name: "More actions" });
     await expect(moreButton).toBeVisible();
     await moreButton.click();
 
@@ -39,16 +38,18 @@ test.describe("Mobile actions menu", () => {
     await clickToMyFiles(page);
     await createFolderInCurrentFolder(page, "TestFolder");
 
-    // Get the folder URL
-    const folderRow = await getRowItem(page, "TestFolder");
-    await folderRow.dblclick();
+    // Wait until the folder is open. Reading the URL right after dblclick
+    // still points at the parent listing, whose row action shares this name
+    // with the dnd-kit draggable wrapped around it.
+    await navigateToFolder(page, "TestFolder", ["My files", "TestFolder"]);
     const folderUrl = page.url();
 
-    // Switch to mobile and navigate to folder
     await page.setViewportSize(MOBILE_VIEWPORT);
     await page.goto(folderUrl);
 
-    const moreButton = page.getByRole("button", { name: "more_vert" });
+    const moreButton = page
+      .locator(".explorer__content__breadcrumbs--mobile")
+      .getByRole("button", { name: "More actions for TestFolder" });
     await expect(moreButton).toBeVisible();
   });
 });

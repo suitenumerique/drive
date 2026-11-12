@@ -135,7 +135,7 @@ for (const restrict of [true, false]) {
     page.on("request", (request) => {
       if (request.url().endsWith("/restrict/")) requests.push(request.method());
     });
-    for (const action of ["Cancel", "close", "Escape"]) {
+    for (const action of ["Cancel", "Close", "Escape"]) {
       // 2. Ask for the change, then back out with each way of dismissing
       //    the confirmation.
       await askRestriction(page, restrict);
@@ -231,17 +231,17 @@ test("files and ordinary root folders have no restriction control", async ({
       await moreActions.click();
       await expect(page.getByRole("menu")).toBeVisible();
       await expect(
-        page.getByRole("menuitem", { name: /Restrict access|Open access/ }),
+        page.getByRole("menuitem", { name: /Restrict access|Expand access/ }),
       ).toHaveCount(0);
       await page.keyboard.press("Escape");
     }
     await expect(
       shareModal(page).getByRole("button", {
-        name: /Restrict access|Open access/,
+        name: /Restrict access|Expand access/,
       }),
     ).toHaveCount(0);
     await shareModal(page)
-      .getByRole("button", { name: "close", exact: true })
+      .getByRole("button", { name: "Close", exact: true })
       .click();
   }
 });
@@ -261,7 +261,7 @@ test("non-owner administrator cannot restrict a folder", async ({
     .click();
   await expect(page.getByRole("menu")).toBeVisible();
   await expect(
-    page.getByRole("menuitem", { name: /Restrict access|Open access/ }),
+    page.getByRole("menuitem", { name: /Restrict access|Expand access/ }),
   ).toHaveCount(0);
   // 3. The backend agrees: the restrict ability is refused.
   const child = findItem(folders.items, names.child);
@@ -406,7 +406,7 @@ test("expanded Favorites refresh after restriction without reloading the page", 
   // 5. Close sharing: the refreshed node under the parent still navigates
   //    to the folder and its content.
   await shareModal(page)
-    .getByRole("button", { name: "close", exact: true })
+    .getByRole("button", { name: "Close", exact: true })
     .click();
   await page
     .getByRole("treeitem")

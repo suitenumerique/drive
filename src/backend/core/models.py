@@ -3,7 +3,6 @@ Declare and configure the models for the drive core application
 """
 # pylint: disable=too-many-lines
 
-import smtplib
 import string
 import uuid
 from datetime import timedelta
@@ -17,16 +16,14 @@ from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.hashers import check_password, identify_hasher, make_password
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.indexes import GistIndex
-from django.contrib.sites.models import Site
 from django.core import mail, validators
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.core.mail import send_mail
 from django.db import models, transaction
 from django.db.models.expressions import RawSQL
-from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.functional import cached_property
+from django.utils.html import format_html
 from django.utils.translation import get_language, override
 from django.utils.translation import gettext_lazy as _
 
@@ -46,6 +43,7 @@ from pydantic import BaseModel as PydanticBaseModel
 from timezone_field import TimeZoneField
 
 from core.permissions import get_permissions_backend
+from core.services.mail import get_email_base_url, send_templated_email
 from core.storage.cache import invalidate_storage_used_cache
 from core.utils.item_title import manage_unique_title as manage_unique_title_utils
 
@@ -369,40 +367,9 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
             raise ValueError("User has no email address.")
         mail.send_mail(subject, message, from_email, [self.email], **kwargs)
 
-    def send_email(self, subject, context=None, language=None):
-        """Generate and send email to the user from a template."""
-
-        if not settings.EMAIL_HOST:
-            logger.info("EMAIL_HOST host is not set, skipping email sending")
-            return
-
-        context = context or {}
-        domain = settings.EMAIL_URL_APP or Site.objects.get_current().domain
-        language = language or get_language()
-        context.update(
-            {
-                "brandname": settings.EMAIL_BRAND_NAME,
-                "domain": domain,
-                "logo_img": settings.EMAIL_LOGO_IMG,
-            }
-        )
-
-        with override(language):
-            msg_html = render_to_string("mail/html/reconciliation.html", context)
-            msg_plain = render_to_string("mail/text/reconciliation.txt", context)
-            subject = str(subject)  # Force translation
-
-            try:
-                send_mail(
-                    subject.capitalize(),
-                    msg_plain,
-                    settings.EMAIL_FROM,
-                    [self.email],
-                    html_message=msg_html,
-                    fail_silently=False,
-                )
-            except smtplib.SMTPException as exception:
-                logger.error("email to %s was not sent: %s", self.email, exception)
+    def send_reconciliation_email(self, subject, context=None, language=None):
+        """Send an email about the reconciliation of user accounts to the user."""
+        send_templated_email(subject, [self.email], "reconciliation", context, language)
 
     @cached_property
     def teams(self):
@@ -682,10 +649,10 @@ class UserReconciliation(BaseModel):
     def send_reconciliation_confirm_email(self, user, user_type, confirmation_id, language=None):
         """Method allowing to send confirmation email for reconciliation requests."""
         language = language or get_language()
-        domain = settings.EMAIL_URL_APP or Site.objects.get_current().domain
+        domain = get_email_base_url()
 
         message = _(
-            """You have requested a reconciliation of your user accounts on Drive.
+            """You have requested a reconciliation of your user accounts on {app_name}.
             To confirm that you are the one who initiated the request
             and that this email belongs to you:"""
         )
@@ -694,18 +661,18 @@ class UserReconciliation(BaseModel):
             subject = _("Confirm by clicking the link to start the reconciliation")
             context = {
                 "title": subject,
-                "message": message,
+                "message": message.format(app_name=settings.EMAIL_APP_NAME),
                 "link": f"{domain}/user-reconciliations/{user_type}/{confirmation_id}/",
                 "link_label": str(_("Click here")),
                 "button_label": str(_("Confirm")),
             }
 
-        user.send_email(subject, context, language)
+        user.send_reconciliation_email(subject, context, language)
 
     def send_reconciliation_done_email(self, language=None):
         """Method allowing to send done email for reconciliation requests."""
         language = language or get_language()
-        domain = settings.EMAIL_URL_APP or Site.objects.get_current().domain
+        domain = get_email_base_url()
 
         message = _(
             """Your reconciliation request has been processed.
@@ -722,7 +689,7 @@ class UserReconciliation(BaseModel):
                 "button_label": str(_("See my documents")),
             }
 
-        self.active_user.send_email(subject, context, language)
+        self.active_user.send_reconciliation_email(subject, context, language)
 
 
 class UserReconciliationCsvImport(BaseModel):
@@ -749,40 +716,9 @@ class UserReconciliationCsvImport(BaseModel):
     def __str__(self):
         return f"User reconciliation CSV import {self.id}"
 
-    def send_email(self, subject, emails, context=None, language=None):
-        """Generate and send email to the user from a template."""
-
-        if not settings.EMAIL_HOST:
-            logger.debug("EMAIL_HOST host is not set, skipping email sending")
-            return
-
-        context = context or {}
-        domain = settings.EMAIL_URL_APP or Site.objects.get_current().domain
-        language = language or get_language()
-        context.update(
-            {
-                "brandname": settings.EMAIL_BRAND_NAME,
-                "domain": domain,
-                "logo_img": settings.EMAIL_LOGO_IMG,
-            }
-        )
-
-        with override(language):
-            msg_html = render_to_string("mail/html/reconciliation.html", context)
-            msg_plain = render_to_string("mail/text/reconciliation.txt", context)
-            subject = str(subject)  # Force translation
-
-            try:
-                send_mail(
-                    subject.capitalize(),
-                    msg_plain,
-                    settings.EMAIL_FROM,
-                    emails,
-                    html_message=msg_html,
-                    fail_silently=False,
-                )
-            except smtplib.SMTPException as exception:
-                logger.error("email to %s was not sent: %s", emails, exception)
+    def send_reconciliation_email(self, subject, emails, context=None, language=None):
+        """Send an email about the reconciliation of user accounts."""
+        send_templated_email(subject, emails, "reconciliation", context, language)
 
     def send_reconciliation_error_email(self, recipient_email, other_email, language=None):
         """Method allowing to send email for reconciliation requests with errors."""
@@ -799,7 +735,9 @@ class UserReconciliationCsvImport(BaseModel):
         ).format(recipient_email=recipient_email, other_email=other_email)
 
         with override(language):
-            subject = _("Reconciliation of your Drive accounts not completed")
+            subject = _("Reconciliation of your {app_name} accounts not completed").format(
+                app_name=settings.EMAIL_APP_NAME
+            )
             context = {
                 "title": subject,
                 "message": message,
@@ -808,7 +746,7 @@ class UserReconciliationCsvImport(BaseModel):
                 "button_label": str(_("Make a new request")),
             }
 
-        self.send_email(subject, emails, context, language)
+        self.send_reconciliation_email(subject, emails, context, language)
 
 
 class IdInPath(models.Func):  # pylint: disable=abstract-method
@@ -1066,13 +1004,33 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         """Load restriction targets along with the accesses the user holds on them."""
         queryset = self.select_related("target")
         if not user.is_authenticated:
-            return queryset
+            return queryset.annotate(nb_target_accesses=models.Value(0))
+        viewer_accesses = ItemAccess.objects.filter(
+            models.Q(user=user) | models.Q(team__in=user.teams)
+        )
+        # Targets are roots, their direct accesses are all their accesses. Their
+        # number is told to the users holding one of them only.
+        nb_target_accesses = (
+            ItemAccess.objects.filter(item_id=models.OuterRef("target_id"))
+            .order_by()
+            .values("item_id")
+            .annotate(count=models.Count("id"))
+            .values("count")
+        )
+        queryset = queryset.annotate(
+            nb_target_accesses=models.Case(
+                models.When(
+                    models.Q(type=ItemTypeChoices.RESTRICTION)
+                    & models.Exists(viewer_accesses.filter(item_id=models.OuterRef("target_id"))),
+                    then=models.Subquery(nb_target_accesses, output_field=models.IntegerField()),
+                ),
+                default=models.Value(0),
+            )
+        )
         return queryset.prefetch_related(
             models.Prefetch(
                 "target__accesses",
-                queryset=ItemAccess.objects.filter(
-                    models.Q(user=user) | models.Q(team__in=user.teams)
-                ),
+                queryset=viewer_accesses,
                 to_attr="viewer_accesses",
             ),
             models.Prefetch(
@@ -1578,10 +1536,11 @@ class Item(TreeModel, BaseModel):
         Read the cached number of accesses of many items in a single cache round trip,
         items missing from the cache compute it when their `nb_accesses` is read.
         """
+        # Restrictions report their nb_target_accesses annotation, nothing to cache
         items_by_cache_key = {
             item.get_nb_accesses_cache_key(): item
             for item in items
-            if not hasattr(item, "_nb_accesses")
+            if not hasattr(item, "_nb_accesses") and item.type != ItemTypeChoices.RESTRICTION
         }
         for cache_key, nb_accesses in cache.get_many(list(items_by_cache_key)).items():
             if nb_accesses is not None:
@@ -1594,6 +1553,9 @@ class Item(TreeModel, BaseModel):
         try:
             return self._nb_accesses
         except AttributeError:
+            if self.type == ItemTypeChoices.RESTRICTION:
+                # Annotated by with_restriction_target for the users accessing the target
+                return getattr(self, "nb_target_accesses", 0)
             cache_key = self.get_nb_accesses_cache_key()
             nb_accesses = cache.get(cache_key)
 
@@ -1619,7 +1581,7 @@ class Item(TreeModel, BaseModel):
         return len(self.path) == 1
 
     @property
-    def is_restricted(self):
+    def is_restricted(self) -> bool:
         """Return whether a restriction targets this folder."""
         if (annotated := getattr(self, "has_restriction", None)) is not None:
             return annotated
@@ -1654,6 +1616,20 @@ class Item(TreeModel, BaseModel):
             roles = get_permissions_backend().roles_for(user, self)
 
         return RoleChoices.max(*roles)
+
+    def as_restriction_target(self):
+        """Annotate this restriction target from what with_restriction_target prefetched."""
+        # pylint: disable=attribute-defined-outside-init
+        # Targets are roots, so the prefetched direct accesses contain all their roles
+        accesses = getattr(self, "viewer_accesses", None)
+        if accesses is not None:
+            self.user_roles = [access.role for access in accesses]
+            self.user_has_direct_access = bool(accesses)
+        link_traces = getattr(self, "viewer_link_traces", None)
+        if link_traces is not None:
+            self.user_has_link_trace = bool(link_traces)
+        self.has_restriction = True
+        return self
 
     def compute_ancestors_links_paths_mapping(self):
         """
@@ -1827,60 +1803,41 @@ class Item(TreeModel, BaseModel):
 
     def send_email(self, subject, emails, context=None, language=None):
         """Generate and send email from a template."""
-
-        if not settings.EMAIL_HOST:
-            logger.debug("EMAIL_HOST host is not set, skipping email sending")
-            return
-
-        context = context or {}
-        base_url = settings.EMAIL_URL_APP or Site.objects.get_current().domain
-        language = language or get_language()
-        context.update(
-            {
-                "brandname": settings.EMAIL_BRAND_NAME,
-                "item": self,
-                "domain": base_url,
-                "link": (
-                    f"{base_url}/explorer/items/files/{self.id}/"
-                    if self.type == ItemTypeChoices.FILE
-                    else f"{base_url}/explorer/items/{self.id}/"
-                ),
-                "logo_img": settings.EMAIL_LOGO_IMG,
-            }
-        )
-
-        with override(language):
-            msg_html = render_to_string("mail/html/invitation.html", context)
-            msg_plain = render_to_string("mail/text/invitation.txt", context)
-            subject = str(subject)  # Force translation
-
-            try:
-                send_mail(
-                    subject.capitalize(),
-                    msg_plain,
-                    settings.EMAIL_FROM,
-                    emails,
-                    html_message=msg_html,
-                    fail_silently=False,
-                )
-            except smtplib.SMTPException as exception:
-                logger.error("invitation to %s was not sent: %s", emails, exception)
+        base_url = get_email_base_url()
+        context = {
+            **(context or {}),
+            "item": self,
+            "link": (
+                f"{base_url}/explorer/items/files/{self.id}/"
+                if self.type == ItemTypeChoices.FILE
+                else f"{base_url}/explorer/items/{self.id}/"
+            ),
+        }
+        send_templated_email(subject, emails, "invitation", context, language)
 
     def send_invitation_email(self, email, role, sender, language=None):
         """Method allowing a user to send an email invitation to another user for a item."""
         language = language or get_language()
         role = RoleChoices(role).label
         sender_name = sender.full_name or sender.email
-        sender_name_email = (
-            f"{sender.full_name:s} ({sender.email})" if sender.full_name else sender.email
+        sender_html = (
+            format_html("<strong>{}</strong> ({})", sender.full_name, sender.email)
+            if sender.full_name
+            else format_html("<strong>{}</strong>", sender.email)
         )
 
         with override(language):
             context = {
-                "title": _("{name} shared an item with you!").format(name=sender_name),
-                "message": _(
-                    '{name} invited you with the role "{role}" on the following item:'
-                ).format(name=sender_name_email, role=role.lower()),
+                "title": _("A new item has been shared with you."),
+                "message": format_html(
+                    _(
+                        "{sender} shared the following item with you: "
+                        '<strong>{title}</strong>, and gave you the role "{role}".'
+                    ),
+                    sender=sender_html,
+                    title=self.title,
+                    role=role,
+                ),
             }
             subject = _("{name} shared an item with you: {title}").format(
                 name=sender_name, title=self.title
@@ -1888,8 +1845,30 @@ class Item(TreeModel, BaseModel):
 
         self.send_email(subject, [email], context, language)
 
+    def _trash_subtree(self, user):
+        """Mark the descendants trashed, following restrictions to the folders the user owns."""
+        restrictions = list(
+            self.descendants()
+            .filter(type=ItemTypeChoices.RESTRICTION, ancestors_deleted_at__isnull=True)
+            .select_related("target")
+        )
+        self.descendants().filter(ancestors_deleted_at__isnull=True).update(
+            ancestors_deleted_at=self.ancestors_deleted_at,
+        )
+        # A restricted folder the user owns goes to the trash with the tree, like a
+        # child: it shares the timestamp so that restoring the tree brings it back.
+        # Otherwise the restriction is lifted and the folder stays with its owners.
+        for restriction in restrictions:
+            target = restriction.target
+            if user is None or target.get_role(user) != RoleChoices.OWNER:
+                restriction.detach()
+                continue
+            target.deleted_at = target.ancestors_deleted_at = self.deleted_at
+            target.save(update_fields=["deleted_at", "ancestors_deleted_at"])
+            target._trash_subtree(user)  # noqa: SLF001  # pylint: disable=protected-access
+
     @transaction.atomic
-    def soft_delete(self):
+    def soft_delete(self, user=None):
         """
         Soft delete the item, marking the deletion on descendants.
         We still keep the .delete() method untouched for programmatic purposes.
@@ -1919,9 +1898,7 @@ class Item(TreeModel, BaseModel):
 
         # Mark all descendants as soft deleted
         if self.type == ItemTypeChoices.FOLDER:
-            self.descendants().filter(ancestors_deleted_at__isnull=True).update(
-                ancestors_deleted_at=self.ancestors_deleted_at,
-            )
+            self._trash_subtree(user)
 
     def hard_delete(self):
         """
@@ -1961,6 +1938,19 @@ class Item(TreeModel, BaseModel):
         self.hard_deleted_at = timezone.now()
         self.save(update_fields=["hard_deleted_at"])
 
+        # The restricted folders trashed along the tree go with it
+        for restriction in (
+            self.descendants()
+            .filter(
+                type=ItemTypeChoices.RESTRICTION,
+                deleted_at__isnull=True,
+                target__deleted_at=self.deleted_at,
+                target__hard_deleted_at__isnull=True,
+            )
+            .select_related("target")
+        ):
+            restriction.target.hard_delete()
+
         # Mark all descendants as hard deleted
         self.descendants().update(hard_deleted_at=self.hard_deleted_at)
 
@@ -1968,6 +1958,26 @@ class Item(TreeModel, BaseModel):
         self._meta.model.objects.filter(target=self).update(hard_deleted_at=self.hard_deleted_at)
 
         transaction.on_commit(lambda: invalidate_storage_used_cache(creator_ids))
+
+    def _restore_subtree(self, deleted_at):
+        """Clear the descendants trashed at the given time, with the folders trashed along."""
+        self.descendants().exclude(
+            models.Q(deleted_at__isnull=False) | models.Q(ancestors_deleted_at__lt=deleted_at)
+        ).update(ancestors_deleted_at=None)
+
+        for restriction in (
+            self.descendants()
+            .filter(
+                type=ItemTypeChoices.RESTRICTION,
+                ancestors_deleted_at__isnull=True,
+                target__deleted_at=deleted_at,
+            )
+            .select_related("target")
+        ):
+            target = restriction.target
+            target.deleted_at = target.ancestors_deleted_at = None
+            target.save(update_fields=["deleted_at", "ancestors_deleted_at"])
+            target._restore_subtree(deleted_at)  # noqa: SLF001  # pylint: disable=protected-access
 
     @transaction.atomic
     def restore(self):
@@ -2017,20 +2027,24 @@ class Item(TreeModel, BaseModel):
 
         self.save(update_fields=["deleted_at", "ancestors_deleted_at"])
 
-        self.descendants().exclude(
-            models.Q(deleted_at__isnull=False)
-            | models.Q(ancestors_deleted_at__lt=current_deleted_at)
-        ).update(ancestors_deleted_at=None)
+        self._restore_subtree(current_deleted_at)
 
-        # Bring back the restriction trashed along the restricted folder, unless
-        # its own subtree went to the trash meanwhile
+        # Bring back the restriction trashed along the restricted folder. Restored
+        # out of a trashed tree, the folder becomes a plain root instead.
         restriction = self._meta.model.objects.filter(
-            target=self, deleted_at=current_deleted_at
+            target=self, ancestors_deleted_at__isnull=False
         ).first()
-        if restriction and not restriction.ancestors().filter(deleted_at__isnull=False).exists():
+        if restriction is None:
+            return
+        if (
+            restriction.deleted_at == current_deleted_at
+            and not restriction.ancestors().filter(deleted_at__isnull=False).exists()
+        ):
             self._meta.model.objects.filter(pk=restriction.pk).update(
                 deleted_at=None, ancestors_deleted_at=None
             )
+        else:
+            restriction.detach()
 
     @transaction.atomic
     def move(self, target):
@@ -2056,6 +2070,11 @@ class Item(TreeModel, BaseModel):
                     )
                 }
             )
+
+        if self.type == ItemTypeChoices.RESTRICTION and target is None:
+            # The folder already lives at the root: dropping the restriction is the whole move
+            self.detach()
+            return
 
         if (
             self.type == ItemTypeChoices.RESTRICTION
@@ -2232,8 +2251,15 @@ class Item(TreeModel, BaseModel):
             )
             item.save(update_fields=["title", "updated_at"])
             item.move(parent)
-            item._normalize_explicit_accesses()  # noqa: SLF001  # pylint: disable=protected-access
-            item._normalize_explicit_link_reach()  # noqa: SLF001  # pylint: disable=protected-access
+            # Inheritance flows down again: the subtree gets normalized along, top
+            # down since a parent reset changes what its children inherit.
+            # ponytail: a few queries per item carrying explicit settings
+            explicit = item.descendants().filter(
+                models.Q(accesses__isnull=False) | models.Q(link_reach__isnull=False)
+            )
+            for node in [item, *explicit.distinct().order_by("path")]:
+                node._normalize_explicit_accesses()  # noqa: SLF001  # pylint: disable=protected-access
+                node._normalize_explicit_link_reach()  # noqa: SLF001  # pylint: disable=protected-access
 
         item.invalidate_nb_accesses_cache()
 

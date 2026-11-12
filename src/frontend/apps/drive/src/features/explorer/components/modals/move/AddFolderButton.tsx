@@ -4,6 +4,7 @@ export const AddFolderButton = () => {
       width="24"
       height="24"
       className="add-folder-icon"
+      aria-hidden="true"
       viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"

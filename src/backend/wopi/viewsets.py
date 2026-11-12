@@ -418,6 +418,16 @@ class WopiViewSet(viewsets.ViewSet):
         lock_service.lock(new_lock_value)
         return Response(status=200)
 
+    @staticmethod
+    def _rename_file_response(request, new_filename):
+        """Build the response to a successful file rename."""
+        if "application/json" in request.META.get("HTTP_ACCEPT", ""):
+            return Response(
+                data={"Name": new_filename}, status=200, content_type="application/json"
+            )
+
+        return Response(status=200)
+
     def _rename_file(self, request, pk=None):
         """
         Rename the file
@@ -460,6 +470,10 @@ class WopiViewSet(viewsets.ViewSet):
             lock_value = request.META.get(HTTP_X_WOPI_LOCK)
             if current_lock_value != lock_value:
                 return Response(status=409, headers={X_WOPI_LOCK: current_lock_value})
+
+        # The source key is deleted after the copy: it must differ from the target.
+        if new_filename_with_extension == item.filename:
+            return self._rename_file_response(request, new_filename)
 
         parent_path = item.path[:-1]
         # Filter on siblings with the desired filename
@@ -513,9 +527,4 @@ class WopiViewSet(viewsets.ViewSet):
             capture_exception(e)
             logger.warning("Error deleting old file for item %s in the storage: %s", item.id, e)
 
-        if "application/json" in request.META.get("HTTP_ACCEPT", ""):
-            return Response(
-                data={"Name": new_filename}, status=200, content_type="application/json"
-            )
-
-        return Response(status=200)
+        return self._rename_file_response(request, new_filename)

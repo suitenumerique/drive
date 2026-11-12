@@ -64,12 +64,6 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
       display: flex;
     }
 
-    &__button-more {
-      .material-icons {
-        font-size: 20px;
-      }
-    }
-
     &__button-add {
       width: 18px !important;
       height: 18px !important;

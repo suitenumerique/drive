@@ -90,9 +90,10 @@ export const test = base.extend<{ folders: RestrictionFixture }>({
 });
 
 export const itemUrl = (id: string) => `/explorer/items/${id}`;
+// The share modal is named after its title, "Share <item>".
 export const shareModal = (page: Page) =>
-  page.getByLabel("Share modal", { exact: true });
-/** The "Restrict access" / "Open access" confirmation above the share modal. */
+  page.getByRole("dialog", { name: /^Share /, exact: true });
+/** The "Restrict access" / "Expand access" confirmation above the share modal. */
 export const confirmation = (page: Page) =>
   page
     .getByRole("dialog")
@@ -147,7 +148,7 @@ export async function openSharing(
   } else if (entry === "mobile breadcrumb") {
     await page
       .locator(".explorer__content__breadcrumbs--mobile")
-      .getByRole("button", { name: "more_vert" })
+      .getByRole("button", { name: /^More actions for / })
       .click();
     await page.getByRole("menuitem", { name: "Share", exact: true }).click();
   } else if (entry === "favorites") {
@@ -159,18 +160,18 @@ export async function openSharing(
     await clickOnRowItemActions(page, title, "Info");
     await page
       .getByTestId("right-panel")
-      .getByRole("button", { name: /group|Share/ })
+      .getByRole("button", { name: /^Share/ })
       .click();
   }
   await expect(shareModal(page)).toBeVisible();
 }
 
 /**
- * Picks "Restrict access" or "Open access" in the share modal menu and returns
+ * Picks "Restrict access" or "Expand access" in the share modal menu and returns
  * the confirmation button, without clicking it.
  */
 export async function askRestriction(page: Page, restricted: boolean) {
-  const label = restricted ? "Restrict access" : "Open access";
+  const label = restricted ? "Restrict access" : "Expand access";
   await shareModal(page)
     .getByRole("button", { name: "More actions", exact: true })
     .click();

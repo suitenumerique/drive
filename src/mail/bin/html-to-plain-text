@@ -12,8 +12,15 @@ if [ ! -d "${DIR_MAILS}"html/ ]; then
   exit;
 fi
 
-for file in "${DIR_MAILS}"html/*.html;
-    do html-to-text -j ./html-to-text.config.json < "$file" > "${file%.html}".txt; done;
+# Plain text is not HTML: disable autoescaping so that quotes and ampersands are
+# not rendered as HTML entities
+for file in "${DIR_MAILS}"html/*.html; do
+    {
+        echo "{% autoescape off %}"
+        html-to-text -j ./html-to-text.config.json < "$file"
+        echo "{% endautoescape %}"
+    } > "${file%.html}".txt
+done;
 
 if [ ! -d "${DIR_MAILS}"text/ ]; then
   mkdir -p "${DIR_MAILS}"text/;

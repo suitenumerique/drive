@@ -2,6 +2,7 @@ import { CellContext } from "@tanstack/react-table";
 import { Item, TRANSIENT_UPLOAD_STATES } from "@/features/drivers/types";
 import { memo, useState } from "react";
 import { Button } from "@gouvfr-lasuite/ui-components";
+import { More } from "@gouvfr-lasuite/ui-components/icons";
 import { Draggable } from "@/features/explorer/components/Draggable";
 import { useDisableDragGridItem } from "./hooks";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
@@ -48,7 +49,7 @@ const EmbeddedExplorerGridActionsCellComponent = (
               aria-label={t("explorer.grid.actions.button_aria_label", {
                 name: item.title,
               })}
-              icon={<span className="material-icons">more_horiz</span>}
+              icon={<More size={16} aria-hidden="true" />}
               size="nano"
             />
           }

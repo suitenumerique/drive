@@ -17,10 +17,20 @@ PYTHONPATH=/app
 SDK_ENABLED=True
 
 # Mail
-DJANGO_EMAIL_BRAND_NAME="La Suite Numérique"
+DJANGO_EMAIL_APP_NAME="Fichiers"
+DJANGO_EMAIL_BRAND_NAME="LaSuite"
+DJANGO_EMAIL_FONT_BOLD_URL="http://localhost:3000/assets/fonts/Marianne-Bold.woff2"
+DJANGO_EMAIL_FONT_REGULAR_URL="http://localhost:3000/assets/fonts/Marianne-Regular.woff2"
+DJANGO_EMAIL_GOVERNMENT_LOGO_IMG="http://localhost:3000/assets/email/logo-gouvernement.png"
 DJANGO_EMAIL_HOST="mailcatcher"
-DJANGO_EMAIL_LOGO_IMG="http://localhost:3000/assets/logo-suite-numerique.png"
+DJANGO_EMAIL_LOGO_IMG="http://localhost:3000/assets/email/logo-lasuite-fichiers.png"
+DJANGO_EMAIL_NEWSLETTER_URL="https://example.com/newsletter"
 DJANGO_EMAIL_PORT=1025
+DJANGO_EMAIL_PRODUCT_ICONS='{"Docs": {"img": "http://localhost:3000/assets/email/icon-docs.png", "href": "https://docs.numerique.gouv.fr"}, "Tchap": {"img": "http://localhost:3000/assets/email/icon-tchap.png", "href": "https://tchap.gouv.fr"}, "Help": {"img": "http://localhost:3000/assets/email/icon-help.png", "href": "https://example.com/help"}}'
+DJANGO_EMAIL_SUITE_LOGO_IMG="http://localhost:3000/assets/email/logo-lasuite.png"
+DJANGO_EMAIL_SUITE_URL="https://lasuite.numerique.gouv.fr"
+DJANGO_EMAIL_SUPPORT_URL="https://example.com/support"
+DJANGO_EMAIL_TERMS_OF_SERVICE_URL="https://example.com/terms"
 DJANGO_EMAIL_URL_APP="http://localhost:3000"
 
 # User reconciliation

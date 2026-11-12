@@ -8,10 +8,28 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(frontend) set an expiration date on item share links
+
+## [v0.27.0] - 2026-11-09
+
+### Added
+
+- ✨(frontend) mark restricted folders in breadcrumbs
+
+### Fixed
+
+- 🐛(frontend) offer folder actions on restricted folders from their parent
+- 🐛(frontend) fix the crash when sharing a folder renamed before being opened
+- 🐛(backend) keep the file on a WOPI rename to its current name
+- ♿️(frontend) associate file list headers with their cells
+
 ## [v0.26.0] - 2026-11-04
 
 ### Added
 
+- ✨(backend) configure the branding of emails with settings
 - ✨(backend) allow to leave an item #826
 - ✨(frontend) allow to leave an item #826
 - ✨(frontend) restrict and reopen folder access from the share modal
@@ -23,6 +41,7 @@ and this project adheres to
 
 ### Changed
 
+- 💄(mail) adopt the new LaSuite email layout #926
 - ⬆️(ci) bump GitHub Actions to latest versions
 - ✨(backend) screen uploads with a denylist
 - ⬆️(backend) upgrade joserfc to 1.7.7
@@ -30,8 +49,12 @@ and this project adheres to
 
 ### Fixed
 
+- 🐛(mail) stop showing HTML entities in plain text emails
+- 🐛(backend) keep the case of names and titles in email subjects
+- ♿️(frontend) identify the current page in the browser title
 - 🐛(frontend) show the full item title in a tooltip when truncated
 - 🐛(backend) fix the upload mimetype allowlist
+- ♿️(frontend) fix accessible names of icon buttons
 
 ## [v0.25.3] - 2026-10-23
 
@@ -657,7 +680,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.26.0...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.27.0...main
+[v0.27.0]: https://github.com/suitenumerique/drive/releases/v0.27.0
 [v0.26.0]: https://github.com/suitenumerique/drive/releases/v0.26.0
 [v0.25.3]: https://github.com/suitenumerique/drive/releases/v0.25.3
 [v0.25.2]: https://github.com/suitenumerique/drive/releases/v0.25.2

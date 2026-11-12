@@ -1,3 +1,4 @@
+import { ArrowRight } from "@gouvfr-lasuite/ui-components/icons";
 import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { useTranslation } from "react-i18next";
 import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
@@ -10,7 +11,7 @@ const ItemsMovedToast = ({ count }: { count: number }) => {
   const { t } = useTranslation();
   return (
     <ToasterItem>
-      <span className="material-icons">arrow_forward</span>
+      <ArrowRight aria-hidden="true" />
       <span>{t("explorer.actions.move.toast", { count })}</span>
     </ToasterItem>
   );

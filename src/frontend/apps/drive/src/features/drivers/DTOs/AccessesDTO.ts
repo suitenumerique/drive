@@ -30,4 +30,6 @@ export type DTOUpdateLinkConfiguration = {
   itemId: string;
   link_reach: LinkReach;
   link_role?: LinkRole | null;
+  // Omitted to keep the current expiration, null to remove it.
+  link_expires_at?: string | null;
 };

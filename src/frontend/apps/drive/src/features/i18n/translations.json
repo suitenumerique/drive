@@ -183,7 +183,10 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Spaces",
-          "all_folders": "All folders"
+          "all_folders": "All folders",
+          "restricted": "Restricted access",
+          "back": "Previous",
+          "more_actions": "More actions"
         },
         "modal": {
           "move": {
@@ -223,8 +226,10 @@
             "text": "No files selected",
             "alt": "No files selected image"
           },
+          "close": "Close",
           "sharing": "Sharing",
           "share": "Share",
+          "share_count": "Share, {{count}} members",
           "format": "Format",
           "updated_at": "Updated at",
           "created_at": "Created at",
@@ -234,6 +239,7 @@
         },
         "grid": {
           "name": "Name",
+          "actions_column": "Actions",
           "last_update": "Last Update",
           "columns": {
             "last_modified": "Last modified",
@@ -253,9 +259,9 @@
             "PB": "PB"
           },
           "sort": {
-            "ascending": "Sort ascending",
-            "descending": "Sort descending",
-            "reset": "Reset sorting"
+            "ascending": "Sort {{column}} ascending",
+            "descending": "Sort {{column}} descending",
+            "reset": "Reset {{column}} sorting"
           },
           "empty": {
             "default": "No folder found in the selected folder",
@@ -509,6 +515,10 @@
           },
           "upload": {
             "toast": "Drop your files here to transfer them in {{title}}",
+            "expand": "Expand",
+            "collapse": "Collapse",
+            "close": "Close",
+            "cancel": "Cancel upload",
             "toast_no_rights": "You don't have the necessary rights to transfer files in {{title}}",
             "file_too_large": "The file \"{{name}}\" is too large. Maximum allowed size is {{maxSize}}.",
             "folders_created": "All folders have been created successfully.",
@@ -584,6 +594,18 @@
           "share": {
             "modal": {
               "title": "Share"
+            },
+            "restriction": {
+              "restrict": {
+                "description": "Only people added specifically to this folder will have access",
+                "confirmation": "Access inherited from the parent folder will be removed.",
+                "details": "People added directly to this folder will keep their access. Access can be restored for others at any time."
+              },
+              "unrestrict": {
+                "description": "Everyone with access to the parent folder will have access",
+                "confirmation": "Everyone with access to the parent folder will have access.",
+                "details": "People added directly will keep their access."
+              }
             }
           },
           "rename": {
@@ -643,6 +665,7 @@
         "my_files": "My files"
       },
       "anonymous_dropdown_menu": {
+        "button": "More actions",
         "copy_link": "Copy link",
         "languages": "Languages"
       },
@@ -909,7 +932,10 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Espaces",
-          "all_folders": "Tous les dossiers"
+          "all_folders": "Tous les dossiers",
+          "restricted": "Accès restreint",
+          "back": "Précédent",
+          "more_actions": "Plus d'actions"
         },
         "modal": {
           "move": {
@@ -949,8 +975,10 @@
             "text": "Aucun fichier sélectionné",
             "alt": "Image d'un fichier sélectionné"
           },
+          "close": "Fermer",
           "sharing": "Partage",
           "share": "Partager",
+          "share_count": "Partager, {{count}} membres",
           "format": "Format",
           "updated_at": "Modification",
           "created_at": "Création",
@@ -960,6 +988,7 @@
         },
         "grid": {
           "name": "Nom",
+          "actions_column": "Actions",
           "last_update": "Dernière modification",
           "columns": {
             "last_modified": "Dernière modification",
@@ -979,9 +1008,9 @@
             "PB": "Po"
           },
           "sort": {
-            "ascending": "Tri croissant",
-            "descending": "Tri décroissant",
-            "reset": "Réinitialiser le tri"
+            "ascending": "Trier {{column}} par ordre croissant",
+            "descending": "Trier {{column}} par ordre décroissant",
+            "reset": "Réinitialiser le tri de {{column}}"
           },
           "empty": {
             "default": "Aucun dossier trouvé dans le dossier sélectionné",
@@ -1235,6 +1264,10 @@
           },
           "upload": {
             "toast": "Déposez vos fichiers ici pour les transférer dans {{title}}",
+            "expand": "Développer",
+            "collapse": "Réduire",
+            "close": "Fermer",
+            "cancel": "Annuler le transfert",
             "toast_no_rights": "Vous n'avez pas les droits nécessaires pour transférer des fichiers dans {{title}}",
             "file_too_large": "Le fichier \"{{name}}\" est trop volumineux. La taille maximale autorisée est {{maxSize}}.",
             "folders_created": "Tous les dossiers ont été créés avec succès.",
@@ -1310,6 +1343,18 @@
           "share": {
             "modal": {
               "title": "Partager"
+            },
+            "restriction": {
+              "restrict": {
+                "description": "Seules les personnes ajoutées spécifiquement à ce dossier y auront accès",
+                "confirmation": "Les accès provenant du dossier parent seront retirés.",
+                "details": "Les personnes ajoutées directement à ce dossier conserveront leur accès. Vous pourrez redonner accès aux autres à tout moment."
+              },
+              "unrestrict": {
+                "description": "Toutes les personnes accédant au dossier parent y auront accès",
+                "confirmation": "Toutes les personnes accédant au dossier parent y auront accès.",
+                "details": "Les personnes ajoutées directement conserveront leur accès."
+              }
             }
           },
           "rename": {
@@ -1342,7 +1387,7 @@
             "move": "Déplacer",
             "download": "Télécharger",
             "rename": "Renommer",
-            "favorite": "Favoris",
+            "favorite": "Ajouter aux favoris",
             "unfavorite": "Retirer des favoris",
             "duplicate": "Dupliquer",
             "duplicate_error": "Une erreur est survenue lors de la duplication.",
@@ -1369,6 +1414,7 @@
         "my_files": "Mes fichiers"
       },
       "anonymous_dropdown_menu": {
+        "button": "Plus d'actions",
         "copy_link": "Copier le lien",
         "languages": "Langue"
       },
@@ -1635,7 +1681,10 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Werkruimten",
-          "all_folders": "Alle mappen"
+          "all_folders": "Alle mappen",
+          "restricted": "Beperkte toegang",
+          "back": "Vorige",
+          "more_actions": "Meer acties"
         },
         "modal": {
           "move": {
@@ -1675,8 +1724,10 @@
             "text": "Geen bestanden geselecteerd",
             "alt": "Geen bestanden geselecteerd afbeelding"
           },
+          "close": "Sluiten",
           "sharing": "Delen",
           "share": "Deel",
+          "share_count": "Deel, {{count}} leden",
           "format": "Formaat",
           "updated_at": "Bijgewerkt op",
           "created_at": "Gecreëerd op",
@@ -1686,6 +1737,7 @@
         },
         "grid": {
           "name": "Naam",
+          "actions_column": "Acties",
           "last_update": "Laatste update",
           "columns": {
             "last_modified": "Laatst gewijzigd",
@@ -1705,9 +1757,9 @@
             "PB": "PB"
           },
           "sort": {
-            "ascending": "Oplopend sorteren",
-            "descending": "Aflopend sorteren",
-            "reset": "Sortering resetten"
+            "ascending": "{{column}} oplopend sorteren",
+            "descending": "{{column}} aflopend sorteren",
+            "reset": "Sortering van {{column}} resetten"
           },
           "empty": {
             "default": "Geen map gevonden in de geselecteerde map",
@@ -1961,6 +2013,10 @@
           },
           "upload": {
             "toast": "Zet uw bestanden hier neer om ze over te zetten in {{title}}",
+            "expand": "Uitklappen",
+            "collapse": "Inklappen",
+            "close": "Sluiten",
+            "cancel": "Upload annuleren",
             "toast_no_rights": "U beschikt niet over de benodigde rechten om bestanden over te dragen in {{title}}",
             "file_too_large": "Het bestand \"{{name}}\" is te groot. De maximale toegestane grootte is {{maxSize}}.",
             "folders_created": "Alle mappen zijn succesvol aangemaakt.",
@@ -2036,6 +2092,18 @@
           "share": {
             "modal": {
               "title": "Deel"
+            },
+            "restriction": {
+              "restrict": {
+                "description": "Alleen personen die specifiek aan deze map zijn toegevoegd, krijgen toegang",
+                "confirmation": "Toegang via de bovenliggende map wordt ingetrokken.",
+                "details": "Personen die rechtstreeks aan deze map zijn toegevoegd, behouden hun toegang. U kunt anderen op elk moment opnieuw toegang geven."
+              },
+              "unrestrict": {
+                "description": "Iedereen met toegang tot de bovenliggende map krijgt toegang",
+                "confirmation": "Iedereen met toegang tot de bovenliggende map krijgt toegang.",
+                "details": "Rechtstreeks toegevoegde personen behouden hun toegang."
+              }
             }
           },
           "rename": {
@@ -2068,7 +2136,7 @@
             "move": "Verplaats",
             "download": "Download",
             "rename": "Hernoem",
-            "favorite": "Favoriet",
+            "favorite": "Toevoegen aan favorieten",
             "unfavorite": "Verwijder uit favorieten",
             "duplicate": "Dupliceer",
             "duplicate_error": "Er is een fout opgetreden bij het dupliceren.",
@@ -2095,6 +2163,7 @@
         "my_files": "Mijn bestanden"
       },
       "anonymous_dropdown_menu": {
+        "button": "Meer acties",
         "copy_link": "Kopieer link",
         "languages": "Talen"
       },

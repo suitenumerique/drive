@@ -4,6 +4,10 @@ import { Item, LinkReach } from "../drivers/types";
 import { Button, Spinner } from "@gouvfr-lasuite/ui-components";
 import { ClientMessageType, SDKRelayManager } from "./SdkRelayManager";
 import { useMutationUpdateLinkConfiguration } from "../explorer/hooks/useMutations";
+import {
+  getLinkExpirationReset,
+  isLinkExpired,
+} from "../explorer/utils/linkExpiration";
 
 export const PickerFooter = ({
   token,
@@ -21,7 +25,8 @@ export const PickerFooter = ({
 
   const onChoose = async () => {
     const promises = selectedItems.map((item) => {
-      if (item.link_reach === LinkReach.PUBLIC) {
+      // An expired public link is closed although its reach is still public.
+      if (item.link_reach === LinkReach.PUBLIC && !isLinkExpired(item)) {
         return Promise.resolve();
       }
 
@@ -31,6 +36,7 @@ export const PickerFooter = ({
             itemId: item.id,
             link_reach: LinkReach.PUBLIC,
             link_role: item.link_role,
+            ...getLinkExpirationReset(item),
           },
           {
             onSuccess: () => {

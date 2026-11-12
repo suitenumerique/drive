@@ -43,7 +43,7 @@ for (const source of ["row", "selection bar"]) {
       else
         await dialog(page)
           .getByRole("button", {
-            name: dismissal === "Close" ? "close" : dismissal,
+            name: dismissal,
             exact: true,
           })
           .click();
@@ -62,7 +62,7 @@ for (const source of ["row", "selection bar"]) {
 }
 
 for (const entryPoint of ["selection bar", "keyboard"]) {
-  test(`${entryPoint}: one batch request, explicit confirmation, and restricted targets survive`, async ({
+  test(`${entryPoint}: one batch request, explicit confirmation, and restricted targets follow the owner`, async ({
     page,
     folders,
   }) => {
@@ -136,13 +136,20 @@ for (const entryPoint of ["selection bar", "keyboard"]) {
     await expect(page.getByRole("row", { name: names.parent })).toHaveCount(0);
     expect(checks).toHaveLength(1);
 
-    // 9. The restricted target survives its parent's deletion: it is not trashed
-    // and its children can still be listed through the API.
-    const preserved = await page.request.get(`${API}/items/${target.id}/`);
+    // 9. The restricted folders follow the owner: the one they own is trashed
+    // along with its parent, the read-only one loses its restriction and
+    // survives at the root, its children still listable through the API.
+    const readOnly = findItem(folders.items, names.readOnly).target!;
+    const trashed = await page.request.get(`${API}/items/${target.id}/`);
+    expect(trashed.ok()).toBeTruthy();
+    expect((await trashed.json()).deleted_at).not.toBeNull();
+    const preserved = await page.request.get(`${API}/items/${readOnly.id}/`);
     expect(preserved.ok()).toBeTruthy();
-    expect((await preserved.json()).deleted_at).toBeNull();
+    const preservedItem = await preserved.json();
+    expect(preservedItem.deleted_at).toBeNull();
+    expect(preservedItem.is_restricted).toBeFalsy();
     expect(
-      (await page.request.get(`${API}/items/${target.id}/children/`)).ok(),
+      (await page.request.get(`${API}/items/${readOnly.id}/children/`)).ok(),
     ).toBeTruthy();
   });
 }
@@ -223,7 +230,7 @@ for (const mobile of [false, true]) {
     // 3. Navigate back via the mobile back button or desktop parent breadcrumb.
     // Verify the actual parent route and its listing of the restricted entry.
     if (mobile)
-      await breadcrumbs.getByRole("button", { name: "chevron_left" }).click();
+      await breadcrumbs.getByRole("button", { name: "Previous" }).click();
     else await breadcrumbs.getByText(names.parent, { exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/items/${folders.parent.id}$`));
     await expect(await getRowItem(page, names.accessible)).toBeVisible();

@@ -12,6 +12,7 @@ import { SortColumnButton } from "./SortColumnButton";
 
 export type CustomizableColumnHeaderProps = {
   slot: "column1" | "column2";
+  labelId: string;
   currentType: ColumnType;
   defaultType: ColumnType;
   sortState: SortState;
@@ -24,6 +25,7 @@ export type CustomizableColumnHeaderProps = {
 const ALL_COLUMN_TYPES = Object.values(ColumnType);
 
 export const CustomizableColumnHeader = ({
+  labelId,
   currentType,
   defaultType,
   sortState,
@@ -85,12 +87,13 @@ export const CustomizableColumnHeader = ({
           icon={buttonIcon}
           onClick={() => setIsOpen(!isOpen)}
         >
-          {t(currentConfig.labelKey)}
+          <span id={labelId}>{t(currentConfig.labelKey)}</span>
         </Button>
       </DropdownMenu>
       {sortable && currentConfig.sortable !== false && (
         <SortColumnButton
           columnId={currentType}
+          columnLabel={t(currentConfig.labelKey)}
           sortState={sortState}
           onSort={onSort}
         />

@@ -44,7 +44,7 @@ export const clickOnMoreActionsButtonFromItem = async (
   await expect(itemContent).toBeVisible();
   await itemContent.hover();
   const moreActionsButton = itemContent.getByRole("button", {
-    name: "more_actions",
+    name: `More actions for ${itemTitle}`,
   });
   await expect(moreActionsButton).toBeVisible();
   await moreActionsButton.click();

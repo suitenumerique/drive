@@ -121,6 +121,19 @@ def test_rename_file_success_accept_json():
     assert response.json()["Name"] == "new name"
 
 
+def test_rename_file_same_name():
+    """Renaming a file to its current name should keep it on the storage."""
+    # Simulate a storage accepting to copy an object onto itself.
+    with patch.object(default_storage.connection.meta.client, "copy_object"):
+        item, response = request_rename("wopi_test.txt", "wopi_test")
+
+    assert response.status_code == 200
+    item.refresh_from_db()
+    assert item.filename == "wopi_test.txt"
+    with default_storage.open(item.file_key) as file:
+        assert file.read() == b"content"
+
+
 def test_rename_file_no_filename():
     """Request without X-WOPI-RequestedName header should return 400."""
     folder = factories.ItemFactory(

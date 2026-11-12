@@ -53,6 +53,7 @@ export type ItemBreadcrumb = {
   path: string;
   depth: number;
   main_workspace: boolean;
+  is_restricted?: boolean;
 };
 
 export type Item = {
@@ -103,6 +104,7 @@ export type Item = {
   user_role?: Role;
   link_reach?: LinkReach;
   link_role?: LinkRole;
+  link_expires_at?: string | null;
   abilities: {
     accesses_manage: boolean;
     accesses_view: boolean;

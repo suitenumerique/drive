@@ -3,6 +3,7 @@ import {
   useDropdownMenu,
   Button,
 } from "@gouvfr-lasuite/ui-components";
+import { Plus } from "@gouvfr-lasuite/ui-components/icons";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import { useTranslation } from "react-i18next";
 import { ExplorerSearchButton } from "@/features/explorer/components/app-view/ExplorerSearchButton";
@@ -29,7 +30,7 @@ export const ExplorerTreeActions = () => {
             onOpenChange={createMenu.setIsOpen}
           >
             <Button
-              icon={<span className="material-icons">add</span>}
+              icon={<Plus aria-hidden="true" />}
               onClick={() => createMenu.setIsOpen(true)}
             >
               {t("explorer.tree.create.label")}

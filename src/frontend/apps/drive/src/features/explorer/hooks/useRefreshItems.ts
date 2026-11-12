@@ -118,12 +118,13 @@ export const useRefreshItemCache = () => {
   ) => {
     if (partialUpdate) {
       updateItemInPaginatedList(["items"], itemId, partialUpdate);
-      queryClient.setQueryData(["items", itemId], (old: Item) => {
-        return {
-          ...old,
-          ...partialUpdate,
-        };
-      });
+      // `old` is undefined when the item was never loaded (e.g. a folder renamed
+      // from its parent listing). Spreading it would cache a fake item holding
+      // only `partialUpdate`, without abilities, which crashes its next readers
+      // (the share modal). Returning undefined leaves the cache untouched.
+      queryClient.setQueryData(["items", itemId], (old?: Item) =>
+        old ? { ...old, ...partialUpdate } : undefined,
+      );
     } else {
       queryClient.invalidateQueries({
         queryKey: ["items"],

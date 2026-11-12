@@ -1,94 +1,63 @@
 import test, { expect, Page } from "@playwright/test";
 import { clearDb, login } from "./utils-common";
 import { expectRowItem } from "./utils-embedded-grid";
-import { createFolderInCurrentFolder } from "./utils-item";
+import {
+  createFileFromTemplate,
+  createFolderInCurrentFolder,
+  getNewButton,
+} from "./utils-item";
 import { navigateToFolder } from "./utils-navigate";
 
-test.describe("Create file from template", () => {
-  test.beforeEach(async ({ page }) => {
-    await clearDb();
-    await login(page, "drive@example.com");
-    await page.goto("/");
+const TEMPLATES = [
+  {
+    label: "a text document (odt)",
+    fileName: "My document",
+    template: "New text document",
+  },
+  {
+    label: "a spreadsheet (ods)",
+    fileName: "My spreadsheet",
+    template: "New spreadsheet",
+  },
+  {
+    label: "a presentation (odp)",
+    fileName: "My presentation",
+    template: "New slides",
+  },
+] as const;
+
+const LOCATIONS = [
+  { title: "Create file from template", suffix: "", openFolder: false },
+  {
+    title: "Create file from template in a folder",
+    suffix: " in a folder",
+    openFolder: true,
+  },
+];
+
+for (const location of LOCATIONS) {
+  test.describe(location.title, () => {
+    test.beforeEach(async ({ page }) => {
+      await clearDb();
+      await login(page, "drive@example.com");
+      await page.goto("/");
+      if (location.openFolder) {
+        await createFolderInCurrentFolder(page, "Test folder");
+        await navigateToFolder(page, "Test folder", [
+          "My files",
+          "Test folder",
+        ]);
+      }
+    });
+
+    for (const { label, fileName, template } of TEMPLATES) {
+      test(`Create ${label}${location.suffix}`, async ({ page }) => {
+        await createFileFromTemplate(page, fileName, template);
+        await expectRowItem(page, fileName);
+      });
+    }
   });
-
-  test("Create a text document (odt)", async ({ page }) => {
-    await page.getByRole("button", { name: "New" }).click();
-    await page.getByRole("menuitem", { name: "New text document" }).click();
-
-    await page.getByRole("textbox", { name: "File name" }).fill("My document");
-    await page.getByRole("button", { name: "Create" }).click();
-
-    await expectRowItem(page, "My document");
-  });
-
-  test("Create a spreadsheet (ods)", async ({ page }) => {
-    await page.getByRole("button", { name: "New" }).click();
-    await page.getByRole("menuitem", { name: "New spreadsheet" }).click();
-
-    await page
-      .getByRole("textbox", { name: "File name" })
-      .fill("My spreadsheet");
-    await page.getByRole("button", { name: "Create" }).click();
-
-    await expectRowItem(page, "My spreadsheet");
-  });
-
-  test("Create a presentation (odp)", async ({ page }) => {
-    await page.getByRole("button", { name: "New" }).click();
-    await page.getByRole("menuitem", { name: "New slides" }).click();
-
-    await page
-      .getByRole("textbox", { name: "File name" })
-      .fill("My presentation");
-    await page.getByRole("button", { name: "Create" }).click();
-
-    await expectRowItem(page, "My presentation");
-  });
-});
-
-test.describe("Create file from template in a folder", () => {
-  test.beforeEach(async ({ page }) => {
-    await clearDb();
-    await login(page, "drive@example.com");
-    await page.goto("/");
-    await createFolderInCurrentFolder(page, "Test folder");
-    await navigateToFolder(page, "Test folder", ["My files", "Test folder"]);
-  });
-
-  test("Create a text document (odt) in a folder", async ({ page }) => {
-    await page.getByRole("button", { name: "New" }).click();
-    await page.getByRole("menuitem", { name: "New text document" }).click();
-
-    await page.getByRole("textbox", { name: "File name" }).fill("My document");
-    await page.getByRole("button", { name: "Create" }).click();
-
-    await expectRowItem(page, "My document");
-  });
-
-  test("Create a spreadsheet (ods) in a folder", async ({ page }) => {
-    await page.getByRole("button", { name: "New" }).click();
-    await page.getByRole("menuitem", { name: "New spreadsheet" }).click();
-
-    await page
-      .getByRole("textbox", { name: "File name" })
-      .fill("My spreadsheet");
-    await page.getByRole("button", { name: "Create" }).click();
-
-    await expectRowItem(page, "My spreadsheet");
-  });
-
-  test("Create a presentation (odp) in a folder", async ({ page }) => {
-    await page.getByRole("button", { name: "New" }).click();
-    await page.getByRole("menuitem", { name: "New slides" }).click();
-
-    await page
-      .getByRole("textbox", { name: "File name" })
-      .fill("My presentation");
-    await page.getByRole("button", { name: "Create" }).click();
-
-    await expectRowItem(page, "My presentation");
-  });
-});
+}
 
 test.describe("Create file from template without the upload entitlement", () => {
   const mockEntitlements = async (page: Page) => {
@@ -113,7 +82,7 @@ test.describe("Create file from template without the upload entitlement", () => 
   });
 
   test("disables the document entries and explains why", async ({ page }) => {
-    await page.getByRole("button", { name: "New" }).click();
+    await getNewButton(page).click();
 
     for (const name of ["New text document", "New spreadsheet", "New slides"]) {
       const entry = page.getByRole("menuitem", { name });
@@ -127,7 +96,7 @@ test.describe("Create file from template without the upload entitlement", () => 
   });
 
   test("keeps New folder available", async ({ page }) => {
-    await page.getByRole("button", { name: "New" }).click();
+    await getNewButton(page).click();
 
     await expect(
       page.getByRole("menuitem", { name: "New folder" }),

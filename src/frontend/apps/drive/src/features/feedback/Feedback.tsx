@@ -80,7 +80,9 @@ export const Feedback = (props: { buttonProps?: Partial<ButtonProps> }) => {
   return (
     <>
       <Button
-        icon={<Icon name="feedback" type={IconType.OUTLINED} />}
+        icon={
+          <Icon name="feedback" type={IconType.OUTLINED} aria-hidden="true" />
+        }
         color="info"
         className="c__feedback__button"
         variant="secondary"

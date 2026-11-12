@@ -5,6 +5,7 @@ import {
   addToast,
   ToasterItem,
 } from "@/features/ui/components/toaster/Toaster";
+import { Trash } from "@gouvfr-lasuite/ui-components/icons";
 import { useMutationDeleteItems } from "./useMutations";
 import { useTranslation } from "react-i18next";
 import { useTreeUtils } from "./useTreeUtils";
@@ -68,7 +69,7 @@ export const useDeleteItem = () => {
       }
       addToast(
         <ToasterItem>
-          <span className="material-icons">delete</span>
+          <Trash aria-hidden="true" />
           <span>
             {t("explorer.actions.delete.toast", { count: itemIds.length })}
           </span>
@@ -78,7 +79,7 @@ export const useDeleteItem = () => {
     } catch {
       addToast(
         <ToasterItem type="error">
-          <span className="material-icons">delete</span>
+          <Trash aria-hidden="true" />
           <span>
             {t("explorer.actions.delete.toast_error", {
               count: itemIds.length,

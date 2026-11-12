@@ -1,3 +1,4 @@
+import { ArrowRight } from "@gouvfr-lasuite/ui-components/icons";
 import { getDriver } from "@/features/config/Config";
 import { getCanUploadErrorDescription } from "@/utils/entitlements";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -64,7 +65,7 @@ export const useMoveItems = () => {
 
       addToast(
         <ToasterItem type="error">
-          <span className="material-icons">arrow_forward</span>
+          <ArrowRight aria-hidden="true" />
           <span>
             {getCanUploadErrorDescription(err, (key) =>
               t(`explorer.modal.move.errors.${key}`),
