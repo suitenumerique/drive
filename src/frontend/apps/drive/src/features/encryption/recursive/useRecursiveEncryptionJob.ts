@@ -16,7 +16,7 @@ import {
   innerEncryptionRoots,
   isInsideInnerRoot,
 } from "./flattenSubtree";
-import { fromBase64, stagedFilename, toBase64 } from "./binary";
+import { fromBase64, stagedName, toBase64 } from "./binary";
 import {
   downloadForStaging,
   getEncryptionUploadUrl,
@@ -1194,10 +1194,9 @@ async function stageOneEncryption({
       wrappedKey = wk;
     }
 
-    const newFilename = stagedFilename(node.item.title, node.item.filename);
-    const uploadUrl = await getEncryptionUploadUrl(
+    const { uploadUrl, filename: newFilename } = await getEncryptionUploadUrl(
       targetId,
-      newFilename,
+      stagedName(node.item.title, node.item.filename),
       encryptedContent.byteLength,
       signal,
     );
@@ -1442,10 +1441,9 @@ async function stageOneEncryptionIntoChain({
       wrappedKey = wk;
     }
 
-    const newFilename = stagedFilename(node.item.title, node.item.filename);
-    const uploadUrl = await getEncryptionUploadUrl(
+    const { uploadUrl, filename: newFilename } = await getEncryptionUploadUrl(
       targetId,
-      newFilename,
+      stagedName(node.item.title, node.item.filename),
       encryptedContent.byteLength,
       signal,
     );
@@ -1551,13 +1549,13 @@ async function decryptPipeline({
           { optimizeMemory: true },
         );
 
-        const newFilename = stagedFilename(node.item.title, node.item.filename);
-        const uploadUrl = await getEncryptionUploadUrl(
-          id,
-          newFilename,
-          plaintext.byteLength,
-          poolSignal,
-        );
+        const { uploadUrl, filename: newFilename } =
+          await getEncryptionUploadUrl(
+            id,
+            stagedName(node.item.title, node.item.filename),
+            plaintext.byteLength,
+            poolSignal,
+          );
         await putToS3(uploadUrl, plaintext, poolSignal, uploadAcl);
 
         onFileStaged(id, { itemId: id, newFilename, sourceEtag });

@@ -1,10 +1,6 @@
-import { stagedFilename } from "../binary";
+import { stagedName as nameOf } from "../binary";
 
-/** The name part, after the random folder. */
-const nameOf = (title: string, filename?: string | null) =>
-  stagedFilename(title, filename).split("/").slice(1).join("/");
-
-describe("stagedFilename", () => {
+describe("stagedName", () => {
   it("keeps the extension of a document titled without it", () => {
     // Created from a template: title "hey", filename "hey.odt".
     expect(nameOf("hey", "hey.odt")).toBe("hey.odt");

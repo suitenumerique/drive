@@ -378,6 +378,31 @@ def describe_maintenance_escrow(root, user):
     }
 
 
+STAGED_FOLDER_LENGTH = len(str(uuid.uuid4())) + 1
+# Longer than this, what follows the last dot is part of the name.
+EXTENSION_MAX_LENGTH = 16
+
+
+def staged_filename(name):
+    """Where a staged copy of a file's content goes, under the item's storage key:
+    a fresh folder, then the name sanitized as for an upload and cut to fit
+    `Item.filename`, its extension kept."""
+    try:
+        safe = utils.sanitize_filename(str(name))
+    except ValidationError:
+        # Editors read a file's type from its extension: kept when the name goes.
+        safe = "file" + os.path.splitext(str(name))[1].strip()
+
+    room = models.Item.filename.field.max_length - STAGED_FOLDER_LENGTH
+    if len(safe) > room:
+        stem, extension = os.path.splitext(safe)
+        if len(extension) > EXTENSION_MAX_LENGTH:
+            stem, extension = safe, ""
+        safe = stem[: room - len(extension)] + extension
+
+    return f"{uuid.uuid4()}/{safe}"
+
+
 def check_encrypt_on_move(data, *, source_is_encrypted, target_is_encrypted):
     """Encrypt-on-move (plaintext into an encrypted folder): the plaintext source picks
     up the chain wrap inline, no /encrypt/ round trip, no per-user wraps."""
@@ -2548,13 +2573,10 @@ class ItemViewSet(
                 raise drf.exceptions.PermissionDenied(
                     _("Only a manager of the item can stage its content.")
                 )
+            # As for an upload, the client names the file and the server places it: in
+            # a folder of its own, never over the current content.
+            new_filename = staged_filename(new_filename)
             key = f"{item.key_base}/{new_filename}"
-            # Staged beside the current content, never over it.
-            if key == item.file_key:
-                raise drf.exceptions.ValidationError(
-                    {"filename": _("A staged copy cannot replace the current content.")},
-                    code="item_staged_over_current",
-                )
         else:
             # An editor still open on a file switched back to plaintext (by its owner
             # or a batch recovery) would write ciphertext over the plaintext, or to a

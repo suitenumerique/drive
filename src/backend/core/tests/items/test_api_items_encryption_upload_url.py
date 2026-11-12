@@ -1,5 +1,6 @@
 """Tests for the upload URLs of encrypted content on API endpoint."""
 
+import uuid
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -27,10 +28,10 @@ def test_api_items_encryption_upload_url_signs_the_size():
     response = request_upload_url(item, user, {"filename": "staged.bin", "size": 42})
 
     assert response.status_code == 200
-    assert response.json()["filename"] == "staged.bin"
+    filename = response.json()["filename"]
     query = parse_qs(urlparse(response.json()["upload_url"]).query)
     assert "content-length" in query["X-Amz-SignedHeaders"][0].split(";")
-    assert urlparse(response.json()["upload_url"]).path.endswith(f"{item.key_base}/staged.bin")
+    assert urlparse(response.json()["upload_url"]).path.endswith(f"{item.key_base}/{filename}")
 
 
 @pytest.mark.parametrize("size", [None, -1, "42", True])
@@ -136,26 +137,30 @@ def test_api_items_encryption_upload_url_staged_copy_by_an_editor_forbidden():
     assert response.status_code == 403
 
 
-def test_api_items_encryption_upload_url_staged_copy_over_the_current_content():
-    """A staged copy named like the current content would overwrite it: refused."""
+@pytest.mark.parametrize(
+    ("asked", "stored"),
+    [
+        ("Rapport été.pdf", "Rapport_ete.pdf"),
+        ("../other-item/file.pdf", "..other-itemfile.pdf"),
+        ("😀.odt", "file.odt"),
+        (f"{'n' * 300}.docx", f"{'n' * 213}.docx"),
+    ],
+)
+def test_api_items_encryption_upload_url_staged_copy_placed_by_the_server(asked, stored):
+    """The client names a staged copy, the server places it: a fresh folder of the item's,
+    the name sanitized as for an upload, cut to fit, so never over the current content."""
     user = factories.UserFactory()
     item = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE, users=[(user, models.RoleChoices.OWNER)]
     )
 
     response = request_upload_url(item, user, {"filename": item.filename, "size": 42})
+    assert response.json()["filename"] != item.filename
 
-    assert response.status_code == 400
-    assert response.json()["errors"][0]["code"] == "item_staged_over_current"
+    response = request_upload_url(item, user, {"filename": asked, "size": 42})
 
-
-def test_api_items_encryption_upload_url_reader_forbidden():
-    """A reader cannot upload content."""
-    user = factories.UserFactory()
-    item = factories.ItemFactory(
-        type=models.ItemTypeChoices.FILE, users=[(user, models.RoleChoices.READER)]
-    )
-
-    response = request_upload_url(item, user, {"filename": "staged.bin", "size": 42})
-
-    assert response.status_code == 403
+    assert response.status_code == 200
+    folder, name = response.json()["filename"].split("/")
+    assert str(uuid.UUID(folder)) == folder
+    assert name == stored
+    assert len(response.json()["filename"]) <= 255

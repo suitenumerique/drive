@@ -20,23 +20,24 @@ export async function downloadForStaging(
   return { body: await resp.arrayBuffer(), etag: resp.headers.get("ETag") };
 }
 
-// The URL signs `size`: the body uploaded to it must be exactly that long.
+// The URL signs `size`: the body uploaded to it must be exactly that long. The
+// backend places the copy and answers its filename, the one to point the item at.
 export async function getEncryptionUploadUrl(
   itemId: string,
-  filename: string,
+  name: string,
   size: number,
   signal?: AbortSignal,
-): Promise<string> {
+): Promise<{ uploadUrl: string; filename: string }> {
   const resp = await fetchAPI(`items/${itemId}/encryption-upload-url/`, {
     method: "POST",
-    body: JSON.stringify({ filename, size }),
+    body: JSON.stringify({ filename: name, size }),
     signal,
   });
   if (!resp.ok) {
     throw new Error(`Failed to get upload URL: ${resp.status}`);
   }
-  const { upload_url } = await resp.json();
-  return upload_url;
+  const { upload_url, filename } = await resp.json();
+  return { uploadUrl: upload_url, filename };
 }
 
 // `acl` must match the ACL signed in the presigned URL (the backend's
