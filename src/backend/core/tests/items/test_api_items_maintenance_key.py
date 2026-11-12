@@ -443,7 +443,26 @@ def test_api_items_key_chain_describes_the_root_escrow_when_entering_at_the_root
         "has_maintenance_key": False,
         "can_store": True,
     }
-    assert data["item_creator_sub"] == file_item.creator.sub
+    assert data["item_creator_sub"] is None
+
+
+def test_api_items_key_chain_gives_members_subs_only_to_who_uses_them():
+    """Drive shows members' subs to owners and administrators only: a reader gets
+    neither the root owner's nor the item creator's, an owner both."""
+    owner = factories.UserFactory()
+    reader = factories.UserFactory()
+    root = _encrypted_root(owner, creator=owner)
+    factories.UserItemAccessFactory(item=root, user=reader, role="reader")
+    factories.ItemEncryptionKeyWrapFactory(item=root, user=reader, wrapped_key="WRAP-READER-ROOT")
+    file_item = _encrypted_child(root, item_type=models.ItemTypeChoices.FILE)
+
+    as_reader = _client(reader).get(f"/api/v1.0/items/{file_item.id!s}/key-chain/").json()
+    as_owner = _client(owner).get(f"/api/v1.0/items/{file_item.id!s}/key-chain/").json()
+
+    assert as_reader["maintenance_escrow"]["owner_sub"] is None
+    assert as_reader["item_creator_sub"] is None
+    assert as_owner["maintenance_escrow"]["owner_sub"] == owner.sub
+    assert as_owner["item_creator_sub"] == file_item.creator.sub
 
 
 def test_api_items_key_chain_has_no_escrow_for_a_side_door_entry():

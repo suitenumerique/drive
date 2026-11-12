@@ -370,11 +370,12 @@ def describe_maintenance_escrow(root, user):
     """What a holder entering the tree at its root needs to refresh or backfill
     the root's maintenance escrow copy: the root's owner, whose organization
     decides the maintenance key, and whether they may store the copy."""
+    can_store = bool(root.get_abilities(user).get("maintenance_key"))
     return {
         "root_item_id": str(root.pk),
-        "owner_sub": root.creator.sub if root.creator else None,
+        "owner_sub": root.creator.sub if root.creator and can_store else None,
         "has_maintenance_key": bool(root.maintenance_wrapped_item_key),
-        "can_store": bool(root.get_abilities(user).get("maintenance_key")),
+        "can_store": can_store,
     }
 
 
@@ -3014,7 +3015,11 @@ class ItemViewSet(
                 "encryption_tree_root_item_id": (
                     str(encryption_tree_root_pk) if encryption_tree_root_pk else None
                 ),
-                "item_creator_sub": item.creator.sub if item.creator else None,
+                "item_creator_sub": (
+                    item.creator.sub
+                    if item.creator and item.get_abilities(user).get("move")
+                    else None
+                ),
                 "maintenance_escrow": (
                     describe_maintenance_escrow(entry_point_item, user)
                     if entry_point_item.pk == encryption_tree_root_pk
