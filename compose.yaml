@@ -351,6 +351,7 @@ services:
     environment:
       RELAY_PORT: "4100"
       DRIVE_API_URL: "http://app-dev:8000"
+      RELAY_ALLOWED_ORIGINS: "http://localhost:3000"
       # The host user has no home in the image: npm needs a writable one.
       HOME: /tmp
       npm_config_cache: /tmp/npm-cache

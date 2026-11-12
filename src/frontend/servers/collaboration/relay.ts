@@ -20,6 +20,24 @@ const PING_INTERVAL_MS = 30_000;
 // by ws with code 1009 (Message Too Big).
 const MAX_PAYLOAD_BYTES = 75 * 1024 * 1024;
 
+// The origins of Drive's pages, comma-separated. A browser names the page opening the
+// socket in `Origin`, and the session cookie authenticates whatever page that is:
+// `SameSite=Lax` keeps other sites out, not a neighbouring app of the same site.
+const ALLOWED_ORIGINS = new Set(
+  (process.env.RELAY_ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value) => new URL(value).origin),
+);
+
+if (ALLOWED_ORIGINS.size === 0) {
+  console.error(
+    "[relay] RELAY_ALLOWED_ORIGINS must list the origins of Drive's pages",
+  );
+  process.exit(1);
+}
+
 // --- Auth ---
 
 interface AuthResult {
@@ -425,6 +443,12 @@ const httpServer = createServer((_req, res) => {
 const wss = new WebSocketServer({
   server: httpServer,
   maxPayload: MAX_PAYLOAD_BYTES,
+  // Refused before the upgrade (403). A client with no `Origin` is no browser, so no
+  // cookie of the user's rides along without its own doing.
+  verifyClient: (
+    { origin }: { origin?: string },
+    done: (ok: boolean, code?: number) => void,
+  ) => done(!origin || ALLOWED_ORIGINS.has(origin), 403),
 });
 
 wss.on("connection", async (ws, req) => {
