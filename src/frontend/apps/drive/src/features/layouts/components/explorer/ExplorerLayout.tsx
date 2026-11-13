@@ -199,6 +199,7 @@ const LeftPanelFooterDesktop = (props: LeftPanelFooterProps) => {
 
 const HelpMenuButton = () => {
   const { config } = useConfig();
+  const { user } = useAuth();
   const helpMenuConfig = config?.FRONTEND_HELP_MENU_CONFIG;
   const hasHelpMenu =
     !!helpMenuConfig && Object.keys(helpMenuConfig).length > 0;
@@ -217,11 +218,21 @@ const HelpMenuButton = () => {
       : undefined;
   };
 
+  // The form can only send with all three values: a partial config keeps
+  // the widget or email behavior above.
+  const { challengeUrl, deliverUrl, channel } =
+    helpMenuConfig.laSuiteSupportForm ?? {};
+  const laSuiteSupportForm =
+    challengeUrl && deliverUrl && channel
+      ? { challengeUrl, deliverUrl, channel, email: user?.email }
+      : undefined;
+
   return (
     <HelpMenu
       documentationUrl={helpMenuConfig.documentationUrl}
       legal={helpMenuConfig.legal}
       onContactUs={getOnContactUs()}
+      laSuiteSupportForm={laSuiteSupportForm}
     />
   );
 };

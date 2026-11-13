@@ -10,6 +10,7 @@ and this project adheres to
 
 ### Added
 
+- ✨(frontend) open the La Suite support form from the help menu
 - ✨(frontend) set an expiration date on item share links
 - ✨(backend) import user storage limits from a CSV file in the admin
 
