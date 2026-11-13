@@ -55,6 +55,10 @@ and this project adheres to
 - 🐛(backend) fix the upload mimetype allowlist
 - ♿️(frontend) fix accessible names of icon buttons
 
+### Changed
+
+- 🔊(backend) log as JSON with django-structlog
+
 ## [v0.25.3] - 2026-10-23
 
 ### Security
