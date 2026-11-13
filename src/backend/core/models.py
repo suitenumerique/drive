@@ -1021,6 +1021,9 @@ class AnnotateUserRoleQuerySetMixin:
         )
 
 
+ITEM_FILENAME_MAX_LENGTH = 255
+
+
 class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
     """Custom queryset for Item model with additional methods."""
 
@@ -1320,7 +1323,7 @@ class Item(TreeModel, BaseModel):
     ancestors_deleted_at = models.DateTimeField(null=True, blank=True)
     hard_deleted_at = models.DateTimeField(null=True, blank=True)
 
-    filename = models.CharField(max_length=255, null=True, blank=True)
+    filename = models.CharField(max_length=ITEM_FILENAME_MAX_LENGTH, null=True, blank=True)
     type = models.CharField(
         max_length=30,
         choices=ItemTypeChoices.choices,

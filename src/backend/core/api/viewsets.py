@@ -394,7 +394,7 @@ def staged_filename(name):
         # Editors read a file's type from its extension: kept when the name goes.
         safe = "file" + os.path.splitext(str(name))[1].strip()
 
-    room = models.Item.filename.field.max_length - STAGED_FOLDER_LENGTH
+    room = models.ITEM_FILENAME_MAX_LENGTH - STAGED_FOLDER_LENGTH
     if len(safe) > room:
         stem, extension = os.path.splitext(safe)
         if len(extension) > EXTENSION_MAX_LENGTH:
@@ -757,7 +757,8 @@ def encryptable_item_refusal(item):
         or team_accesses(item__path__descendants=item.path).exists()
     ):
         return _(
-            "Remove the team accesses of the item, its folders and its content before encrypting it."
+            "Remove the team accesses of the item, its folders and its content "
+            "before encrypting it."
         )
     return None
 
