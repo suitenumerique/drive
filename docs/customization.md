@@ -118,3 +118,59 @@ THEME_CUSTOMIZATION_FILE_PATH=<path>
 ### Example of a JSON customization file
 
 The json must follow some rules: https://github.com/suitenumerique/drive/blob/main/src/backend/drive/configuration/theme/default.json
+
+## Help menu
+
+The help menu is the "?" button of the left panel. It is hidden when its
+configuration is empty.
+
+### Settings 🔧
+
+```shellscript
+FRONTEND_HELP_MENU_CONFIG=<dict>
+```
+
+The value is read as a Python dict: write it like JSON, but with `True` and
+`False`. A JSON `true` or `null` makes the setting fail. Every key is optional,
+and an entry only shows when its key is set.
+
+| Key | Description |
+|-----|-------------|
+| `documentationUrl` | "Documentation" link |
+| `legal` | "Legal" submenu, with `personalDataUrl`, `termsOfUseUrl`, `accessibilityUrl` and `legalNoticeUrl` |
+| `laSuiteSupportForm` | Support form, sent to the La Suite support API: `challengeUrl` (anti-spam challenge), `deliverUrl` (where the messages are posted) and `channel` (the support team that receives them). The three keys are needed, and the URLs are used as given |
+| `supportMessagesWidget` | `True` to open the messages widget, set with the `FRONTEND_FEEDBACK_MESSAGES_WIDGET_*` variables |
+| `supportEmail` | Link to open, e.g. `mailto:support@example.com`. Also the default of `EMAIL_SUPPORT_URL` |
+
+"Contact us" opens the first of these that is set: `laSuiteSupportForm`, then
+`supportMessagesWidget`, then `supportEmail`. The support form fills in the
+email of the logged-in user.
+
+### Example
+
+```json
+{
+  "documentationUrl": "https://docs.example.com/drive/",
+  "legal": {
+    "personalDataUrl": "https://example.com/personal-data/",
+    "termsOfUseUrl": "https://example.com/terms/",
+    "accessibilityUrl": "https://example.com/accessibility/",
+    "legalNoticeUrl": "https://example.com/legal-notice/"
+  },
+  "supportEmail": "mailto:support@example.com",
+  "laSuiteSupportForm": {
+    "challengeUrl": "https://lasuite.numerique.gouv.fr/api/support/challenge",
+    "deliverUrl": "https://lasuite.numerique.gouv.fr/api/support/deliver/",
+    "channel": "fichiers"
+  }
+}
+```
+
+In an env file, write the value on one line, after
+`FRONTEND_HELP_MENU_CONFIG=`.
+
+### Content-Security-Policy
+
+Behind a Content-Security-Policy, the support form needs the origin of the
+support API in `connect-src`, and `'wasm-unsafe-eval'` in `script-src` for the
+anti-spam check.
