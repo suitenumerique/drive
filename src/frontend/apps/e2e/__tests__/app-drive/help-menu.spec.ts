@@ -187,3 +187,119 @@ test.describe("Help menu", () => {
     await expect(footer.getByRole("button", { name: "Help" })).toHaveCount(0);
   });
 });
+
+// The form itself (validation, anti-spam check, request shape) is tested in
+// the UI kit. These tests check how Drive configures and opens it.
+test.describe("Help menu - La Suite support form", () => {
+  // Same origin as the app, so the requests can be stubbed without CORS.
+  const SUPPORT_API = "/test-support-api/";
+
+  const openContactUs = async (page: import("@playwright/test").Page) => {
+    const footer = page.locator(".c__left-panel__footer__drive");
+    await footer.getByRole("button", { name: "Help" }).click();
+    await page.getByRole("menuitem", { name: "Contact us" }).click();
+  };
+
+  test("opens the support form instead of the support email", async ({
+    page,
+  }) => {
+    // 1. Configure both the support email and the support form.
+    await overrideHelpMenuConfig(page, {
+      ...HELP_MENU_CONFIG,
+      laSuiteSupportForm: { api: SUPPORT_API, channel: "fichiers" },
+    });
+    await spyOnWindowOpen(page);
+    await login(page, "drive@example.com");
+    await page.goto("/");
+
+    // 2. "Contact us" opens the form, and the email link is not opened.
+    await openContactUs(page);
+    await expect(
+      page.getByRole("dialog", { name: "Contact the team" }),
+    ).toBeVisible();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const openedUrls = await page.evaluate(() => (window as any).__openedUrls);
+    expect(openedUrls).toEqual([]);
+
+    // 3. The user is logged in: Drive passes their email, so the form does
+    //    not ask for it.
+    await expect(page.getByRole("textbox", { name: "E-mail" })).toHaveCount(0);
+  });
+
+  test("sends the message to the configured API and channel", async ({
+    page,
+  }) => {
+    // 1. Stub the support API. The challenge is a cheap SHA-256 one with a
+    //    one-byte prefix, solved in milliseconds: the real anti-spam check is
+    //    tested in the UI kit.
+    await overrideHelpMenuConfig(page, {
+      ...HELP_MENU_CONFIG,
+      laSuiteSupportForm: { api: SUPPORT_API, channel: "fichiers" },
+    });
+    await page.route(`**${SUPPORT_API}challenge`, (route) =>
+      route.fulfill({
+        json: {
+          parameters: {
+            algorithm: "SHA-256",
+            cost: 1,
+            keyLength: 32,
+            keyPrefix: "00",
+            nonce: "00",
+            salt: "00",
+          },
+          signature: "test",
+        },
+      }),
+    );
+    // Record the delivered request to check what Drive sends.
+    const deliverRequest = page.waitForRequest(`**${SUPPORT_API}deliver/`);
+    await page.route(`**${SUPPORT_API}deliver/`, (route) =>
+      route.fulfill({ json: { success: true } }),
+    );
+    await login(page, "drive@example.com");
+    await page.goto("/");
+
+    // 2. Fill the form and send it.
+    await openContactUs(page);
+    await page.getByRole("textbox", { name: "Subject" }).fill("Upload issue");
+    await page
+      .getByRole("textbox", { name: "Your message" })
+      .fill("The upload button does nothing.");
+    await page.getByRole("button", { name: "Send" }).click();
+
+    // 3. The request carries Drive's channel and the user's email, and the
+    //    form shows its success view.
+    const request = await deliverRequest;
+    expect(request.headers()["x-channel-id"]).toBe("fichiers");
+    expect(request.postDataJSON()).toMatchObject({
+      subject: "Upload issue",
+      textBody: "The upload button does nothing.",
+      email: "drive@example.com",
+      channel: "fichiers",
+    });
+    await expect(
+      page.getByRole("heading", { name: "Thank you for your feedback" }),
+    ).toBeVisible();
+  });
+
+  test("keeps the support email when the form config has no channel", async ({
+    page,
+  }) => {
+    // 1. A partial form config: the API without the channel.
+    await overrideHelpMenuConfig(page, {
+      ...HELP_MENU_CONFIG,
+      laSuiteSupportForm: { api: SUPPORT_API },
+    });
+    await spyOnWindowOpen(page);
+    await login(page, "drive@example.com");
+    await page.goto("/");
+
+    // 2. "Contact us" falls back to the support email instead of opening a
+    //    form that could not send.
+    await openContactUs(page);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const openedUrls = await page.evaluate(() => (window as any).__openedUrls);
+    expect(openedUrls).toEqual([HELP_MENU_CONFIG.supportEmail]);
+    await expect(page.getByRole("dialog", { name: "Contact the team" })).toHaveCount(0);
+  });
+});
