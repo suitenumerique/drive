@@ -82,6 +82,7 @@ This document lists all configurable environment variables for the Drive applica
 | `FRONTEND_FEEDBACK_MESSAGES_WIDGET_API_URL` | API URL for feedback messages widget | `None` |
 | `FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL` | Channel for feedback messages widget | `None` |
 | `FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH` | Path for feedback messages widget | `None` |
+| `FRONTEND_HELP_MENU_CONFIG` | Help menu of the left panel, as JSON: `documentationUrl`, `legal` (`personalDataUrl`, `termsOfUseUrl`, `accessibilityUrl`, `legalNoticeUrl`), and what "Contact us" does, in this order: `laSuiteSupportForm` (e.g. `{"api": "https://lasuite.numerique.gouv.fr/api/support/", "channel": "fichiers"}`) opens the La Suite support form, `supportMessagesWidget: true` opens the messages widget, `supportEmail` opens that link. Behind a Content-Security-Policy, the support form needs the API origin in `connect-src` and `'wasm-unsafe-eval'` in `script-src` (anti-spam check) | `{}` |
 | `FRONTEND_RELEASE_NOTE_ENABLED` | Enable release notes modal on connexion | `True` |
 | `FRONTEND_ENTITLEMENTS_DISCLAIMERS` | Enable entitlements disclaimers with custom params | `{}` |
 | `ITEM_FILE_MAX_SIZE` | Maximum file size for uploads in bytes | `5368709120` (5GB) |

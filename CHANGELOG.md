@@ -10,6 +10,7 @@ and this project adheres to
 
 ### Added
 
+- ✨(frontend) open the La Suite support form from the help menu
 - ✨(frontend) set an expiration date on item share links
 
 ## [v0.27.0] - 2026-11-09

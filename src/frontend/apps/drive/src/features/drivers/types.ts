@@ -242,6 +242,17 @@ export type ApiConfig = {
     };
     supportEmail?: string;
     supportMessagesWidget?: boolean;
+    /**
+     * "Contact us" opens the La Suite support form, which sends the messages
+     * to the La Suite support API. Takes precedence over supportMessagesWidget
+     * and supportEmail.
+     */
+    laSuiteSupportForm?: {
+      /** Base URL of the support API, e.g. https://lasuite.numerique.gouv.fr/api/support/ */
+      api?: string;
+      /** Support channel of the app, e.g. "fichiers". */
+      channel?: string;
+    };
   };
   FRONTEND_THEME?: string;
   FRONTEND_HIDE_GAUFRE?: boolean;
