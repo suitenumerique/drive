@@ -1,0 +1,29 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+{% block content %}
+<p>{% translate "Upload a CSV file with an email and a quota column to set the storage limit of the listed users. The quota is in GB: 0 for unlimited storage, empty for the default limit." %}</p>
+<p><a href="{% static 'core/admin/storage_limits_example.csv' %}" download>{% translate "Download an example file" %}</a></p>
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <p><input type="submit" value="{% translate 'Apply the limits' %}"></p>
+</form>
+{% if results is not None %}
+<table>
+  <thead>
+    <tr>
+      <th>{% translate "Email" %}</th>
+      <th>{% translate "Result" %}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for result in results %}
+    <tr>
+      <td>{% if result.user %}<a href="{% url 'admin:core_user_change' result.user.pk %}">{{ result.email }}</a>{% else %}{{ result.email }}{% endif %}</td>
+      <td>{{ result.status }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

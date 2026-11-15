@@ -1,5 +1,7 @@
 """Admin classes and registrations for core app."""
 
+import csv
+import io
 from decimal import Decimal
 from functools import partial
 
@@ -7,10 +9,12 @@ from django import forms
 from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin import helpers
+from django.contrib.admin.models import CHANGE, LogEntry
 from django.contrib.admin.widgets import AutocompleteSelect
 from django.contrib.auth import admin as auth_admin
 from django.contrib.auth import forms as auth_forms
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.validators import FileExtensionValidator, validate_email
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Subquery, UUIDField
 from django.db.models.fields.json import KeyTextTransform
@@ -38,6 +42,15 @@ from core.utils.quota import quota_to_str
 from core.utils.sizes import format_size
 
 BYTES_PER_GB = 1000**3
+STORAGE_LIMITS_IMPORT_MAX_SIZE = 5 * 1000**2
+
+
+def format_storage_limit_override(override):
+    """Return the human readable storage limit override."""
+    if override is None:
+        return _("default limit")
+    return format_size(override) if override else _("unlimited")
+
 
 admin.site.site_header = format_lazy("{} {}", admin.site.site_header, settings.RELEASE)
 
@@ -66,6 +79,53 @@ class UserChangeForm(auth_forms.UserChangeForm):
         """Convert the storage limit override from GB to bytes."""
         value = self.cleaned_data["storage_limit_override"]
         return None if value is None else int(value * BYTES_PER_GB)
+
+
+class StorageLimitsImportForm(forms.Form):
+    """Form reading the storage limit override of users from a CSV file."""
+
+    file = forms.FileField(
+        label=_("CSV file"),
+        validators=[FileExtensionValidator(["csv"])],
+        widget=forms.FileInput(attrs={"accept": ".csv"}),
+    )
+
+    def clean_file(self):
+        """Return the storage limit override in bytes of each email of the file."""
+        if self.cleaned_data["file"].size > STORAGE_LIMITS_IMPORT_MAX_SIZE:
+            raise ValidationError(_("The file must not exceed 5 MB."))
+        quota_field = forms.DecimalField(required=False, min_value=0)
+        limits = {}
+        errors = []
+        try:
+            content = self.cleaned_data["file"].read().decode("utf-8-sig")
+            reader = csv.DictReader(io.StringIO(content, newline=""))
+            if not {"email", "quota"} <= set(reader.fieldnames or ()):
+                raise ValidationError(_("The file must have the email and quota columns."))
+            for row in reader:
+                email = models.normalize_email(row["email"] or "")
+                try:
+                    validate_email(email)
+                    quota = quota_field.clean((row["quota"] or "").strip())
+                except ValidationError:
+                    errors.append(
+                        _("Line {line}: invalid email or quota.").format(line=reader.line_num)
+                    )
+                    continue
+                limit = None if quota is None else int(quota * BYTES_PER_GB)
+                if limits.setdefault(email, limit) != limit:
+                    errors.append(
+                        _("Line {line}: {email} already has another quota.").format(
+                            line=reader.line_num, email=email
+                        )
+                    )
+        except UnicodeDecodeError as error:
+            raise ValidationError(_("The file must be encoded in UTF-8.")) from error
+        except csv.Error as error:
+            raise ValidationError(_("The file is not a valid CSV file.")) from error
+        if errors:
+            raise ValidationError(errors)
+        return limits
 
 
 class DuplicateEmailFilter(admin.SimpleListFilter):
@@ -104,6 +164,7 @@ class UserAdmin(auth_admin.UserAdmin):
     """Admin class for the User model"""
 
     form = UserChangeForm
+    change_list_template = "core/admin/user_change_list.html"
 
     fieldsets = (
         (
@@ -281,6 +342,78 @@ class UserAdmin(auth_admin.UserAdmin):
                 deactivated.append(user.pk)
         models.User.objects.filter(pk__in=deactivated).update(is_active=False)
         self.message_user(request, f"{len(deactivated)} users deactivated.")
+
+    @staticmethod
+    def _set_storage_limits(limits, user_id):
+        """Set and log the storage limit override of each email, return the result per user."""
+        users_by_email = {}
+        for user in models.User.objects.filter(email__in=list(limits)).order_by("created_at"):
+            users_by_email.setdefault(user.email, []).append(user)
+
+        results = []
+        users_by_limit = {}
+        for email, limit in limits.items():
+            users = users_by_email.get(email, [])
+            if not users:
+                results.append({"email": email, "status": _("no user found")})
+            # Every user sharing the email is updated, existing overrides included
+            for user in users:
+                if user.storage_limit_override == limit:
+                    status = _("already {limit}")
+                else:
+                    status = _("{previous} → {limit}")
+                    users_by_limit.setdefault(limit, []).append(user.pk)
+                results.append(
+                    {
+                        "email": email,
+                        "user": user,
+                        "status": status.format(
+                            previous=format_storage_limit_override(user.storage_limit_override),
+                            limit=format_storage_limit_override(limit),
+                        ),
+                    }
+                )
+        for limit, user_ids in users_by_limit.items():
+            users = models.User.objects.filter(pk__in=user_ids)
+            users.update(storage_limit_override=limit)
+            LogEntry.objects.log_actions(
+                user_id,
+                users,
+                CHANGE,
+                f"Storage limit imported: {format_storage_limit_override(limit)}.",
+            )
+        return results
+
+    def import_storage_limits_view(self, request):
+        """Set the storage limit override of the users listed in a CSV file."""
+        if not self.has_change_permission(request):
+            raise PermissionDenied
+        context = {
+            **self.admin_site.each_context(request),
+            "title": _("Import storage limits"),
+        }
+        if request.method == "POST":
+            form = StorageLimitsImportForm(request.POST, request.FILES)
+            if form.is_valid():
+                with transaction.atomic():
+                    context["results"] = self._set_storage_limits(
+                        form.cleaned_data["file"], request.user.pk
+                    )
+        else:
+            form = StorageLimitsImportForm()
+        context["form"] = form
+        return TemplateResponse(request, "core/admin/import_storage_limits.html", context)
+
+    def get_urls(self):
+        """Add the view importing the storage limits."""
+        return [
+            path(
+                "import-storage-limits/",
+                self.admin_site.admin_view(self.import_storage_limits_view),
+                name="core_user_import_storage_limits",
+            ),
+            *super().get_urls(),
+        ]
 
     @staticmethod
     def _storage_limit(obj):
