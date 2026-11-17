@@ -34,37 +34,9 @@ LOCK_KEY = "metrics:business:refresh-lock"
 VALUES_TIMEOUT = 24 * 60 * 60
 
 
-def items_queryset():
-    """
-    The item counts, by type and by upload state.
-
-    COUNT(*) and not COUNT(id): the id is not in item_type_upload_state_idx, and
-    counting it would read the whole item table instead of the index.
-    """
-    return (
-        models.Item.objects.filter(hard_deleted_at__isnull=True)
-        .values("type", "upload_state")
-        .annotate(count=Count("*"))
-        .order_by()
-    )
-
-
 def users_queryset():
     """The user counts, active or not, answered from user_is_active_idx."""
     return models.User.objects.values("is_active").annotate(count=Count("*")).order_by()
-
-
-def _count_items():
-    """Count the items that are not hard deleted, by type and by upload state."""
-    counts = {"total": 0, "types": {}, "upload_states": {}}
-    for row in items_queryset():
-        counts["total"] += row["count"]
-        counts["types"][row["type"]] = counts["types"].get(row["type"], 0) + row["count"]
-        # folders have no upload state
-        if row["upload_state"] is not None:
-            state = row["upload_state"]
-            counts["upload_states"][state] = counts["upload_states"].get(state, 0) + row["count"]
-    return counts
 
 
 def _count_users():
@@ -81,7 +53,6 @@ def _count_accesses():
 
 
 FAMILIES = {
-    "items": _count_items,
     "users": _count_users,
     "invitations": _count_invitations,
     "accesses": _count_accesses,
@@ -186,21 +157,6 @@ class DriveBusinessCollector:
                 duration.add_metric([name], entry["duration"])
         yield age
         yield duration
-
-        if (items := values.get("items")) is not None:
-            yield _gauge("drive_items_count", "Items that are not hard deleted", items["total"])
-            for state in models.ItemUploadStateChoices.values:
-                yield _gauge(
-                    f"drive_items_{state}_count",
-                    f"Items in the {state} upload state",
-                    items["upload_states"].get(state, 0),
-                )
-            for item_type in models.ItemTypeChoices.values:
-                yield _gauge(
-                    f"drive_items_{item_type}_count",
-                    f"Items of type {item_type}",
-                    items["types"].get(item_type, 0),
-                )
 
         if (users := values.get("users")) is not None:
             gauge = GaugeMetricFamily("drive_users_count", "Users", labels=["is_active"])

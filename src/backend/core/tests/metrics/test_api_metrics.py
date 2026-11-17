@@ -239,11 +239,11 @@ def test_api_metrics_business(settings):
 
     response = _get_metrics(HTTP_AUTHORIZATION=f"Bearer {API_KEY}")
     assert response.status_code == 200
-    assert f'drive_items_count{{hostname="{socket.gethostname()}"}} 0.0' in (
+    assert f'drive_invitations_count{{hostname="{socket.gethostname()}"}} 0.0' in (
         response.content.decode()
     )
 
     settings.PROMETHEUS_BUSINESS_METRICS_ENABLED = False
     response = _get_metrics(HTTP_AUTHORIZATION=f"Bearer {API_KEY}")
     assert response.status_code == 200
-    assert "drive_items_count" not in response.content.decode()
+    assert "drive_invitations_count" not in response.content.decode()

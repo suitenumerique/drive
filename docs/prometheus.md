@@ -72,8 +72,7 @@ asked to the broker at scrape time (Redis brokers only).
 
 ### Business metrics
 
-Computed from the database and kept in the shared cache. Hard deleted items are
-never counted.
+Computed from the database and kept in the shared cache.
 
 - Once the values are older than `PROMETHEUS_BUSINESS_METRICS_CACHE_TTL`, the
   scrape that takes a refresh lock in the cache computes them again, for every
@@ -82,22 +81,18 @@ never counted.
 - Postgres cancels any of these queries after
   `PROMETHEUS_BUSINESS_METRICS_STATEMENT_TIMEOUT` seconds. The family keeps its
   previous values, and is tried again after the cache ttl.
-- The counts are answered from small partial indexes (migration
-  `0036_business_metrics_indexes`, built `CONCURRENTLY`): on 4M items, 26MB
-  and 1MB are read instead of the whole 1.5GB item table. Expect the migration
-  to take a few minutes on a large database.
+- Items are not counted: counting a large item table at every refresh cannot
+  stay fast, and the index it would need slows down every change of upload
+  state. The user count is answered from a small index on `is_active`.
 - The values lag behind the database by up to the cache ttl, plus the
   computation time. Before the first computation, the families are absent.
 
 | Metric | Description |
 |---|---|
-| `drive_items_count` | Items |
-| `drive_items_<state>_count` | Items per upload state: `pending`, `duplicating`, `converting`, `analyzing`, `suspicious`, `file_too_large_to_analyze`, `ready` |
-| `drive_items_<type>_count` | Items per type: `file`, `folder`, `restriction` |
 | `drive_users_count{is_active}` | Users, active or not |
 | `drive_invitations_count` | Invitations to items |
 | `drive_accesses_count` | Accesses granted on items |
-| `drive_business_metrics_age_seconds{family}` | Time since a family (`items`, `users`, `invitations`, `accesses`) was computed |
+| `drive_business_metrics_age_seconds{family}` | Time since a family (`users`, `invitations`, `accesses`) was computed |
 | `drive_business_metrics_duration_seconds{family}` | Time its last computation took |
 
 No label ever carries a path, a user or an item identifier. Every sample
@@ -119,7 +114,7 @@ The Celery queue and the business metrics describe the whole deployment:
 every replica reports the same values. Read them with `max`, never `sum`:
 
 ```promql
-max(drive_items_count)
+max(drive_users_count)
 max(drive_celery_queue_length)
 ```
 

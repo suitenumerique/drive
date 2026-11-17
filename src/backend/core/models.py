@@ -1390,14 +1390,6 @@ class Item(TreeModel, BaseModel):
                 condition=models.Q(hard_deleted_at__isnull=True, quota_excluded=False),
                 name="item_creator_size_quota_idx",
             ),
-            # Covers the item counts of the Prometheus business metrics: about 8
-            # distinct pairs, so the deduplicated index stays small (26MB for 4M
-            # items) and the counts are answered from it alone.
-            models.Index(
-                fields=["type", "upload_state"],
-                condition=models.Q(hard_deleted_at__isnull=True),
-                name="item_type_upload_state_idx",
-            ),
         ]
 
     def __str__(self):

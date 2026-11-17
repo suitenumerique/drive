@@ -15,6 +15,7 @@ and this project adheres to
 ### Removed
 
 - 🔥(backend) open folder restriction to every owner, drop the user allow list
+- 🔥(backend) remove the item counts from the business metrics
 
 ## [v1.0.0] - 2026-11-17
 

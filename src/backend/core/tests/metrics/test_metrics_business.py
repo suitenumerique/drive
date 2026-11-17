@@ -5,7 +5,6 @@ from unittest import mock
 from django.core.cache import cache
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
-from django.utils import timezone
 
 import pytest
 from prometheus_client import CollectorRegistry
@@ -44,53 +43,23 @@ def test_metrics_business_empty_database():
     """Every metric should be there with a zero, so that dashboards have no gap."""
     samples = _collect()
 
-    assert samples[("drive_items_count", ())] == 0
-    for state in models.ItemUploadStateChoices.values:
-        assert samples[(f"drive_items_{state}_count", ())] == 0
-    for item_type in models.ItemTypeChoices.values:
-        assert samples[(f"drive_items_{item_type}_count", ())] == 0
     assert samples[("drive_users_count", (("is_active", "true"),))] == 0
     assert samples[("drive_users_count", (("is_active", "false"),))] == 0
     assert samples[("drive_invitations_count", ())] == 0
     assert samples[("drive_accesses_count", ())] == 0
 
 
-def _file(upload_state, **kwargs):
-    """A file in the given upload state: a new file is always saved as pending."""
-    item = factories.ItemFactory(type=models.ItemTypeChoices.FILE, **kwargs)
-    models.Item.objects.filter(pk=item.pk).update(upload_state=upload_state)
-    return item
-
-
 def test_metrics_business_values():
-    """The metrics should count what is in the database, hard deleted items aside."""
+    """The metrics should count what is in the database."""
     user = factories.UserFactory()
     factories.UserFactory(is_active=False)
     folder = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, creator=user)
-    _file(models.ItemUploadStateChoices.READY, size=100, creator=user)
-    _file(models.ItemUploadStateChoices.ANALYZING, size=20, creator=user)
-    # excluded from the quotas, but still an item
-    _file(models.ItemUploadStateChoices.READY, size=1000, quota_excluded=True, creator=user)
-    # hard deleted: counted nowhere
-    _file(
-        models.ItemUploadStateChoices.READY,
-        size=5000,
-        deleted_at=timezone.now(),
-        hard_deleted_at=timezone.now(),
-        creator=user,
-    )
     factories.UserItemAccessFactory(item=folder, user=user)
     factories.InvitationFactory(item=folder)
 
     samples = _collect()
 
-    assert samples[("drive_items_count", ())] == 4
-    assert samples[("drive_items_folder_count", ())] == 1
-    assert samples[("drive_items_file_count", ())] == 3
-    assert samples[("drive_items_restriction_count", ())] == 0
-    assert samples[("drive_items_ready_count", ())] == 2
-    assert samples[("drive_items_analyzing_count", ())] == 1
-    assert samples[("drive_items_pending_count", ())] == 0
+    assert not any(name.startswith("drive_items_") for name, _labels in samples)
     assert (
         samples[("drive_users_count", (("is_active", "true"),))]
         == models.User.objects.filter(is_active=True).count()
@@ -229,7 +198,6 @@ def _plan(run):
 @pytest.mark.parametrize(
     "run, index",
     [
-        (lambda: list(business.items_queryset()), "item_type_upload_state_idx"),
         (lambda: list(business.users_queryset()), "user_is_active_idx"),
     ],
 )
@@ -239,7 +207,7 @@ def test_metrics_business_queries_use_their_index(run, index):
     a query that no longer matches it (COUNT(id), another filter) reads the whole
     item table, which takes minutes on a production sized database.
     """
-    _file(models.ItemUploadStateChoices.READY, size=10)
+    factories.UserFactory()
 
     plan = _plan(run)
 
