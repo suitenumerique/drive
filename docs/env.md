@@ -130,6 +130,7 @@ This document lists all configurable environment variables for the Drive applica
 | `PROMETHEUS_BUSINESS_METRICS_STATEMENT_TIMEOUT` | Seconds after which Postgres cancels a business metrics query | `10` |
 | `PROMETHEUS_CELERY_QUEUE_METRICS_ENABLED` | Report the length of the Celery queue on `/metrics` | `True` |
 | `PROMETHEUS_DB_METRICS_ENABLED` | Count and time the SQL queries | `True` |
+| `PROMETHEUS_MALWARE_DETECTION_METRICS_CACHE_TTL` | Seconds after which the malware detection queue is computed again | `60` |
 | `PROMETHEUS_METRICS_ENABLED` | Serve the Prometheus metrics on `/metrics` | `False` |
 | `PROMETHEUS_METRICS_SSL_REDIRECT_EXEMPT` | Take `/metrics` out of the redirect to https | `False` |
 | `PROMETHEUS_MULTIPROC_DIR` | Directory the gunicorn workers share their metrics through | `<tmp>/drive-prometheus-<uid>` |

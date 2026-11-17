@@ -42,6 +42,7 @@ scrape_configs:
 | `PROMETHEUS_CELERY_QUEUE_METRICS_ENABLED` | Report the length of the Celery queue | `True` |
 | `PROMETHEUS_BUSINESS_METRICS_ENABLED` | Report the business metrics | `True` |
 | `PROMETHEUS_BUSINESS_METRICS_CACHE_TTL` | Seconds after which the business metrics are computed again | `300` |
+| `PROMETHEUS_MALWARE_DETECTION_METRICS_CACHE_TTL` | Seconds after which the malware detection queue is computed again | `60` |
 | `PROMETHEUS_BUSINESS_METRICS_STATEMENT_TIMEOUT` | Seconds after which Postgres cancels a business metrics query | `10` |
 | `PROMETHEUS_MULTIPROC_DIR` | Directory the gunicorn workers share their metrics through | `<tmp>/drive-prometheus-<uid>` |
 
@@ -74,10 +75,11 @@ asked to the broker at scrape time (Redis brokers only).
 
 Computed from the database and kept in the shared cache.
 
-- Once the values are older than `PROMETHEUS_BUSINESS_METRICS_CACHE_TTL`, the
-  scrape that takes a refresh lock in the cache computes them again, for every
-  replica. All the other scrapes answer right away with the values they have,
-  however old: a slow computation never runs twice at once.
+- Once the values are older than `PROMETHEUS_BUSINESS_METRICS_CACHE_TTL`
+  (`PROMETHEUS_MALWARE_DETECTION_METRICS_CACHE_TTL` for the malware detection
+  queue), the scrape that takes a refresh lock in the cache computes them
+  again, for every replica. All the other scrapes answer right away with the
+  values they have, however old: a slow computation never runs twice at once.
 - Postgres cancels any of these queries after
   `PROMETHEUS_BUSINESS_METRICS_STATEMENT_TIMEOUT` seconds. The family keeps its
   previous values, and is tried again after the cache ttl.
@@ -92,8 +94,49 @@ Computed from the database and kept in the shared cache.
 | `drive_users_count{is_active}` | Users, active or not |
 | `drive_invitations_count` | Invitations to items |
 | `drive_accesses_count` | Accesses granted on items |
-| `drive_business_metrics_age_seconds{family}` | Time since a family (`users`, `invitations`, `accesses`) was computed |
+| `drive_malware_detections{status}` | Files in the malware detection queue: `pending` (waiting for a processing slot), `processing` (sent to the scanner), `failed` (analysis failed or file unsafe) |
+| `drive_malware_detection_oldest_age_seconds{status}` | Time since the oldest `pending` or `processing` detection entered the queue, `0` when none waits. For `processing`, it includes the time the file waited in `pending` |
+| `drive_business_metrics_age_seconds{family}` | Time since a family (`users`, `invitations`, `accesses`, `malware_detections`) was computed |
 | `drive_business_metrics_duration_seconds{family}` | Time its last computation took |
+
+### Malware detection queue
+
+django-lasuite keeps a detection for every file sent to analysis: `pending`
+until a processing slot is free, then `processing` until the scanner answers.
+It deletes the detection when the file is safe, and marks it `failed`
+otherwise, until an admin abandons the analysis or the item is purged.
+
+Watch how long the oldest detections have waited rather than how many there
+are: a burst of uploads fills the queue while the scanner keeps up, and a
+scanner that stopped answering can hold a few files in `processing` while
+nothing is `pending`.
+
+Both ages count from the moment the file entered the queue: django-lasuite
+records no time when a detection moves to `processing`. After a large import,
+the files reach `processing` already old while the scanner answers, so the age
+of `processing` only tells something once nothing is `pending` any more.
+
+```promql
+# the scanner does not take the files: the oldest one waits for 15 minutes
+max(drive_malware_detection_oldest_age_seconds{status="pending"}) > 900
+
+# the scanner takes the files but does not answer: nothing is pending, and a
+# file queued 30 minutes ago is still processing. Hold it for a few minutes
+# (for: 5m): the last files of an import are still processing for a moment
+# once the pending queue is empty.
+max(drive_malware_detection_oldest_age_seconds{status="processing"}) > 1800
+  and on() max(drive_malware_detections{status="pending"}) == 0
+
+# analyses failing, or unsafe files, above the usual rate: new failures over
+# the last hour, from the lowest count of the hour so that abandoned analyses
+# do not hide them
+max(drive_malware_detections{status="failed"})
+  - min_over_time(max(drive_malware_detections{status="failed"})[1h:1m]) > 10
+```
+
+The values lag behind by up to `PROMETHEUS_MALWARE_DETECTION_METRICS_CACHE_TTL`
+seconds. With the dummy backend of the development environment, nothing is
+queued: every count stays at 0.
 
 No label ever carries a path, a user or an item identifier. Every sample
 carries a `hostname` label (the pod name in Kubernetes).
@@ -115,6 +158,7 @@ every replica reports the same values. Read them with `max`, never `sum`:
 
 ```promql
 max(drive_users_count)
+max(drive_malware_detections{status="pending"})
 max(drive_celery_queue_length)
 ```
 

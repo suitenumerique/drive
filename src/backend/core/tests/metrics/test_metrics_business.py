@@ -5,8 +5,10 @@ from unittest import mock
 from django.core.cache import cache
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
+from django.utils import timezone
 
 import pytest
+from lasuite.malware_detection.models import MalwareDetection, MalwareDetectionStatus
 from prometheus_client import CollectorRegistry
 
 from core import factories, models
@@ -47,6 +49,66 @@ def test_metrics_business_empty_database():
     assert samples[("drive_users_count", (("is_active", "false"),))] == 0
     assert samples[("drive_invitations_count", ())] == 0
     assert samples[("drive_accesses_count", ())] == 0
+    for status in MalwareDetectionStatus.values:
+        assert samples[("drive_malware_detections", (("status", status),))] == 0
+    for status in ("pending", "processing"):
+        assert samples[("drive_malware_detection_oldest_age_seconds", (("status", status),))] == 0
+    assert ("drive_malware_detection_oldest_age_seconds", (("status", "failed"),)) not in samples
+
+
+def _detection(status, age):
+    """A malware detection created `age` ago: created_at is set on creation."""
+    detection = MalwareDetection.objects.create(
+        path=f"item/{timezone.now().timestamp()}/file.txt", status=status, backend="test"
+    )
+    MalwareDetection.objects.filter(pk=detection.pk).update(
+        created_at=timezone.now() - timezone.timedelta(seconds=age)
+    )
+    return detection
+
+
+def test_metrics_business_malware_detections():
+    """
+    The malware detection queue should be counted by status, with how long its
+    oldest pending and processing detections have been waiting.
+    """
+    _detection(MalwareDetectionStatus.PENDING, age=600)
+    _detection(MalwareDetectionStatus.PENDING, age=30)
+    _detection(MalwareDetectionStatus.PROCESSING, age=120)
+    _detection(MalwareDetectionStatus.FAILED, age=86400)
+    _detection(MalwareDetectionStatus.FAILED, age=60)
+    _detection(MalwareDetectionStatus.FAILED, age=10)
+
+    samples = _collect()
+
+    assert samples[("drive_malware_detections", (("status", "pending"),))] == 2
+    assert samples[("drive_malware_detections", (("status", "processing"),))] == 1
+    assert samples[("drive_malware_detections", (("status", "failed"),))] == 3
+    pending_age = samples[("drive_malware_detection_oldest_age_seconds", (("status", "pending"),))]
+    processing_age = samples[
+        ("drive_malware_detection_oldest_age_seconds", (("status", "processing"),))
+    ]
+    assert 600 <= pending_age < 610
+    assert 120 <= processing_age < 130
+    # how long the failed detections have waited means nothing: they wait no more
+    assert ("drive_malware_detection_oldest_age_seconds", (("status", "failed"),)) not in samples
+
+
+def test_metrics_business_malware_detections_own_ttl(settings):
+    """
+    The malware detection queue should be computed again after its own cache ttl,
+    while the other families keep their cached values.
+    """
+    settings.PROMETHEUS_BUSINESS_METRICS_CACHE_TTL = 300
+    settings.PROMETHEUS_MALWARE_DETECTION_METRICS_CACHE_TTL = 0
+    _collect()
+    factories.UserFactory()
+    _detection(MalwareDetectionStatus.PENDING, age=0)
+
+    samples = _collect()
+
+    assert samples[("drive_malware_detections", (("status", "pending"),))] == 1
+    assert samples[("drive_users_count", (("is_active", "true"),))] == 0
 
 
 def test_metrics_business_values():
@@ -203,9 +265,9 @@ def _plan(run):
 )
 def test_metrics_business_queries_use_their_index(run, index):
     """
-    The counts over the large tables should be answerable from their index alone:
-    a query that no longer matches it (COUNT(id), another filter) reads the whole
-    item table, which takes minutes on a production sized database.
+    The counts should be answerable from their index alone: a query that no
+    longer matches it (COUNT(id), another filter) reads the whole table, and
+    keeps getting slower as the table grows.
     """
     factories.UserFactory()
 

@@ -1833,10 +1833,10 @@ class Base(Configuration):
         environ_name="PROMETHEUS_CELERY_QUEUE_METRICS_ENABLED",
         environ_prefix=None,
     )
-    # Report the business metrics of Drive (items, users, invitations, accesses) on
-    # /metrics. They are computed from the database at most every
-    # PROMETHEUS_BUSINESS_METRICS_CACHE_TTL seconds, by one scrape for all the
-    # replicas, and the other scrapes answer with the values in the shared cache.
+    # Report the business metrics of Drive (users, invitations, accesses, malware
+    # detection queue) on /metrics. They are computed from the database at most
+    # every PROMETHEUS_BUSINESS_METRICS_CACHE_TTL seconds, by one scrape for all
+    # the replicas, and the other scrapes answer with the values in the shared cache.
     PROMETHEUS_BUSINESS_METRICS_ENABLED = values.BooleanValue(
         True,
         environ_name="PROMETHEUS_BUSINESS_METRICS_ENABLED",
@@ -1845,6 +1845,13 @@ class Base(Configuration):
     PROMETHEUS_BUSINESS_METRICS_CACHE_TTL = values.PositiveIntegerValue(
         300,
         environ_name="PROMETHEUS_BUSINESS_METRICS_CACHE_TTL",
+        environ_prefix=None,
+    )
+    # The malware detection queue is what alerts are raised on: it is computed
+    # again more often than the other business metrics, its table staying small.
+    PROMETHEUS_MALWARE_DETECTION_METRICS_CACHE_TTL = values.PositiveIntegerValue(
+        60,
+        environ_name="PROMETHEUS_MALWARE_DETECTION_METRICS_CACHE_TTL",
         environ_prefix=None,
     )
     # Postgres cancels a business metrics query running longer than this, in
