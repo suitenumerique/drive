@@ -19,7 +19,11 @@ import { ImportDropdown } from "../item-actions/ImportDropdown";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/router";
 import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import {
+  getExplorerItemHref,
+  isUnmodifiedPrimaryClick,
+} from "../../utils/utils";
 import {
   DefaultRoute,
   getDefaultRouteId,
@@ -53,6 +57,12 @@ export const AppExplorerBreadcrumbs = () => {
     (onDefaultRoute && defaultRouteId === DefaultRoute.MY_FILES) ||
     (!onDefaultRoute && item?.abilities?.children_create);
 
+  const getItemHref = useCallback(
+    (crumb: { id: string; originalId?: string }) =>
+      getExplorerItemHref(crumb, router.query.minimal),
+    [router.query.minimal],
+  );
+
   if (!item && !onDefaultRoute) {
     return null;
   }
@@ -65,6 +75,7 @@ export const AppExplorerBreadcrumbs = () => {
           currentItemId={item?.id}
           item={item}
           showMenuLastItem={true}
+          getItemHref={getItemHref}
           onGoBack={(item) => {
             onNavigate({
               type: NavigationEventType.ITEM,
@@ -185,6 +196,9 @@ export const ExplorerBreadcrumbsMobile = () => {
     }
 
     const { workspace, parent, current } = items;
+    const parentHref =
+      ORDERED_DEFAULT_ROUTES.find((route) => route.id === parent?.id)?.route ??
+      getExplorerItemHref(parent, router.query.minimal);
 
     const workspaceTitle = workspace.main_workspace
       ? t("explorer.workspaces.mainWorkspace")
@@ -213,7 +227,13 @@ export const ExplorerBreadcrumbsMobile = () => {
                 color="neutral"
                 icon={<ChevronLeft aria-hidden="true" />}
                 aria-label={t("explorer.breadcrumbs.back")}
-                onClick={() => {
+                href={parentHref}
+                draggable={false}
+                onClick={(event) => {
+                  if (!isUnmodifiedPrimaryClick(event)) {
+                    return;
+                  }
+                  event.preventDefault();
                   if (parent?.id === DefaultRoute.SHARED_WITH_ME) {
                     router.push("/explorer/items/shared-with-me");
                   } else if (parent?.id === DefaultRoute.MY_FILES) {

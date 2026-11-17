@@ -141,7 +141,12 @@ test("Search and select to move an item", async ({ page }) => {
   await clickOnRowItemActions(page, "John", "Move");
   await searchAndSelectItem(page, "Jim");
   const moveFolderModal = await getMoveFolderModal(page);
-  await expectExplorerBreadcrumbs(moveFolderModal, ["Doe", "Jane", "Jim"]);
+  await expectExplorerBreadcrumbs(moveFolderModal, [
+    "All folders",
+    "Doe",
+    "Jane",
+    "Jim",
+  ]);
   await acceptMoveItem(page);
 
   await clickToMyFiles(page);

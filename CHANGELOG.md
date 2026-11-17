@@ -17,6 +17,10 @@ and this project adheres to
 
 - 💄(frontend) drop the beta badge from the DSFR logo
 
+### Fixed
+
+- ♿️(frontend) use links for navigation and buttons for actions
+
 ## [v0.27.0] - 2026-11-09
 
 ### Added

@@ -170,9 +170,17 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
         &__container {
           display: flex;
           gap: 12px;
-          overflow: hidden;
+          flex: 1;
+          min-width: 0;
+
+          // The back link draws a 4px ring outside itself. Clipping the row
+          // cut that ring on the left. Only the titles need to be clipped.
+          &__actions {
+            flex-shrink: 0;
+          }
 
           &__info {
+            min-width: 0;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -442,8 +450,22 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
           justify-content: center;
           width: 24px;
           height: 24px;
+          padding: 0;
+          border: none;
+          background: transparent;
+          color: inherit;
+          line-height: 0;
           border-radius: 50%;
           position: relative;
+
+          .file-upload-toast__files__item__cancel-overlay {
+            display: none;
+          }
+
+          &:hover .file-upload-toast__files__item__cancel-overlay,
+          &:focus-visible .file-upload-toast__files__item__cancel-overlay {
+            display: flex;
+          }
         }
       }
     }

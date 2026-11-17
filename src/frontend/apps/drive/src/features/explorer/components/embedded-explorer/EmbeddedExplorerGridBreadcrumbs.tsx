@@ -25,11 +25,13 @@ import {
   clearFromRoute,
   getFromRoute,
   getManualNavigationItemId,
+  isUnmodifiedPrimaryClick,
 } from "../../utils/utils";
 import { useAuth } from "@/features/auth/Auth";
 
 type BaseBreadcrumbsProps = {
   onGoBack?: (item: Item | ItemBreadcrumb) => void;
+  getItemHref?: (item: Item | ItemBreadcrumb) => string;
   goToSpaces?: () => void;
   currentItemId?: string | null;
   item?: Item;
@@ -57,6 +59,7 @@ export const EmbeddedExplorerGridBreadcrumbs = ({
  */
 const BaseBreadcrumbs = ({
   onGoBack,
+  getItemHref,
   goToSpaces,
   showAllFolderItem = false,
   showMenuLastItem = false,
@@ -83,20 +86,27 @@ const BaseBreadcrumbs = ({
   };
 
   const getDefaultRouteButton = (defaultRouteData: DefaultRouteData) => {
+    const isCurrent = router.pathname === defaultRouteData.route;
+
     return (
-      <div
+      <a
         className="c__breadcrumbs__button"
         data-testid="default-route-button"
-        role="button"
-        tabIndex={0}
-        onClick={() => {
+        href={defaultRouteData.route}
+        aria-current={isCurrent ? "page" : undefined}
+        draggable={false}
+        onClick={(event) => {
+          if (!isUnmodifiedPrimaryClick(event)) {
+            return;
+          }
+          event.preventDefault();
           router.push(defaultRouteData.route);
         }}
       >
         {defaultRouteData.icon({ size: IconSize.MEDIUM })}
 
         {t(defaultRouteData.label)}
-      </div>
+      </a>
     );
   };
 
@@ -189,6 +199,7 @@ const BaseBreadcrumbs = ({
         content: (
           <BreadcrumbItemButton
             item={item}
+            href={getItemHref?.(item)}
             onClick={() => handleGoBack(item)}
           />
         ),
@@ -215,14 +226,15 @@ const BaseBreadcrumbs = ({
       breadcrumbsItems.push({
         id: "all-folders",
         content: (
-          <div
+          <button
+            type="button"
             className="c__breadcrumbs__button"
             onClick={() => {
               goToSpaces?.();
             }}
           >
             {t("explorer.breadcrumbs.all_folders")}
-          </div>
+          </button>
         ),
       });
     }
@@ -240,6 +252,7 @@ const BaseBreadcrumbs = ({
         content: (
           <BreadcrumbItemButton
             item={item}
+            href={getItemHref?.(item)}
             onClick={() => handleGoBack(item)}
             isActive={isActive}
           />
@@ -268,6 +281,7 @@ const BaseBreadcrumbs = ({
     forcedBreadcrumbsItems,
     i18n.language,
     onRestrictionUpdated,
+    getItemHref,
   ]);
 
   return <Breadcrumbs items={breadcrumbsItems} />;
@@ -277,25 +291,55 @@ export type BreadcrumbItemProps = {
   item: ItemBreadcrumb | Item;
   isActive?: boolean;
   onClick: () => void;
+  href?: string;
   rightIcon?: React.ReactNode;
 };
 export const BreadcrumbItemButton = ({
   item,
   rightIcon,
   onClick,
+  href,
   isActive = false,
 }: BreadcrumbItemProps) => {
-  return (
-    <button
-      className={clsx("c__breadcrumbs__button", {
-        active: isActive,
-      })}
-      data-testid="breadcrumb-button"
-      onClick={onClick}
-    >
+  const className = clsx("c__breadcrumbs__button", {
+    active: isActive,
+  });
+  const content = (
+    <>
       {item.title}
       <RestrictedBreadcrumbIcon item={item} />
       {rightIcon}
+    </>
+  );
+
+  if (href) {
+    return (
+      <a
+        className={className}
+        data-testid="breadcrumb-button"
+        href={href}
+        draggable={false}
+        onClick={(event) => {
+          if (!isUnmodifiedPrimaryClick(event)) {
+            return;
+          }
+          event.preventDefault();
+          onClick();
+        }}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={className}
+      data-testid="breadcrumb-button"
+      onClick={onClick}
+    >
+      {content}
     </button>
   );
 };

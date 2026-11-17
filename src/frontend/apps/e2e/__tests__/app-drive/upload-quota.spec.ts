@@ -27,7 +27,9 @@ test.describe("Upload reservations with real object storage", () => {
     });
     await page.goto("/");
     await expect(
-      page.getByRole("link", { name: "My files", exact: true }),
+      page
+        .locator(".explorer__tree__nav")
+        .getByRole("link", { name: "My files", exact: true }),
     ).toBeVisible();
   });
 
