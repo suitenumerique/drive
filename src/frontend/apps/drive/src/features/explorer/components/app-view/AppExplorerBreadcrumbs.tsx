@@ -20,7 +20,10 @@ import { useTranslation } from "react-i18next";
 import { useRouter } from "next/router";
 import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
 import { useCallback, useMemo, useState } from "react";
-import { getExplorerItemHref } from "../../utils/utils";
+import {
+  getExplorerItemHref,
+  isUnmodifiedPrimaryClick,
+} from "../../utils/utils";
 import {
   DefaultRoute,
   getDefaultRouteId,
@@ -193,6 +196,9 @@ export const ExplorerBreadcrumbsMobile = () => {
     }
 
     const { workspace, parent, current } = items;
+    const parentHref =
+      ORDERED_DEFAULT_ROUTES.find((route) => route.id === parent?.id)?.route ??
+      getExplorerItemHref(parent, router.query.minimal);
 
     const workspaceTitle = workspace.main_workspace
       ? t("explorer.workspaces.mainWorkspace")
@@ -221,7 +227,13 @@ export const ExplorerBreadcrumbsMobile = () => {
                 color="neutral"
                 icon={<ChevronLeft aria-hidden="true" />}
                 aria-label={t("explorer.breadcrumbs.back")}
-                onClick={() => {
+                href={parentHref}
+                draggable={false}
+                onClick={(event) => {
+                  if (!isUnmodifiedPrimaryClick(event)) {
+                    return;
+                  }
+                  event.preventDefault();
                   if (parent?.id === DefaultRoute.SHARED_WITH_ME) {
                     router.push("/explorer/items/shared-with-me");
                   } else if (parent?.id === DefaultRoute.MY_FILES) {
