@@ -6,18 +6,26 @@ import {
 import { getRowItem } from "./utils-embedded-grid";
 import { clickOnItemInTree } from "./utils-tree";
 
+// The same names are now links in the breadcrumb. These helpers open the
+// sidebar entry.
+const clickSidebarLink = (page: Page, name: string) =>
+  page
+    .locator(".explorer__tree__nav")
+    .getByRole("link", { name, exact: true })
+    .click();
+
 export const clickToRecent = async (page: Page) => {
-  await page.getByRole("link", { name: "Recents" }).click();
+  await clickSidebarLink(page, "Recents");
   await expectDefaultRoute(page, "Recents", "/explorer/items/recent");
 };
 
 export const clickToMyFiles = async (page: Page) => {
-  await page.getByRole("link", { name: "My files" }).click();
+  await clickSidebarLink(page, "My files");
   await expectDefaultRoute(page, "My files", "/explorer/items/my-files");
 };
 
 export const clickToSharedWithMe = async (page: Page) => {
-  await page.getByRole("link", { name: "Shared with me" }).click();
+  await clickSidebarLink(page, "Shared with me");
   await expectDefaultRoute(
     page,
     "Shared with me",
@@ -26,7 +34,7 @@ export const clickToSharedWithMe = async (page: Page) => {
 };
 
 export const clickToTrash = async (page: Page) => {
-  await page.getByRole("link", { name: "Trash" }).click();
+  await clickSidebarLink(page, "Trash");
   const breadcrumbs = page.getByTestId("trash-page-breadcrumbs");
   await expect(breadcrumbs).toBeVisible();
   await expect(breadcrumbs).toContainText("Trash");
