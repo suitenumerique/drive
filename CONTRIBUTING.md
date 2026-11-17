@@ -58,7 +58,10 @@ We use [OnlyOffice](https://www.onlyoffice.com/) and [Collabora](https://www.col
 
 ### Requirements
 
-Contributors are required to sign off their commits with `git commit --signoff`: this confirms that they have read and accepted the [Developer's Certificate of Origin 1.1](https://developercertificate.org/). For security reasons please [sign your commits with your SSH or GPG key](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification) with `git commit -S`.
+Regarding <abbr title ="Intellectual Property">IP</abbr>, the project works on an _"Inbound=outbound"_ basis, which means that it doesn't require you to grant to it any extra rights beyond what is stated in the licence text: there is no <abbr title ="Contributor Licence Agreement">CLA</abbr> nor any copyright assignment, but you have to confirm that you own the required rights in order to submit your contribution under the licence of the project. This means that you have to carefully read the terms of the [licence](LICENSE) if you're not already familiar with it, read the [Developer's Certificate of Origin 1.1](https://developercertificate.org/) and confirm that you accept both by signing off your commits with `git commit --signoff`.
+
+For security reasons, please also [cryptographically sign your commits with your SSH or GPG key](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification) with `git commit -S` (so the whole command would look like `git commit -S --signoff -m "✨(frontend) mention users in the comments"`).
+
 
 ### Creating an Issue
 
