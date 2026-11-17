@@ -671,10 +671,10 @@
   resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/integration/-/integration-1.0.2.tgz#ed0000f4b738c5a19bb60f5b80a9a2f5d9414234"
   integrity sha512-npOotZQSyu6SffHiPP+jQVOkJ3qW2KE2cANhEK92sNLX9uZqQaCqljO5GhzsBmh0lB76fiXnrr9i8SIpnDUSZg==
 
-"@gouvfr-lasuite/ui-components@1.5.0":
-  version "1.5.0"
-  resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/ui-components/-/ui-components-1.5.0.tgz#05195d957a231aa5f96c7f200369eb08999b1bd5"
-  integrity sha512-kngtVeex4fYPNC0K7YxNG6PzNxOPdzKjaoe61lN9enBQ3shY1PjdR7rzwaVkHqWU3y9mtaX219V5fjQ20le9NQ==
+"@gouvfr-lasuite/ui-components@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/ui-components/-/ui-components-2.0.0.tgz#b5250b890825d38bd3689627ef8d0bb2c5947a0c"
+  integrity sha512-3FgfmF+29gZU472gZ4Y39O5WvQOAoCzBS8y34AYLED1Wt1K3j/Dnjplh8sN+yubD57BUaytqkt5PCo/+RwMrAQ==
   dependencies:
     "@dnd-kit/core" "6.3.1"
     "@dnd-kit/modifiers" "9.0.0"
@@ -691,6 +691,7 @@
     "@react-stately/calendar" "3.9.3"
     "@react-stately/datepicker" "3.16.1"
     "@tanstack/react-table" "8.21.3"
+    altcha "3.3.0"
     classnames "2.5.1"
     clsx "2.1.1"
     cmdk "1.0.4"
@@ -3625,6 +3626,13 @@ alien-signals@^0.4.9:
   resolved "https://registry.yarnpkg.com/alien-signals/-/alien-signals-0.4.14.tgz#9ff8f72a272300a51692f54bd9bbbada78fbf539"
   integrity sha512-itUAVzhczTmP2U5yX67xVpsbbOiquusbWVyA9N+sy6+r6YVbFkahXvNCeEPWEOMhwDYwbVbGHFkVL03N9I5g+Q==
 
+altcha@3.3.0:
+  version "3.3.0"
+  resolved "https://registry.yarnpkg.com/altcha/-/altcha-3.3.0.tgz#e2c52081d82899ae2050ca0763b984f856a56f93"
+  integrity sha512-olIeb1A5K2wzbFSxV3qgeknygbdJt7qmzCfAZn704PWsE9iGrfc/oTw1FfiESjsvaJf8Uk6elJX8opKq5u7dTw==
+  dependencies:
+    hash-wasm "^4.12.0"
+
 ansi-escapes@^4.2.1:
   version "4.3.2"
   resolved "https://registry.yarnpkg.com/ansi-escapes/-/ansi-escapes-4.3.2.tgz#6b2291d1db7d98b6521d5f1efa42d0f3a9feb65e"
@@ -5249,6 +5257,11 @@ has-tostringtag@^1.0.2:
   integrity sha512-NqADB8VjPFLM2V0VvHUewwwsw0ZWBaIdgo+ieHtK3hasLz4qeCRjYcqfB6AQrBggRKppKF8L52/VqdVsO47Dlw==
   dependencies:
     has-symbols "^1.0.3"
+
+hash-wasm@^4.12.0:
+  version "4.13.0"
+  resolved "https://registry.yarnpkg.com/hash-wasm/-/hash-wasm-4.13.0.tgz#714d58df2b630385ec6286833095b871e8d7e90e"
+  integrity sha512-GrWl7wsV46fKIXQZB5ebskLZLAmKL6d9RS0fspCxDeQyjoNu1AfTJTMLPOJyfzaQm0ldFiwFN21/w+sE/kgEFQ==
 
 hasown@^2.0.2, hasown@^2.0.3, hasown@^2.0.4:
   version "2.0.4"
