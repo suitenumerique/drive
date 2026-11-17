@@ -9,13 +9,13 @@ const themesImages = {
   },
   "dsfr-dark": {
     favicon: "/assets/favicon.png",
-    logo: "/assets/logo_beta.svg",
-    "logo-icon": "/assets/logo-icon_beta.svg",
+    logo: "/assets/dsfr_logo.svg",
+    "logo-icon": "/assets/dsfr_logo_icon.svg",
   },
   "dsfr-light": {
     favicon: "/assets/favicon.png",
-    logo: "/assets/logo_beta.svg",
-    "logo-icon": "/assets/logo-icon_beta.svg",
+    logo: "/assets/dsfr_logo.svg",
+    "logo-icon": "/assets/dsfr_logo_icon.svg",
   },
 };
 

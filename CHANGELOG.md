@@ -12,6 +12,10 @@ and this project adheres to
 
 - ✨(frontend) set an expiration date on item share links
 
+### Changed
+
+- 💄(frontend) drop the beta badge from the DSFR logo
+
 ## [v0.27.0] - 2026-11-09
 
 ### Added
