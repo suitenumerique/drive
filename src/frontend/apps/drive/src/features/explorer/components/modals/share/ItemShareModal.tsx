@@ -48,6 +48,7 @@ import {
   getLinkExpirationReset,
 } from "@/features/explorer/utils/linkExpiration";
 import posthog from "posthog-js";
+import { isUnmodifiedPrimaryClick } from "@/features/explorer/utils/utils";
 
 type WorkspaceShareModalProps = {
   isOpen: boolean;
@@ -648,13 +649,20 @@ const RedirectionToParentItem = ({
   return (
     <div>
       {t("share_modal.options.top_message.inherited_edit")}{" "}
-      <button
-        type="button"
+      <a
+        href={`/explorer/items/${itemId}`}
         className="workspace-share-modal__parent-folder-link"
-        onClick={handleRedirectToParentItem}
+        draggable={false}
+        onClick={(event) => {
+          if (!isUnmodifiedPrimaryClick(event)) {
+            return;
+          }
+          event.preventDefault();
+          handleRedirectToParentItem();
+        }}
       >
         {t("share_modal.options.top_message.parent_folder")}
-      </button>
+      </a>
     </div>
   );
 };

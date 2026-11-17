@@ -156,7 +156,7 @@ MultiUserTest(
     // Open share modal on the sub folder and click the parent folder link
     const shareModal = await openShareModal(userA.page);
     await clickOnMemberItemRole(userA.page, "user@webkit.test");
-    const parentFolderLink = userA.page.getByRole("button", {
+    const parentFolderLink = userA.page.getByRole("link", {
       name: "the parent folder.",
     });
     await expect(parentFolderLink).toBeVisible();
