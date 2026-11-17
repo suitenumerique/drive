@@ -450,8 +450,22 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
           justify-content: center;
           width: 24px;
           height: 24px;
+          padding: 0;
+          border: none;
+          background: transparent;
+          color: inherit;
+          line-height: 0;
           border-radius: 50%;
           position: relative;
+
+          .file-upload-toast__files__item__cancel-overlay {
+            display: none;
+          }
+
+          &:hover .file-upload-toast__files__item__cancel-overlay,
+          &:focus-visible .file-upload-toast__files__item__cancel-overlay {
+            display: flex;
+          }
         }
       }
     }

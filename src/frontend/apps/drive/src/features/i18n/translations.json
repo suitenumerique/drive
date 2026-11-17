@@ -553,7 +553,8 @@
                 "organization_quota_exceeded": "Quota exceeded",
                 "no_organization": "Upload not allowed",
                 "not_activated": "Upload not allowed"
-              }
+              },
+              "cancel": "Cancel upload of {{name}}"
             },
             "cancel_modal": {
               "title": "Leave upload?",
@@ -1302,7 +1303,8 @@
                 "organization_quota_exceeded": "Quota atteint",
                 "no_organization": "Téléversement non autorisé",
                 "not_activated": "Téléversement non autorisé"
-              }
+              },
+              "cancel": "Annuler le transfert de {{name}}"
             },
             "cancel_modal": {
               "title": "Quitter le transfert ?",
@@ -2051,7 +2053,8 @@
                 "organization_quota_exceeded": "Quotum bereikt",
                 "no_organization": "Uploaden niet toegestaan",
                 "not_activated": "Uploaden niet toegestaan"
-              }
+              },
+              "cancel": "Upload van {{name}} annuleren"
             },
             "cancel_modal": {
               "title": "Upload verlaten?",

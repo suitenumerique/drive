@@ -40,7 +40,6 @@ export const FileRow = ({
   onCancelFile?: (name: string) => void;
 }) => {
   const { t } = useTranslation();
-  const [hovered, setHovered] = useState(false);
 
   return (
     <div
@@ -91,31 +90,21 @@ export const FileRow = ({
           </Tooltip>
         )}
         {meta.status === FileUploadStatus.UPLOADING && (
-          <div
-            role="button"
-            tabIndex={0}
+          <button
+            type="button"
             className="file-upload-toast__files__item__progress--hoverable"
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
+            aria-label={t("explorer.actions.upload.files.cancel", { name })}
             onClick={() => onCancelFile?.(name)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onCancelFile?.(name);
-              }
-            }}
           >
             <CircularProgress progress={meta.progress} />
-            {hovered && (
-              <div className="file-upload-toast__files__item__cancel-overlay">
-                <XMark
-                  size={16}
-                  aria-hidden="true"
-                  className="file-upload-toast__files__item__cancel-icon"
-                />
-              </div>
-            )}
-          </div>
+            <span className="file-upload-toast__files__item__cancel-overlay">
+              <XMark
+                size={16}
+                aria-hidden="true"
+                className="file-upload-toast__files__item__cancel-icon"
+              />
+            </span>
+          </button>
         )}
       </div>
     </div>
