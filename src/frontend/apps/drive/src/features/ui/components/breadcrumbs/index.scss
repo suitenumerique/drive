@@ -38,6 +38,14 @@
     font-weight: 600;
     color: var(--c--contextuals--content--semantic--neutral--primary);
   }
+
+  // The bar clips anything drawn outside the crumb, so the browser outline
+  // of a link only left the side strokes. Draw the ring inside the crumb.
+  &:focus-visible {
+    outline: 2px solid
+      var(--c--contextuals--content--semantic--neutral--primary);
+    outline-offset: -2px;
+  }
 }
 
 .c__breadcrumbs__restricted {

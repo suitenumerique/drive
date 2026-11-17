@@ -48,6 +48,35 @@ export const getManualNavigationItemId = () => {
 };
 
 /**
+ * Lets the browser handle modified clicks on links (new tab, new window,
+ * download) instead of the client-side router.
+ */
+export const isUnmodifiedPrimaryClick = (event: {
+  button: number;
+  metaKey: boolean;
+  ctrlKey: boolean;
+  shiftKey: boolean;
+  altKey: boolean;
+}) =>
+  event.button === 0 &&
+  !event.metaKey &&
+  !event.ctrlKey &&
+  !event.shiftKey &&
+  !event.altKey;
+
+export const getExplorerItemHref = (
+  item: { id: string; originalId?: string },
+  minimal?: string | string[],
+) => {
+  const id = item.originalId ?? item.id;
+  const minimalValue = Array.isArray(minimal) ? minimal[0] : minimal;
+  if (!minimalValue) {
+    return `/explorer/items/${id}`;
+  }
+  return `/explorer/items/${id}?minimal=${encodeURIComponent(minimalValue)}`;
+};
+
+/**
  * Temporary solution to redirect to the last visited item, by default the personal root folder.
  * But we are waiting for the backend to be ready to handle this.
  *
