@@ -64,7 +64,7 @@ def get_or_create_user_by_sub(sub, email=None):
         email: Email to store on a newly created user
 
     Returns:
-        User instance, or None if unknown and OIDC_CREATE_USER is unset
+        User instance, or None if unknown and MENSHEN_CREATE_USER is unset
 
     Raises:
         SuspiciousOperation: If the sub is missing or invalid, the email of a user
@@ -82,7 +82,7 @@ def get_or_create_user_by_sub(sub, email=None):
     try:
         user = User.objects.get(sub=sub)
     except User.DoesNotExist:
-        if not settings.OIDC_CREATE_USER:
+        if not settings.MENSHEN_CREATE_USER:
             return None
 
         # A second account sharing this email would break the lookups by email that

@@ -95,6 +95,7 @@ This document lists all configurable environment variables for the Drive applica
 | `LOGGING_LEVEL_LOGGERS_ROOT` | Logging level for root logger | `INFO` |
 | `MAX_PAGE_SIZE` | Limit the maximum page size the client may request | `200` |
 | `MEDIA_BASE_URL` | Base URL for media files | `None` |
+| `MENSHEN_CREATE_USER` | Automatically create users on token exchange login | `True` |
 | `OIDC_AUTH_REQUEST_EXTRA_PARAMS` | Extra parameters for OIDC auth requests | `{}` |
 | `OIDC_ALLOW_DUPLICATE_EMAILS` | Allow multiple users with same email | `False` |
 | `OIDC_CREATE_USER` | Automatically create users on OIDC login | `True` |

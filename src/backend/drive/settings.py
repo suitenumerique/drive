@@ -1574,6 +1574,11 @@ class Base(Configuration):
     MENSHEN_CLIENT_SECRET = SecretFileValue(
         None, environ_name="MENSHEN_CLIENT_SECRET", environ_prefix=None
     )
+    MENSHEN_CREATE_USER = values.BooleanValue(
+        default=True,
+        environ_name="MENSHEN_CREATE_USER",
+        environ_prefix=None,
+    )
 
     # Scope an exchanged token must carry to reach an external API action, by resource
     # and action, following La Suite's "service:resource:action" convention. An action

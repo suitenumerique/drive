@@ -139,8 +139,8 @@ def test_menshen_authenticate_inactive_user(menshen_backend_conf):
 
 
 def test_menshen_authenticate_unknown_sub_without_user_creation(menshen_backend_conf):
-    """No account should be provisioned while OIDC_CREATE_USER is off."""
-    menshen_backend_conf.OIDC_CREATE_USER = False
+    """No account should be provisioned while MENSHEN_CREATE_USER is off."""
+    menshen_backend_conf.MENSHEN_CREATE_USER = False
 
     with responses.RequestsMock() as rsps:
         introspection_mock(rsps)
