@@ -51,8 +51,8 @@ class ResourceServerClientPermission(permissions.BasePermission):
     Permission class for resource server views.
     This provides a way to open the resource server views to a limited set of
     Service Providers.
-    Note: See MenshenPermission for more complex permission system, based on
-    the Service Provider ID and the requested scopes.
+    Note: see MenshenPermission for a permission system based on the requested
+    scopes.
     """
 
     def has_permission(self, request, view):

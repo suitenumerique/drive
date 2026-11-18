@@ -7,8 +7,8 @@ Drive implements resource server, so it means it can be used from an external ap
 ## Prerequisites
 
 In order to activate the resource server, you must choose to enable one or both of these authentication methods:
-- Token Echange (using [Menshen](https://github.com/suitenumerique/menshen), LaSuite's Token Exchange Server implmentaiton)
-- Access token from the the IdP
+- Token Exchange (using [Menshen](https://github.com/suitenumerique/menshen), LaSuite's Token Exchange Server implementation)
+- Access token from the IdP
 
 ### Token Exchange (Menshen) setup
 
@@ -20,11 +20,17 @@ MENSHEN_CLIENT_SECRET=
 MENSHEN_REQUIRED_SCOPES=
 ```
 
-Follows the reference implementation, see the [documentation](https://github.com/suitenumerique/menshen/blob/main/docs/la-suite.md)
+Current integration follows the reference implementation, see the [documentation](https://github.com/suitenumerique/menshen/blob/main/docs/la-suite.md)
+
+`MENSHEN_REQUIRED_SCOPES` maps a resource to its actions, and each action to the scope it requires. Here is an example of a valid value, on a single line as an environment file expects it.
+
+```
+MENSHEN_REQUIRED_SCOPES={"items": {"list": "drive:item:list", "retrieve": "drive:item:retrieve", "create": "drive:item:create", "children": {"GET": "drive:item:list-children", "POST": "drive:item:create-children"}, "upload_ended": "drive:item:upload-ended"}}
+```
 
 ### Access token setup
 
-On Drive you need to setup the following environement variables
+On Drive you need to setup the following environment variables
 
 ```
 OIDC_RESOURCE_SERVER_ENABLED=True
@@ -36,7 +42,7 @@ OIDC_RS_AUDIENCE_CLAIM=
 OIDC_RS_ALLOWED_AUDIENCES=
 ```
 
-Follows the reference implementation in `django-lasuite`, see the [documentation](https://github.com/suitenumerique/django-lasuite/blob/main/documentation/how-to-use-oidc-resource-server-backend.md)
+Current integration follows the reference implementation in `django-lasuite`, see the [documentation](https://github.com/suitenumerique/django-lasuite/blob/main/documentation/how-to-use-oidc-resource-server-backend.md)
 
 
 ## Customise allowed routes
