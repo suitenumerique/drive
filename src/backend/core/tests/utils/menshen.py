@@ -1,5 +1,7 @@
 """Utils for testing the external API authenticated through Menshen token exchange."""
 
+from rest_framework.test import APIClient
+
 MENSHEN_SERVER_URL = "https://menshen.example.com"
 MENSHEN_INTROSPECTION_URL = f"{MENSHEN_SERVER_URL}/auth/token/introspect/"
 MENSHEN_CLIENT_ID = "drive"
@@ -52,3 +54,25 @@ def menshen_introspection_response(**overrides):
         "token_type": "urn:ietf:params:oauth:token-type:access_token",
         **overrides,
     }
+
+
+def introspection_mock(httpx2_mock, **overrides):
+    """Answer Menshen's introspection with an active token."""
+    return httpx2_mock.post(MENSHEN_INTROSPECTION_URL).respond(
+        json=menshen_introspection_response(**overrides)
+    )
+
+
+def menshen_api_client():
+    """Build an API client carrying an exchanged token."""
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {MENSHEN_TOKEN}")
+
+    return client
+
+
+def menshen_client(httpx2_mock, scope, **overrides):
+    """Build an API client whose exchanged token carries the given scopes."""
+    introspection_mock(httpx2_mock, scope=scope, **overrides)
+
+    return menshen_api_client()

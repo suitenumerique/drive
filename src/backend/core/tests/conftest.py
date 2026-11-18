@@ -14,11 +14,7 @@ import structlog
 from cryptography.fernet import Fernet
 
 from core import factories
-from core.tests.utils.menshen import (
-    MENSHEN_INTROSPECTION_URL,
-    menshen_backend_setup,
-    menshen_introspection_response,
-)
+from core.tests.utils.menshen import introspection_mock, menshen_backend_setup
 from core.tests.utils.urls import reload_urls
 
 USER = "user"
@@ -192,7 +188,7 @@ def menshen_backend(menshen_backend_conf, httpx2_mock):
     A fixture enabling the Menshen token exchange backend.
     Including a mocked introspection endpoint answering with an active token.
     """
-    httpx2_mock.post(MENSHEN_INTROSPECTION_URL).respond(json=menshen_introspection_response())
+    introspection_mock(httpx2_mock)
 
     yield httpx2_mock
 

@@ -16,7 +16,7 @@ from core.tests.utils.menshen import (
     MENSHEN_INTROSPECTION_URL,
     MENSHEN_SUB,
     MENSHEN_TOKEN,
-    menshen_introspection_response,
+    introspection_mock,
 )
 
 pytestmark = pytest.mark.django_db
@@ -30,13 +30,6 @@ def build_request(token=MENSHEN_TOKEN, scheme="Bearer"):
         return APIRequestFactory().get("/")
 
     return APIRequestFactory().get("/", HTTP_AUTHORIZATION=f"{scheme} {token}")
-
-
-def introspection_mock(httpx2_mock, **overrides):
-    """Register an active introspection response on a mocked Menshen."""
-    return httpx2_mock.post(MENSHEN_INTROSPECTION_URL).respond(
-        json=menshen_introspection_response(**overrides)
-    )
 
 
 # Deferring to the next authentication backend

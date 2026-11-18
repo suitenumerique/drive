@@ -13,35 +13,13 @@ active response always names one.
 """
 
 import pytest
-from rest_framework.test import APIClient
 
 from core import factories, models
-from core.tests.utils.menshen import (
-    MENSHEN_INTROSPECTION_URL,
-    MENSHEN_SOURCE,
-    MENSHEN_TOKEN,
-    menshen_introspection_response,
-)
+from core.tests.utils.menshen import MENSHEN_SOURCE, menshen_client
 
 pytestmark = pytest.mark.django_db
 
 # pylint: disable=unused-argument
-
-
-def menshen_client(httpx2_mock, scope, source=MENSHEN_SOURCE):
-    """Build an API client whose exchanged token carries the given scopes.
-
-    `source` is the audience id of the service that exchanged the token, which Menshen
-    reports as the introspection `client_id`.
-    """
-    httpx2_mock.post(MENSHEN_INTROSPECTION_URL).respond(
-        json=menshen_introspection_response(scope=scope, client_id=source)
-    )
-
-    client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {MENSHEN_TOKEN}")
-
-    return client
 
 
 def test_api_items_create_root_menshen(menshen_backend_conf, httpx2_mock, user_specific_sub):
@@ -108,7 +86,7 @@ def test_api_items_create_menshen_source_not_configured(
         MENSHEN_SOURCE: {"quota_excluded": True}
     }
 
-    response = menshen_client(httpx2_mock, "drive:item:create", source="other_service").post(
+    response = menshen_client(httpx2_mock, "drive:item:create", client_id="other_service").post(
         "/external_api/v1.0/items/",
         {"size": 8, "type": models.ItemTypeChoices.FILE, "filename": "file.txt"},
     )

@@ -7,10 +7,9 @@ more so as it is the one path that provisions users Drive has never seen.
 """
 
 import pytest
-from rest_framework.test import APIClient
 
 from core import factories, models
-from core.tests.utils.menshen import MENSHEN_SUB, MENSHEN_TOKEN
+from core.tests.utils.menshen import MENSHEN_SUB, menshen_api_client
 
 pytestmark = pytest.mark.django_db
 
@@ -40,14 +39,6 @@ def set_can_access(settings, can_access):
     }
 
 
-def build_client():
-    """Build an API client carrying an exchanged token."""
-    client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {MENSHEN_TOKEN}")
-
-    return client
-
-
 def test_api_items_list_menshen_entitled_user(
     menshen_backend_conf, menshen_backend, user_specific_sub
 ):
@@ -58,7 +49,7 @@ def test_api_items_list_menshen_entitled_user(
         item=item, user=user_specific_sub, role=models.RoleChoices.READER
     )
 
-    response = build_client().get("/external_api/v1.0/items/")
+    response = menshen_api_client().get("/external_api/v1.0/items/")
 
     assert response.status_code == 200
 
@@ -73,7 +64,7 @@ def test_api_items_list_menshen_user_not_entitled(
         item=item, user=user_specific_sub, role=models.RoleChoices.READER
     )
 
-    response = build_client().get("/external_api/v1.0/items/")
+    response = menshen_api_client().get("/external_api/v1.0/items/")
 
     assert response.status_code == 403
     # Refused for the entitlement, not for a missing scope or a missing access.
@@ -88,7 +79,7 @@ def test_api_items_list_menshen_unknown_user_not_entitled(menshen_backend_conf, 
     """
     set_can_access(menshen_backend_conf, False)
 
-    response = build_client().get("/external_api/v1.0/items/")
+    response = menshen_api_client().get("/external_api/v1.0/items/")
 
     assert response.status_code == 403
     assert response.json() == REFUSED

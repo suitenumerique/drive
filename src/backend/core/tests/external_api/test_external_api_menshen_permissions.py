@@ -10,16 +10,11 @@ scope it demands. An action left out of that mapping is never reachable.
 from types import SimpleNamespace
 
 import pytest
-from rest_framework.test import APIClient
 
 from core import factories, models
 from core.external_api.authentication import MenshenAuthentication
 from core.external_api.permissions import MenshenPermission
-from core.tests.utils.menshen import (
-    MENSHEN_INTROSPECTION_URL,
-    MENSHEN_TOKEN,
-    menshen_introspection_response,
-)
+from core.tests.utils.menshen import menshen_client
 
 pytestmark = pytest.mark.django_db
 
@@ -50,18 +45,6 @@ def build_view(action, resource="items", actions=EXTERNAL_API_ACTIONS):
         view.resource_server_actions = actions
 
     return view
-
-
-def menshen_client(httpx2_mock, scope):
-    """Build an API client whose exchanged token carries the given scopes."""
-    httpx2_mock.post(MENSHEN_INTROSPECTION_URL).respond(
-        json=menshen_introspection_response(scope=scope)
-    )
-
-    client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Bearer {MENSHEN_TOKEN}")
-
-    return client
 
 
 # The permission class
