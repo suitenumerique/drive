@@ -28,7 +28,7 @@ class MenshenPermission(permissions.BasePermission):
             # Let DRF routers return a 405 for unsupported methods
             return True
 
-        if hasattr(view, "resource_server_actions") and action not in view.resource_server_actions:
+        if action not in view.resource_server_actions:
             return False
 
         required_scope = settings.MENSHEN_REQUIRED_SCOPES.get(
@@ -68,10 +68,7 @@ class ResourceServerClientPermission(permissions.BasePermission):
         if not request.user.is_authenticated:
             return False
 
-        if (
-            hasattr(view, "resource_server_actions")
-            and view.action not in view.resource_server_actions
-        ):
+        if view.action not in view.resource_server_actions:
             return False
 
         # When used as a resource server, the request has a token audience

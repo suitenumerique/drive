@@ -21,15 +21,15 @@ from core.external_api.permissions import MenshenPermission, ResourceServerClien
 
 
 class ResourceServerRestrictionMixin:
-    """
-    Mixin for Resource Server Viewsets to provide shortcut to get
-    configured actions for a given resource.
+    """Restrict a resource server viewset to the actions EXTERNAL_API opens for its resource.
+
+    Subclasses declare `resource`, the EXTERNAL_API key of the resource they serve.
     """
 
-    def _get_resource_server_actions(self, resource_name):
-        """Get resource_server_actions from settings."""
-        external_api_config = settings.EXTERNAL_API.get(resource_name, {})
-        return list(external_api_config.get("actions", []))
+    @property
+    def resource_server_actions(self):
+        """Actions EXTERNAL_API opens for this viewset's resource."""
+        return list(settings.EXTERNAL_API.get(self.resource, {}).get("actions", []))
 
     def get_permissions(self):
         """Apply the resource server checks to every action, whatever its permission classes."""
@@ -43,11 +43,7 @@ class ResourceServerItemViewSet(ResourceServerRestrictionMixin, ItemViewSet):
     authentication_classes = [MenshenAuthentication, ResourceServerAuthentication]
 
     permission_classes = [ItemPermission]
-
-    @property
-    def resource_server_actions(self):
-        """Build resource_server_actions from settings."""
-        return self._get_resource_server_actions(self.resource)
+    resource = "items"
 
     def get_create_extra_attributes(self):
         """Apply per-audience item attributes from EXTERNAL_API_AUD_ITEM_ATTRIBUTES."""
@@ -61,11 +57,7 @@ class ResourceServerUserViewSet(ResourceServerRestrictionMixin, UserViewSet):
     authentication_classes = [ResourceServerAuthentication]
 
     permission_classes = [IsSelf]
-
-    @property
-    def resource_server_actions(self):
-        """Get resource_server_actions from settings."""
-        return self._get_resource_server_actions("users")
+    resource = "users"
 
 
 class ResourceServerItemAccessViewSet(ResourceServerRestrictionMixin, ItemAccessViewSet):
@@ -74,11 +66,7 @@ class ResourceServerItemAccessViewSet(ResourceServerRestrictionMixin, ItemAccess
     authentication_classes = [ResourceServerAuthentication]
 
     permission_classes = [ItemAccessPermission]
-
-    @property
-    def resource_server_actions(self):
-        """Get resource_server_actions from settings."""
-        return self._get_resource_server_actions("item_access")
+    resource = "item_access"
 
 
 class ResourceServerInvitationViewSet(ResourceServerRestrictionMixin, InvitationViewset):
@@ -87,8 +75,4 @@ class ResourceServerInvitationViewSet(ResourceServerRestrictionMixin, Invitation
     authentication_classes = [ResourceServerAuthentication]
 
     permission_classes = [InvitationPermission]
-
-    @property
-    def resource_server_actions(self):
-        """Get resource_server_actions from settings."""
-        return self._get_resource_server_actions("item_invitation")
+    resource = "item_invitation"

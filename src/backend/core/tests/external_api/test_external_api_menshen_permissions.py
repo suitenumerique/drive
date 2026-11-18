@@ -195,12 +195,13 @@ def test_permission_refuses_a_view_without_a_resource(settings):
     assert MenshenPermission().has_permission(request, build_view("list", resource=None)) is False
 
 
-def test_permission_skips_the_action_check_for_an_unrestricted_view(settings):
-    """A view declaring no resource_server_actions should be gated by scope alone."""
+def test_permission_requires_the_view_to_declare_its_actions(settings):
+    """A view declaring no resource_server_actions should fail, not open every action."""
     settings.MENSHEN_REQUIRED_SCOPES = {"items": {"list": "drive:item:list"}}
     request = build_request(["drive:item:list"])
 
-    assert MenshenPermission().has_permission(request, build_view("list", actions=None)) is True
+    with pytest.raises(AttributeError):
+        MenshenPermission().has_permission(request, build_view("list", actions=None))
 
 
 # Through the API
