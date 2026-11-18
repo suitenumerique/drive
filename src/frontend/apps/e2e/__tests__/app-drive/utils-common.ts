@@ -78,7 +78,7 @@ export const getStorageState = (username: string) => {
   return `${__dirname}/../../playwright/.auth/user-${username}.json`;
 };
 
-type UserFixture = { context: BrowserContext; page: Page };
+export type UserFixture = { context: BrowserContext; page: Page };
 
 type TwoUsers = {
   userA: UserFixture;

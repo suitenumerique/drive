@@ -85,6 +85,17 @@ body {
   z-index: 1000;
 }
 
+// The 403 page passes the formatted page title as file.title so FilePreview
+// sets document.title correctly. Hide both visual title elements: the header
+// h1 and the preview-message paragraph — the description already explains the
+// situation and the formatted title includes "| Drive" which looks wrong there.
+.drive-403-preview {
+  .file-preview__title,
+  .preview-message__title {
+    display: none;
+  }
+}
+
 .c__datagrid--empty,
 .c__datagrid thead {
   transition:
