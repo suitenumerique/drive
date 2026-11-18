@@ -772,7 +772,7 @@
 	--c--components--datagrid--header--color: var(--c--contextuals--content--semantic--neutral--primary);
 	--c--components--datagrid--header--size: 12px;
 	--c--components--datagrid--header--weight: 500;
-	--c--components--datagrid--body--background-color-hover: var(--c--contextuals--background--semantic--neutral--tertiary);
+	--c--components--datagrid--body--background-color-hover: var(--c--contextuals--background--semantic--contextual--primary);
 	--c--components--badge--font-size: var(--c--globals--font--sizes--xs);
 	--c--components--badge--border-radius: 12px;
 	--c--components--badge--padding-inline: var(--c--globals--spacings--xs);
@@ -789,6 +789,11 @@
 	--c--components--badge--warning--color: var(--c--contextuals--content--semantic--warning--secondary);
 	--c--components--badge--info--background-color: var(--c--contextuals--background--semantic--info--secondary);
 	--c--components--badge--info--color: var(--c--contextuals--content--semantic--info--secondary);
+	--c--components--gaufre--widgetpath: 'https://static.suite.anct.gouv.fr/widgets/lagaufre.js';
+	--c--components--gaufre--apiurl: 'https://lasuite.numerique.gouv.fr/api/services';
+	--c--components--favicon--src: '/assets/favicon.png';
+	--c--components--logo--src: url('/assets/logo_beta.svg');
+	--c--components--logo-icon--src: url('/assets/logo-icon_beta.svg');
 }
 .cunningham-theme--dark{
 	--c--globals--colors--logo-1-light: #4844AD;
