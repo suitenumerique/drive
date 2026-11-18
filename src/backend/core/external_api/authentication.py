@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import SuspiciousOperation, ValidationError
 
-import requests
+import httpx2
 from lasuite.oidc_resource_server.authentication import (
     ResourceServerAuthentication as LaSuiteResourceServerAuthentication,
 )
@@ -145,7 +145,12 @@ class MenshenAuthentication(authentication.BaseAuthentication):
 
         try:
             response = client.introspect(IntrospectionRequest(token=token))
-        except (requests.RequestException, ResponseParsingError) as e:
+        except (
+            httpx2.HTTPError,
+            ResponseParsingError,
+            httpx2.InvalidURL,
+            UnicodeDecodeError,
+        ) as e:
             logger.warning("Menshen introspection failed: %s", e)
             return None
 

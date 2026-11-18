@@ -187,19 +187,14 @@ def menshen_backend_conf(settings):
 
 
 @pytest.fixture
-def menshen_backend(menshen_backend_conf):
+def menshen_backend(menshen_backend_conf, httpx2_mock):
     """
     A fixture enabling the Menshen token exchange backend.
     Including a mocked introspection endpoint answering with an active token.
     """
-    with responses.RequestsMock() as rsps:
-        rsps.add(
-            responses.POST,
-            MENSHEN_INTROSPECTION_URL,
-            json=menshen_introspection_response(),
-        )
+    httpx2_mock.post(MENSHEN_INTROSPECTION_URL).respond(json=menshen_introspection_response())
 
-        yield rsps
+    yield httpx2_mock
 
 
 @pytest.fixture(name="indexer_settings")

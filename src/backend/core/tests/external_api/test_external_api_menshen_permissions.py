@@ -10,7 +10,6 @@ scope it demands. An action left out of that mapping is never reachable.
 from types import SimpleNamespace
 
 import pytest
-import responses
 from rest_framework.test import APIClient
 
 from core import factories, models
@@ -53,12 +52,10 @@ def build_view(action, resource="items", actions=EXTERNAL_API_ACTIONS):
     return view
 
 
-def menshen_client(rsps, scope):
+def menshen_client(httpx2_mock, scope):
     """Build an API client whose exchanged token carries the given scopes."""
-    rsps.add(
-        responses.POST,
-        MENSHEN_INTROSPECTION_URL,
-        json=menshen_introspection_response(scope=scope),
+    httpx2_mock.post(MENSHEN_INTROSPECTION_URL).respond(
+        json=menshen_introspection_response(scope=scope)
     )
 
     client = APIClient()
@@ -207,7 +204,9 @@ def test_permission_requires_the_view_to_declare_its_actions(settings):
 # Through the API
 
 
-def test_api_items_list_with_the_required_scope(menshen_backend_conf, user_specific_sub):
+def test_api_items_list_with_the_required_scope(
+    menshen_backend_conf, httpx2_mock, user_specific_sub
+):
     """A token carrying the list scope should be allowed to list items."""
     # A file would still be pending upload, which the listing leaves out.
     item = factories.ItemFactory(
@@ -217,73 +216,76 @@ def test_api_items_list_with_the_required_scope(menshen_backend_conf, user_speci
         item=item, user=user_specific_sub, role=models.RoleChoices.READER
     )
 
-    with responses.RequestsMock() as rsps:
-        response = menshen_client(rsps, "drive:item:list").get("/external_api/v1.0/items/")
+    response = menshen_client(httpx2_mock, "drive:item:list").get("/external_api/v1.0/items/")
 
     assert response.status_code == 200
     # The token speaks for a user, the listing is that user's own.
     assert str(item.id) in [result["id"] for result in response.json()["results"]]
 
 
-def test_api_items_list_without_the_required_scope(menshen_backend_conf, user_specific_sub):
+def test_api_items_list_without_the_required_scope(
+    menshen_backend_conf, httpx2_mock, user_specific_sub
+):
     """A token that does not carry the list scope should be refused."""
     item = factories.ItemFactory(link_reach=models.LinkReachChoices.RESTRICTED)
     factories.UserItemAccessFactory(
         item=item, user=user_specific_sub, role=models.RoleChoices.READER
     )
 
-    with responses.RequestsMock() as rsps:
-        response = menshen_client(rsps, "drive:item:retrieve").get("/external_api/v1.0/items/")
+    response = menshen_client(httpx2_mock, "drive:item:retrieve").get("/external_api/v1.0/items/")
 
     assert response.status_code == 403
 
 
-def test_api_items_retrieve_with_the_required_scope(menshen_backend_conf, user_specific_sub):
+def test_api_items_retrieve_with_the_required_scope(
+    menshen_backend_conf, httpx2_mock, user_specific_sub
+):
     """A token carrying the retrieve scope should be allowed to retrieve an item."""
     item = factories.ItemFactory(link_reach=models.LinkReachChoices.RESTRICTED)
     factories.UserItemAccessFactory(
         item=item, user=user_specific_sub, role=models.RoleChoices.READER
     )
 
-    with responses.RequestsMock() as rsps:
-        response = menshen_client(rsps, "drive:item:retrieve").get(
-            f"/external_api/v1.0/items/{item.id!s}/"
-        )
+    response = menshen_client(httpx2_mock, "drive:item:retrieve").get(
+        f"/external_api/v1.0/items/{item.id!s}/"
+    )
 
     assert response.status_code == 200
 
 
-def test_api_items_retrieve_an_item_the_user_cannot_access(menshen_backend_conf, user_specific_sub):
+def test_api_items_retrieve_an_item_the_user_cannot_access(
+    menshen_backend_conf, httpx2_mock, user_specific_sub
+):
     """The scope should not stand in for the end user's own access to the item.
 
     The token speaks for a user, the item permissions still apply to that user.
     """
     item = factories.ItemFactory(link_reach=models.LinkReachChoices.RESTRICTED)
 
-    with responses.RequestsMock() as rsps:
-        response = menshen_client(rsps, "drive:item:retrieve").get(
-            f"/external_api/v1.0/items/{item.id!s}/"
-        )
+    response = menshen_client(httpx2_mock, "drive:item:retrieve").get(
+        f"/external_api/v1.0/items/{item.id!s}/"
+    )
 
     assert response.status_code == 403
 
 
-def test_api_items_destroy_is_not_reachable(menshen_backend_conf, user_specific_sub):
+def test_api_items_destroy_is_not_reachable(menshen_backend_conf, httpx2_mock, user_specific_sub):
     """An action the external API does not open should be refused."""
     item = factories.ItemFactory(link_reach=models.LinkReachChoices.RESTRICTED)
     factories.UserItemAccessFactory(
         item=item, user=user_specific_sub, role=models.RoleChoices.OWNER
     )
 
-    with responses.RequestsMock() as rsps:
-        response = menshen_client(rsps, "drive:item:destroy").delete(
-            f"/external_api/v1.0/items/{item.id!s}/"
-        )
+    response = menshen_client(httpx2_mock, "drive:item:destroy").delete(
+        f"/external_api/v1.0/items/{item.id!s}/"
+    )
 
     assert response.status_code == 403
 
 
-def test_api_items_create_children_with_the_required_scope(menshen_backend_conf, user_specific_sub):
+def test_api_items_create_children_with_the_required_scope(
+    menshen_backend_conf, httpx2_mock, user_specific_sub
+):
     """A token carrying the create-children scope should be allowed to create a child."""
     item = factories.ItemFactory(
         link_reach=models.LinkReachChoices.RESTRICTED,
@@ -293,17 +295,16 @@ def test_api_items_create_children_with_the_required_scope(menshen_backend_conf,
         item=item, user=user_specific_sub, role=models.RoleChoices.OWNER
     )
 
-    with responses.RequestsMock() as rsps:
-        response = menshen_client(rsps, "drive:item:create-children").post(
-            f"/external_api/v1.0/items/{item.id!s}/children/",
-            {"size": 8, "type": models.ItemTypeChoices.FILE, "filename": "file.txt"},
-        )
+    response = menshen_client(httpx2_mock, "drive:item:create-children").post(
+        f"/external_api/v1.0/items/{item.id!s}/children/",
+        {"size": 8, "type": models.ItemTypeChoices.FILE, "filename": "file.txt"},
+    )
 
     assert response.status_code == 201
 
 
 def test_api_items_list_children_scope_does_not_create_children(
-    menshen_backend_conf, user_specific_sub
+    menshen_backend_conf, httpx2_mock, user_specific_sub
 ):
     """The scope that lists children should not create any."""
     item = factories.ItemFactory(
@@ -314,21 +315,23 @@ def test_api_items_list_children_scope_does_not_create_children(
         item=item, user=user_specific_sub, role=models.RoleChoices.OWNER
     )
 
-    with responses.RequestsMock() as rsps:
-        response = menshen_client(rsps, "drive:item:list-children").post(
-            f"/external_api/v1.0/items/{item.id!s}/children/",
-            {"size": 8, "type": models.ItemTypeChoices.FILE, "filename": "file.txt"},
-        )
+    response = menshen_client(httpx2_mock, "drive:item:list-children").post(
+        f"/external_api/v1.0/items/{item.id!s}/children/",
+        {"size": 8, "type": models.ItemTypeChoices.FILE, "filename": "file.txt"},
+    )
 
     assert response.status_code == 403
 
 
-def test_api_items_recents_without_the_required_scope(menshen_backend_conf, user_specific_sub):
+def test_api_items_recents_without_the_required_scope(
+    menshen_backend_conf, httpx2_mock, user_specific_sub
+):
     """An action declaring its own permission classes should still demand its scope."""
     menshen_backend_conf.EXTERNAL_API = {"items": {"enabled": True, "actions": ["recents"]}}
     menshen_backend_conf.MENSHEN_REQUIRED_SCOPES = {"items": {"recents": "drive:item:recents"}}
 
-    with responses.RequestsMock() as rsps:
-        response = menshen_client(rsps, "drive:item:list").get("/external_api/v1.0/items/recents/")
+    response = menshen_client(httpx2_mock, "drive:item:list").get(
+        "/external_api/v1.0/items/recents/"
+    )
 
     assert response.status_code == 403

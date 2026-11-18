@@ -13,7 +13,6 @@ active response always names one.
 """
 
 import pytest
-import responses
 from rest_framework.test import APIClient
 
 from core import factories, models
@@ -29,16 +28,14 @@ pytestmark = pytest.mark.django_db
 # pylint: disable=unused-argument
 
 
-def menshen_client(rsps, scope, source=MENSHEN_SOURCE):
+def menshen_client(httpx2_mock, scope, source=MENSHEN_SOURCE):
     """Build an API client whose exchanged token carries the given scopes.
 
     `source` is the audience id of the service that exchanged the token, which Menshen
     reports as the introspection `client_id`.
     """
-    rsps.add(
-        responses.POST,
-        MENSHEN_INTROSPECTION_URL,
-        json=menshen_introspection_response(scope=scope, client_id=source),
+    httpx2_mock.post(MENSHEN_INTROSPECTION_URL).respond(
+        json=menshen_introspection_response(scope=scope, client_id=source)
     )
 
     client = APIClient()
@@ -47,13 +44,12 @@ def menshen_client(rsps, scope, source=MENSHEN_SOURCE):
     return client
 
 
-def test_api_items_create_root_menshen(menshen_backend_conf, user_specific_sub):
+def test_api_items_create_root_menshen(menshen_backend_conf, httpx2_mock, user_specific_sub):
     """An exchanged token carrying the create scope should create a root item."""
-    with responses.RequestsMock() as rsps:
-        response = menshen_client(rsps, "drive:item:create").post(
-            "/external_api/v1.0/items/",
-            {"size": 8, "type": models.ItemTypeChoices.FILE, "filename": "file.txt"},
-        )
+    response = menshen_client(httpx2_mock, "drive:item:create").post(
+        "/external_api/v1.0/items/",
+        {"size": 8, "type": models.ItemTypeChoices.FILE, "filename": "file.txt"},
+    )
 
     assert response.status_code == 201
 
@@ -63,25 +59,24 @@ def test_api_items_create_root_menshen(menshen_backend_conf, user_specific_sub):
 
 
 def test_api_items_create_root_menshen_applies_source_attributes(
-    menshen_backend_conf, user_specific_sub
+    menshen_backend_conf, httpx2_mock, user_specific_sub
 ):
     """Items created with an exchanged token get the attributes of the calling service."""
     menshen_backend_conf.EXTERNAL_API_AUD_ITEM_ATTRIBUTES = {
         MENSHEN_SOURCE: {"quota_excluded": True}
     }
 
-    with responses.RequestsMock() as rsps:
-        response = menshen_client(rsps, "drive:item:create").post(
-            "/external_api/v1.0/items/",
-            {"size": 8, "type": models.ItemTypeChoices.FILE, "filename": "file.txt"},
-        )
+    response = menshen_client(httpx2_mock, "drive:item:create").post(
+        "/external_api/v1.0/items/",
+        {"size": 8, "type": models.ItemTypeChoices.FILE, "filename": "file.txt"},
+    )
 
     assert response.status_code == 201
     assert models.Item.objects.get(id=response.json()["id"]).quota_excluded is True
 
 
 def test_api_items_create_children_menshen_applies_source_attributes(
-    menshen_backend_conf, user_specific_sub
+    menshen_backend_conf, httpx2_mock, user_specific_sub
 ):
     """Children created with an exchanged token get those attributes too."""
     menshen_backend_conf.EXTERNAL_API_AUD_ITEM_ATTRIBUTES = {
@@ -96,27 +91,27 @@ def test_api_items_create_children_menshen_applies_source_attributes(
         item=parent, user=user_specific_sub, role=models.RoleChoices.OWNER
     )
 
-    with responses.RequestsMock() as rsps:
-        response = menshen_client(rsps, "drive:item:create-children").post(
-            f"/external_api/v1.0/items/{parent.id!s}/children/",
-            {"size": 8, "type": models.ItemTypeChoices.FILE, "filename": "file.txt"},
-        )
+    response = menshen_client(httpx2_mock, "drive:item:create-children").post(
+        f"/external_api/v1.0/items/{parent.id!s}/children/",
+        {"size": 8, "type": models.ItemTypeChoices.FILE, "filename": "file.txt"},
+    )
 
     assert response.status_code == 201
     assert models.Item.objects.get(id=response.json()["id"]).quota_excluded is True
 
 
-def test_api_items_create_menshen_source_not_configured(menshen_backend_conf, user_specific_sub):
+def test_api_items_create_menshen_source_not_configured(
+    menshen_backend_conf, httpx2_mock, user_specific_sub
+):
     """A service missing from the setting keeps the default item attributes."""
     menshen_backend_conf.EXTERNAL_API_AUD_ITEM_ATTRIBUTES = {
         MENSHEN_SOURCE: {"quota_excluded": True}
     }
 
-    with responses.RequestsMock() as rsps:
-        response = menshen_client(rsps, "drive:item:create", source="other_service").post(
-            "/external_api/v1.0/items/",
-            {"size": 8, "type": models.ItemTypeChoices.FILE, "filename": "file.txt"},
-        )
+    response = menshen_client(httpx2_mock, "drive:item:create", source="other_service").post(
+        "/external_api/v1.0/items/",
+        {"size": 8, "type": models.ItemTypeChoices.FILE, "filename": "file.txt"},
+    )
 
     assert response.status_code == 201
     assert models.Item.objects.get(id=response.json()["id"]).quota_excluded is False
