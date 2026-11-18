@@ -5,7 +5,7 @@ Tests for the authentication of the external API through Menshen token exchange.
 import httpx2
 import pytest
 from rest_framework import exceptions
-from rest_framework.test import APIRequestFactory
+from rest_framework.test import APIClient, APIRequestFactory
 
 from core import factories, models
 from core.external_api.authentication import (
@@ -241,3 +241,36 @@ def test_menshen_authenticate_exposes_the_scopes_as_a_list(
 def test_menshen_authenticate_header_answers_401():
     """Unauthenticated request gets a 401."""
     assert MenshenAuthentication().authenticate_header(build_request()) == "bearer"
+
+
+# Alongside the resource server
+
+
+def list_items_with_a_resource_server_token(user):
+    """List items with a resource server token, for a user reading one of them."""
+    # A file would still be pending upload, which the listing leaves out.
+    item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.RESTRICTED, type=models.ItemTypeChoices.FOLDER
+    )
+    factories.UserItemAccessFactory(item=item, user=user, role="reader")
+
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION="Bearer some_resource_server_token")
+
+    return item, client.get("/external_api/v1.0/items/")
+
+
+def test_api_items_list_resource_server_token_unknown_to_menshen(
+    menshen_backend_conf, resource_server_backend, httpx2_mock, user_specific_sub
+):
+    """Menshen not knowing a resource server token should defer to the resource server.
+
+    Fixture order matters, as menshen_backend_conf deactivates resource server
+    authentication.
+    """
+    httpx2_mock.post(MENSHEN_INTROSPECTION_URL).respond(json={"active": False})
+
+    item, response = list_items_with_a_resource_server_token(user_specific_sub)
+
+    assert response.status_code == 200
+    assert str(item.id) in [result["id"] for result in response.json()["results"]]

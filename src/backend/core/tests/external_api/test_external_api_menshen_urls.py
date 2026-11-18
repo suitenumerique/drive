@@ -50,3 +50,14 @@ def test_api_external_nested_routes_not_registered_with_menshen_only(
 def test_api_external_users_registered_with_the_resource_server(resource_server_backend_conf):
     """Enabling the resource server should keep registering the other resources."""
     assert APIClient().get("/external_api/v1.0/users/me/").status_code == 401
+
+
+def test_api_external_users_registered_with_menshen_and_resource_server(
+    menshen_backend_conf, resource_server_backend_conf
+):
+    """Enabling Menshen on top of the resource server should keep the users route.
+
+    Fixture order matters: menshen_backend_conf turns the resource server off,
+    resource_server_backend_conf turns it back on.
+    """
+    assert APIClient().get("/external_api/v1.0/users/me/").status_code == 401
