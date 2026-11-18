@@ -209,7 +209,10 @@ def test_permission_requires_the_view_to_declare_its_actions(settings):
 
 def test_api_items_list_with_the_required_scope(menshen_backend_conf, user_specific_sub):
     """A token carrying the list scope should be allowed to list items."""
-    item = factories.ItemFactory(link_reach=models.LinkReachChoices.RESTRICTED)
+    # A file would still be pending upload, which the listing leaves out.
+    item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.RESTRICTED, type=models.ItemTypeChoices.FOLDER
+    )
     factories.UserItemAccessFactory(
         item=item, user=user_specific_sub, role=models.RoleChoices.READER
     )
@@ -316,5 +319,16 @@ def test_api_items_list_children_scope_does_not_create_children(
             f"/external_api/v1.0/items/{item.id!s}/children/",
             {"size": 8, "type": models.ItemTypeChoices.FILE, "filename": "file.txt"},
         )
+
+    assert response.status_code == 403
+
+
+def test_api_items_recents_without_the_required_scope(menshen_backend_conf, user_specific_sub):
+    """An action declaring its own permission classes should still demand its scope."""
+    menshen_backend_conf.EXTERNAL_API = {"items": {"enabled": True, "actions": ["recents"]}}
+    menshen_backend_conf.MENSHEN_REQUIRED_SCOPES = {"items": {"recents": "drive:item:recents"}}
+
+    with responses.RequestsMock() as rsps:
+        response = menshen_client(rsps, "drive:item:list").get("/external_api/v1.0/items/recents/")
 
     assert response.status_code == 403

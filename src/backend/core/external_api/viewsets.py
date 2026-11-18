@@ -32,10 +32,16 @@ class ResourceServerRestrictionMixin:
         return list(settings.EXTERNAL_API.get(self.resource, {}).get("actions", []))
 
     def get_permissions(self):
-        """Apply the resource server checks to every action, whatever its permission classes."""
-        return [ResourceServerClientPermission(), *super().get_permissions()]
+        """Apply the external API checks to every action, whatever its permission classes.
 
-# TODO: Put back Menshen Permissions
+        MenshenPermission only passes requests authenticated by MenshenAuthentication,
+        so it opens nothing on a viewset that does not list that backend.
+        """
+        return [
+            (MenshenPermission | ResourceServerClientPermission)(),
+            *super().get_permissions(),
+        ]
+
 
 class ResourceServerItemViewSet(ResourceServerRestrictionMixin, ItemViewSet):
     """Resource Server Viewset for the Drive app."""
