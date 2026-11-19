@@ -46,9 +46,9 @@
 | `ingressMedia.annotations.nginx.ingress.kubernetes.io/auth-url`                     |                                                      | `https://drive.example.com/api/v1.0/items/media-auth/`                                                          |
 | `ingressMedia.annotations.nginx.ingress.kubernetes.io/auth-response-headers`        |                                                      | `Authorization, X-Amz-Date, X-Amz-Content-SHA256`                                                               |
 | `ingressMedia.annotations.nginx.ingress.kubernetes.io/upstream-vhost`               |                                                      | `minio.drive.svc.cluster.local:9000`                                                                            |
-| `ingressMedia.annotations.nginx.ingress.kubernetes.io/configuration-snippet`        |                                                      | `add_header Content-Security-Policy "default-src 'none'" always;
-add_header Content-Disposition "attachment";
-` |
+| `ingressMedia.securityHeaders.contentSecurityPolicy`                                | Content-Security-Policy added to every media response, empty to disable  | `"default-src 'none'; sandbox"`                                                                            |
+| `ingressMedia.securityHeaders.xContentTypeOptions`                                  | X-Content-Type-Options added to every media response, empty to disable   | `"nosniff"`                                                                                                 |
+| `ingressMedia.securityHeaders.relayContentDisposition`                              | Relay the Content-Disposition computed by the media-auth endpoint, not supported with auth-keepalive | `true`                          |
 | `ingressMediaPreview.enabled`                                                       | whether to enable the Ingress or not                 | `false`                                                                                                         |
 | `ingressMediaPreview.className`                                                     | IngressClass to use for the Ingress                  | `nil`                                                                                                           |
 | `ingressMediaPreview.host`                                                          | Host for the Ingress                                 | `drive.example.com`                                                                                             |
@@ -61,8 +61,9 @@ add_header Content-Disposition "attachment";
 | `ingressMediaPreview.annotations.nginx.ingress.kubernetes.io/auth-url`              |                                                      | `https://drive.example.com/api/v1.0/items/media-auth/`                                                          |
 | `ingressMediaPreview.annotations.nginx.ingress.kubernetes.io/auth-response-headers` |                                                      | `Authorization, X-Amz-Date, X-Amz-Content-SHA256`                                                               |
 | `ingressMediaPreview.annotations.nginx.ingress.kubernetes.io/upstream-vhost`        |                                                      | `minio.drive.svc.cluster.local:9000`                                                                            |
-| `ingressMediaPreview.annotations.nginx.ingress.kubernetes.io/configuration-snippet` |                                                      | `add_header Content-Security-Policy "default-src 'none'" always;
-`                                              |
+| `ingressMediaPreview.securityHeaders.contentSecurityPolicy`                         | Content-Security-Policy added to every media preview response, empty to disable | `"default-src 'none'; sandbox"`                                                                      |
+| `ingressMediaPreview.securityHeaders.xContentTypeOptions`                           | X-Content-Type-Options added to every media preview response, empty to disable | `"nosniff"`                                                                                           |
+| `ingressMediaPreview.securityHeaders.relayContentDisposition`                       | Relay the Content-Disposition computed by the media-auth endpoint, forcing the download of active content (SVG, XML), not supported with auth-keepalive | `true`                    |
 | `ingressMetrics.enabled` | whether to enable the Ingress publishing the metrics of the backend | `false` |
 | `ingressMetrics.className` | IngressClass to use for the Ingress | `nil` |
 | `ingressMetrics.host` | Host for the Ingress. Use a host of its own, and add it to ALLOWED_HOSTS | `metrics.drive.example.com` |

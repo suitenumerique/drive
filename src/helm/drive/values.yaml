@@ -97,14 +97,21 @@ ingressMedia:
   ## @param ingressMedia.annotations.nginx.ingress.kubernetes.io/auth-url
   ## @param ingressMedia.annotations.nginx.ingress.kubernetes.io/auth-response-headers
   ## @param ingressMedia.annotations.nginx.ingress.kubernetes.io/upstream-vhost
-  ## @param ingressMedia.annotations.nginx.ingress.kubernetes.io/configuration-snippet
   annotations:
     nginx.ingress.kubernetes.io/auth-url: https://drive.example.com/api/v1.0/items/media-auth/
     nginx.ingress.kubernetes.io/auth-response-headers: "Authorization, X-Amz-Date, X-Amz-Content-SHA256"
     nginx.ingress.kubernetes.io/upstream-vhost: minio.drive.svc.cluster.local:9000
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      add_header Content-Security-Policy "default-src 'none'" always;
-      add_header Content-Disposition "attachment";
+
+  # Security headers added to the media responses, assembled into the nginx
+  # configuration-snippet annotation by the ingress template. Setting the raw
+  # nginx.ingress.kubernetes.io/configuration-snippet annotation overrides them all.
+  ## @param ingressMedia.securityHeaders.contentSecurityPolicy Content-Security-Policy added to every media response, empty to disable
+  ## @param ingressMedia.securityHeaders.xContentTypeOptions X-Content-Type-Options added to every media response, empty to disable
+  ## @param ingressMedia.securityHeaders.relayContentDisposition Relay the Content-Disposition computed by the media-auth endpoint, not supported with auth-keepalive
+  securityHeaders:
+    contentSecurityPolicy: "default-src 'none'; sandbox"
+    xContentTypeOptions: "nosniff"
+    relayContentDisposition: true
 
 ## @param ingressMediaPreview.enabled whether to enable the Ingress or not
 ## @param ingressMediaPreview.className IngressClass to use for the Ingress
@@ -131,13 +138,21 @@ ingressMediaPreview:
   ## @param ingressMediaPreview.annotations.nginx.ingress.kubernetes.io/auth-url
   ## @param ingressMediaPreview.annotations.nginx.ingress.kubernetes.io/auth-response-headers
   ## @param ingressMediaPreview.annotations.nginx.ingress.kubernetes.io/upstream-vhost
-  ## @param ingressMediaPreview.annotations.nginx.ingress.kubernetes.io/configuration-snippet
   annotations:
     nginx.ingress.kubernetes.io/auth-url: https://drive.example.com/api/v1.0/items/media-auth/
     nginx.ingress.kubernetes.io/auth-response-headers: "Authorization, X-Amz-Date, X-Amz-Content-SHA256"
     nginx.ingress.kubernetes.io/upstream-vhost: minio.drive.svc.cluster.local:9000
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      add_header Content-Security-Policy "default-src 'none'" always;
+
+  # Security headers added to the media preview responses, assembled into the nginx
+  # configuration-snippet annotation by the ingress template. Setting the raw
+  # nginx.ingress.kubernetes.io/configuration-snippet annotation overrides them all.
+  ## @param ingressMediaPreview.securityHeaders.contentSecurityPolicy Content-Security-Policy added to every media preview response, empty to disable
+  ## @param ingressMediaPreview.securityHeaders.xContentTypeOptions X-Content-Type-Options added to every media preview response, empty to disable
+  ## @param ingressMediaPreview.securityHeaders.relayContentDisposition Relay the Content-Disposition computed by the media-auth endpoint, forcing the download of active content (SVG, XML), not supported with auth-keepalive
+  securityHeaders:
+    contentSecurityPolicy: "default-src 'none'; sandbox"
+    xContentTypeOptions: "nosniff"
+    relayContentDisposition: true
 
 ## @param ingressMetrics.enabled whether to enable the Ingress publishing the metrics of the backend
 ## @param ingressMetrics.className IngressClass to use for the Ingress

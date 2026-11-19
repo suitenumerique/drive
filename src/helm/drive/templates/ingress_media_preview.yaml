@@ -18,10 +18,8 @@ metadata:
   namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "drive.labels" . | nindent 4 }}
-  {{- with .Values.ingressMediaPreview.annotations }}
   annotations:
-  {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- include "drive.mediaIngressAnnotations" .Values.ingressMediaPreview | nindent 4 }}
 spec:
   {{- if and .Values.ingressMediaPreview.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
   ingressClassName: {{ .Values.ingressMediaPreview.className }}

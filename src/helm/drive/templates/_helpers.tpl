@@ -284,3 +284,40 @@ or podMonitor values)
     {{- toYaml . | nindent 4 }}
   {{- end }}
 {{- end }}
+
+{{/*
+Build the nginx configuration-snippet adding the security headers of the media
+ingresses: static Content-Security-Policy and X-Content-Type-Options, plus the
+Content-Disposition relayed from the media-auth subrequest so the backend can
+force the download of active content (SVG, XML). Empty values are skipped.
+A user-provided configuration-snippet annotation takes precedence over this default.
+*/}}
+{{- define "drive.mediaSecurityHeadersSnippet" -}}
+{{- $securityHeaders := .securityHeaders -}}
+{{- $lines := list -}}
+{{- if $securityHeaders.relayContentDisposition -}}
+{{/* auth_request_set needs auth_request: no relay with auth-keepalive, which goes through Lua. */}}
+{{-   $lines = append $lines "auth_request_set $mediaContentDisposition $upstream_http_content_disposition;" -}}
+{{-   $lines = append $lines "proxy_hide_header Content-Disposition;" -}}
+{{-   $lines = append $lines "add_header Content-Disposition $mediaContentDisposition;" -}}
+{{- end -}}
+{{- if $securityHeaders.contentSecurityPolicy -}}
+{{-   $lines = append $lines (printf "add_header Content-Security-Policy %s always;" ($securityHeaders.contentSecurityPolicy | quote)) -}}
+{{- end -}}
+{{- if $securityHeaders.xContentTypeOptions -}}
+{{-   $lines = append $lines (printf "add_header X-Content-Type-Options %s always;" ($securityHeaders.xContentTypeOptions | quote)) -}}
+{{- end -}}
+{{- join "\n" $lines -}}
+{{- end -}}
+
+{{/* Add the default security headers snippet to the annotations of a media ingress. */}}
+{{- define "drive.mediaIngressAnnotations" -}}
+{{- $annotations := deepCopy .annotations | default dict -}}
+{{- if not (hasKey $annotations "nginx.ingress.kubernetes.io/configuration-snippet") -}}
+{{-   $snippet := include "drive.mediaSecurityHeadersSnippet" . -}}
+{{-   if $snippet -}}
+{{-     $_ := set $annotations "nginx.ingress.kubernetes.io/configuration-snippet" $snippet -}}
+{{-   end -}}
+{{- end -}}
+{{- toYaml $annotations -}}
+{{- end -}}

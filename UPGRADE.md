@@ -16,6 +16,13 @@ the following command inside your docker container:
 
 ## [Unreleased]
 
+- ⚠️ Media responses carry new security headers. The Helm chart and
+  `src/nginx/servers.conf.erb` add them by default. If you set your own
+  `nginx.ingress.kubernetes.io/configuration-snippet` on the media ingresses, or
+  run your own proxy, add them yourself: `Content-Security-Policy` and
+  `X-Content-Type-Options` on `/media/` and `/media/preview/`, plus the
+  `Content-Disposition` of the media-auth response on `/media/preview/`.
+
 ## [v0.26.0] - 2026-11-04
 
 - ⚠️ `FILE_MIMETYPE_ALLOWED` was read from `DJANGO_FILE_MIMETYPE_ALLOWED`:
