@@ -21,10 +21,9 @@ pytestmark = pytest.mark.django_db
         ("reader", False),
     ],
 )
-def test_models_items_restricted_get_abilities_restrict_requires_owner(settings, role, expected):
+def test_models_items_restricted_get_abilities_restrict_requires_owner(role, expected):
     """Only an owner can restrict a folder."""
     user = factories.UserFactory()
-    settings.FEATURES_RESTRICTED_FOLDERS_USERS = [user.email]
     parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
     folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
     factories.UserItemAccessFactory(item=folder, user=user, role=role)
@@ -34,10 +33,9 @@ def test_models_items_restricted_get_abilities_restrict_requires_owner(settings,
     assert abilities["restrict"] is expected
 
 
-def test_models_items_restricted_get_abilities_restrict_forbidden_on_roots(settings):
+def test_models_items_restricted_get_abilities_restrict_forbidden_on_roots():
     """A root folder cannot be restricted: no parent can hold its restriction."""
     user = factories.UserFactory()
-    settings.FEATURES_RESTRICTED_FOLDERS_USERS = [user.email]
     folder = factories.ItemFactory(
         type=models.ItemTypeChoices.FOLDER,
         users=[(user, models.RoleChoices.OWNER)],
@@ -48,10 +46,9 @@ def test_models_items_restricted_get_abilities_restrict_forbidden_on_roots(setti
     assert abilities["restrict"] is False
 
 
-def test_models_items_restricted_get_abilities_restrict_allowed_on_restricted_root(settings):
+def test_models_items_restricted_get_abilities_restrict_allowed_on_restricted_root():
     """An explicit owner can deactivate a restricted folder moved to the root."""
     user = factories.UserFactory()
-    settings.FEATURES_RESTRICTED_FOLDERS_USERS = [user.email]
     folder = factories.ItemFactory(
         type=models.ItemTypeChoices.FOLDER,
         users=[(user, models.RoleChoices.OWNER)],

@@ -8,10 +8,9 @@ from core import factories, models
 pytestmark = pytest.mark.django_db
 
 
-def test_api_items_restrict_owner_can_activate(settings):
-    """An owner listed in the allowed users can activate restriction on a folder."""
+def test_api_items_restrict_owner_can_activate():
+    """An owner can activate restriction on a folder."""
     user = factories.UserFactory()
-    settings.FEATURES_RESTRICTED_FOLDERS_USERS = [user.email]
     parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
     folder = factories.ItemFactory(
         parent=parent,
@@ -33,10 +32,9 @@ def test_api_items_restrict_owner_can_activate(settings):
     assert models.ItemAccess.objects.filter(item=folder, user=user, role="owner").count() == 1
 
 
-def test_api_items_restrict_non_owner_cannot_activate(settings):
+def test_api_items_restrict_non_owner_cannot_activate():
     """A non-owner cannot activate restriction on a folder."""
     user = factories.UserFactory()
-    settings.FEATURES_RESTRICTED_FOLDERS_USERS = [user.email]
     parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
     folder = factories.ItemFactory(
         parent=parent,
@@ -54,10 +52,9 @@ def test_api_items_restrict_non_owner_cannot_activate(settings):
     assert folder.is_restricted is False
 
 
-def test_api_items_restrict_owner_cannot_activate_a_root(settings):
+def test_api_items_restrict_owner_cannot_activate_a_root():
     """A root folder cannot be restricted, even by its owner."""
     user = factories.UserFactory()
-    settings.FEATURES_RESTRICTED_FOLDERS_USERS = [user.email]
     folder = factories.ItemFactory(
         type=models.ItemTypeChoices.FOLDER,
         users=[(user, "owner")],
@@ -73,10 +70,9 @@ def test_api_items_restrict_owner_cannot_activate_a_root(settings):
     assert folder.is_restricted is False
 
 
-def test_api_items_restrict_owner_can_deactivate(settings):
-    """An owner listed in the allowed users can deactivate restriction on a folder."""
+def test_api_items_restrict_owner_can_deactivate():
+    """An owner can deactivate restriction on a folder."""
     user = factories.UserFactory()
-    settings.FEATURES_RESTRICTED_FOLDERS_USERS = [user.email]
     parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
     folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
     folder = folder.restrict(user)
@@ -94,11 +90,10 @@ def test_api_items_restrict_owner_can_deactivate(settings):
     assert not models.Item.objects.filter(target=folder).exists()
 
 
-def test_api_items_restrict_excluded_owner_cannot_deactivate(settings):
+def test_api_items_restrict_excluded_owner_cannot_deactivate():
     """A user without explicit access cannot deactivate a restricted folder."""
     parent_owner = factories.UserFactory()
     user = factories.UserFactory()
-    settings.FEATURES_RESTRICTED_FOLDERS_USERS = [parent_owner.email]
     parent = factories.ItemFactory(
         type=models.ItemTypeChoices.FOLDER,
         users=[(parent_owner, "owner"), (user, "owner")],
@@ -108,45 +103,6 @@ def test_api_items_restrict_excluded_owner_cannot_deactivate(settings):
 
     client = APIClient()
     client.force_login(parent_owner)
-
-    response = client.delete(f"/api/v1.0/items/{folder.id!s}/restrict/")
-    assert response.status_code == 403
-
-    folder.refresh_from_db()
-    assert folder.is_restricted is True
-
-
-def test_api_items_restrict_owner_not_listed_cannot_activate():
-    """An owner absent from the allowed users cannot activate restriction on a folder."""
-    user = factories.UserFactory()
-    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
-    folder = factories.ItemFactory(
-        parent=parent,
-        type=models.ItemTypeChoices.FOLDER,
-        users=[(user, "owner")],
-    )
-
-    client = APIClient()
-    client.force_login(user)
-
-    assert client.get(f"/api/v1.0/items/{folder.id!s}/").json()["abilities"]["restrict"] is False
-
-    response = client.post(f"/api/v1.0/items/{folder.id!s}/restrict/")
-    assert response.status_code == 403
-
-    folder.refresh_from_db()
-    assert folder.is_restricted is False
-
-
-def test_api_items_restrict_owner_not_listed_cannot_deactivate():
-    """An owner absent from the allowed users cannot deactivate restriction on a folder."""
-    user = factories.UserFactory()
-    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
-    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
-    folder = folder.restrict(user)
-
-    client = APIClient()
-    client.force_login(user)
 
     response = client.delete(f"/api/v1.0/items/{folder.id!s}/restrict/")
     assert response.status_code == 403

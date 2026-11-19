@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Removed
+
+- 🔥(backend) open folder restriction to every owner, drop the user allow list
+
 ## [v1.0.0] - 2026-11-17
 
 ### Added
