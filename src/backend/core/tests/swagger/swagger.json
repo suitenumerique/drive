@@ -1717,7 +1717,7 @@
         "/api/v1.0/items/media-auth/": {
             "get": {
                 "operationId": "items_media_auth_retrieve",
-                "description": "This view is used by an Nginx subrequest to control access to an item's\nattachment file.\n\nWhen we let the request go through, we compute authorization headers that will be added to\nthe request going through thanks to the nginx.ingress.kubernetes.io/auth-response-headers\nannotation. The request will then be proxied to the object storage backend who will\nrespond with the file after checking the signature included in headers.",
+                "description": "This view is used by an Nginx subrequest to control access to an item's\nattachment file.\n\nWhen we let the request go through, we compute authorization headers that will be added to\nthe request going through thanks to the nginx.ingress.kubernetes.io/auth-response-headers\nannotation. The request will then be proxied to the object storage backend who will\nrespond with the file after checking the signature included in headers.\n\nThe response also carries a Content-Disposition for downloads and active\ncontent previews, which the proxy relays to the client response.",
                 "tags": [
                     "items"
                 ],

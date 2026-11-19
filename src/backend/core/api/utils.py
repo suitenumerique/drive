@@ -177,6 +177,17 @@ def is_previewable_item(item):
     return False
 
 
+def is_active_content_mimetype(mimetype):
+    """Return True if previews of the mimetype must be served as attachments."""
+    if mimetype is None:
+        return False
+    mimetype = mimetype.lower()
+    # Any XML-based format can carry XSLT or namespaced script elements.
+    return mimetype.endswith("+xml") or mimetype in {
+        active.lower() for active in settings.MEDIA_ACTIVE_CONTENT_MIMETYPES
+    }
+
+
 def get_item_file_head_object(item):
     """
     Get the head object of an item file.

@@ -422,3 +422,62 @@ def test_api_items_media_auth_link_password_locked():
 
     response = client.get("/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url)
     assert response.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "mimetype,filename",
+    [("image/png", "image.png"), ("application/pdf", "document.pdf")],
+)
+def test_api_items_media_auth_security_headers_on_download(mimetype, filename):
+    """Media downloads should be served as attachments."""
+    item = factories.ItemFactory(
+        link_reach="public",
+        type=models.ItemTypeChoices.FILE,
+        filename=filename,
+        mimetype=mimetype,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    original_url = f"http://localhost/media/{item.file_key:s}"
+    response = APIClient().get("/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url)
+
+    assert response.status_code == 200
+    assert response["Content-Disposition"] == "attachment"
+
+
+@pytest.mark.parametrize(
+    "mimetype,filename",
+    [("image/png", "image.png"), ("application/pdf", "document.pdf")],
+)
+def test_api_items_media_auth_security_headers_on_inline_preview(mimetype, filename):
+    """PNG and PDF previews should stay inline."""
+    item = factories.ItemFactory(
+        link_reach="public",
+        type=models.ItemTypeChoices.FILE,
+        filename=filename,
+        mimetype=mimetype,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    original_url = f"http://localhost/media/preview/{item.file_key:s}"
+    response = APIClient().get("/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url)
+
+    assert response.status_code == 200
+    assert "Content-Disposition" not in response
+
+
+def test_api_items_media_auth_security_headers_on_active_content_preview():
+    """Force SVG previews to download when opened directly."""
+    item = factories.ItemFactory(
+        link_reach="public",
+        type=models.ItemTypeChoices.FILE,
+        filename="payload.svg",
+        mimetype="image/svg+xml",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    original_url = f"http://localhost/media/preview/{item.file_key:s}"
+    response = APIClient().get("/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url)
+
+    assert response.status_code == 200
+    assert response["Content-Disposition"] == "attachment"

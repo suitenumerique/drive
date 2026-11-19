@@ -2152,6 +2152,9 @@ class ItemViewSet(
         the request going through thanks to the nginx.ingress.kubernetes.io/auth-response-headers
         annotation. The request will then be proxied to the object storage backend who will
         respond with the file after checking the signature included in headers.
+
+        The response also carries a Content-Disposition for downloads and active
+        content previews, which the proxy relays to the client response.
         """
         url_params, _, _, item = self._authorize_subrequest(request, MEDIA_STORAGE_URL_PATTERN)
         if item.type != models.ItemTypeChoices.FILE:
@@ -2167,9 +2170,17 @@ class ItemViewSet(
             raise drf.exceptions.PermissionDenied()
 
         # Generate S3 authorization headers using the extracted URL parameters
-        request = utils.generate_s3_authorization_headers(f"{url_params.get('key'):s}")
+        authorization = utils.generate_s3_authorization_headers(f"{url_params.get('key'):s}")
 
-        return drf.response.Response("authorized", headers=request.headers, status=200)
+        headers = dict(authorization.headers)
+        # Downloads are always attachments. A preview of active content (e.g. SVG)
+        # is forced to download too, so opening the preview URL directly in a
+        # browser cannot run scripts on the application origin. The in-app preview,
+        # fetched as a subresource, ignores Content-Disposition and keeps working.
+        if not url_params.get("preview") or utils.is_active_content_mimetype(item.mimetype):
+            headers["Content-Disposition"] = "attachment"
+
+        return drf.response.Response("authorized", headers=headers, status=200)
 
     @drf.decorators.action(detail=True, methods=["get"], url_path="wopi")
     def wopi(self, request, *args, **kwargs):

@@ -971,6 +971,21 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    # Force downloads of web documents that can run scripts on the application
+    # origin. Keep PDF previews inline for printing in the browser's PDF viewer.
+    # Any "+xml" mimetype is always active.
+    MEDIA_ACTIVE_CONTENT_MIMETYPES = values.ListValue(
+        [
+            "application/xhtml+xml",
+            "application/xml",
+            "image/svg+xml",
+            "text/html",
+            "text/xml",
+        ],
+        environ_name="MEDIA_ACTIVE_CONTENT_MIMETYPES",
+        environ_prefix=None,
+    )
+
     # Internationalization
     # https://docs.djangoproject.com/en/3.1/topics/i18n/
 

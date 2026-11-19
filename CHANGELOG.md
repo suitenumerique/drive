@@ -18,6 +18,10 @@ and this project adheres to
 - 🔥(backend) open folder restriction to every owner, drop the user allow list
 - 🔥(backend) remove the item counts from the business metrics
 
+### Fixed
+
+- 🔒️(backend) force the download of active content previews
+
 ## [v1.0.0] - 2026-11-17
 
 ### Added
