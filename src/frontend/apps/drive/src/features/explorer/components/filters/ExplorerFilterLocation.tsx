@@ -35,7 +35,7 @@ export const ExplorerFilterLocation = (props: {
         value,
         render: () => (
           <div className="explorer__filters__item">
-            <Icon size={IconSize.SMALL} />
+            <Icon size={IconSize.SMALL} aria-hidden="true" />
             {t(`explorer.filters.location.options.${value}`)}
           </div>
         ),
@@ -47,6 +47,7 @@ export const ExplorerFilterLocation = (props: {
   return (
     <Filter
       label={t("explorer.filters.location.label")}
+      resetLabel={t("explorer.filters.location.reset_name")}
       options={options}
       selectedKey={props.value ?? null} // undefined would trigger "uncontrolled components become controlled" warning.
       onSelectionChange={props.onChange}

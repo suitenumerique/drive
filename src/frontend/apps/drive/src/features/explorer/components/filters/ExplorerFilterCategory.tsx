@@ -53,6 +53,7 @@ export const ExplorerFilterCategory = (props: {
   return (
     <Filter
       label={t("explorer.filters.category.label")}
+      resetLabel={t("explorer.filters.category.reset_name")}
       options={options}
       selectedKey={props.value ?? null} // undefined would trigger "uncontrolled components become controlled" warning.
       onSelectionChange={props.onChange}

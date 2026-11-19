@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- ♿️(frontend) give the search filters a heading and named reset rows
+
 ## [v1.0.0] - 2026-11-17
 
 ### Added

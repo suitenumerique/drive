@@ -40,7 +40,7 @@ test("Filter items by file type category", async ({ page }) => {
   await expectRowItemIsNotVisible(page, "Quarterly report");
 
   await filtersBar.getByRole("button", { name: /^Type/ }).click();
-  await page.getByRole("button", { name: "Reset" }).click();
+  await page.getByRole("button", { name: "Reset the type filter" }).click();
 
   await expectRowItem(page, "Quarterly report");
   await expectRowItem(page, "Holiday photo");
@@ -64,7 +64,9 @@ test("Filter items by shared contact", async ({ page }) => {
   await expectRowItemIsNotVisible(page, "Filters folder");
 
   await filtersBar.getByRole("button", { name: /^Shared with/ }).click();
-  await page.getByRole("button", { name: "Reset" }).click();
+  await page
+    .getByRole("button", { name: 'Reset the "Shared with" filter' })
+    .click();
 
   await expectRowItem(page, "Quarterly report");
   await expectRowItem(page, "Filters folder");
@@ -86,7 +88,7 @@ test("Filter items by modification date", async ({ page }) => {
   await expectRowItemIsNotVisible(page, "Old report");
 
   await filtersBar.getByRole("button", { name: /^Modified/ }).click();
-  await page.getByRole("button", { name: "Reset" }).click();
+  await page.getByRole("button", { name: "Reset the modified filter" }).click();
 
   await expectRowItem(page, "Old report");
 });
@@ -146,7 +148,7 @@ test("Filter items by modification date custom", async ({ page }) => {
   await expect(page.getByRole("option", { name: rangeLabel })).toBeVisible();
   await expect(page.getByRole("option", { name: "Custom" })).not.toBeVisible();
 
-  await page.getByRole("button", { name: "Reset" }).click();
+  await page.getByRole("button", { name: "Reset the modified filter" }).click();
 
   await expectRowItem(page, "Old report");
 
