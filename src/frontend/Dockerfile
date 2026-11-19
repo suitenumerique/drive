@@ -41,9 +41,14 @@ RUN yarn build
 # ---- Front-end image ----
 FROM nginxinc/nginx-unprivileged:alpine3.24 AS frontend-production
 
+# Builds that reuse a layer cache never re-run the upgrade below. Pass a new
+# value (e.g. the date) with --build-arg CACHEBUST=... to force it.
+ARG CACHEBUST
+
 # Upgrade system packages to install security updates
 USER root
-RUN apk update && \
+RUN echo "cache bust: ${CACHEBUST}" && \
+  apk update && \
   apk upgrade && \
   rm -rf /var/cache/apk/*
 

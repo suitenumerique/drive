@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- 🔧(docker) add a CACHEBUST build arg to force the system packages upgrade
+
 ### Removed
 
 - 🔥(backend) open folder restriction to every owner, drop the user allow list

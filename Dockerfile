@@ -6,8 +6,13 @@ FROM ghcr.io/astral-sh/uv:0.13.4 AS uv
 # ---- base image to inherit from ----
 FROM python:3.13.17-alpine AS base
 
+# Builds that reuse a layer cache never re-run the upgrade below. Pass a new
+# value (e.g. the date) with --build-arg CACHEBUST=... to force it.
+ARG CACHEBUST
+
 # Upgrade system packages to install security updates
-RUN apk --no-cache upgrade && \
+RUN echo "cache bust: ${CACHEBUST}" && \
+  apk --no-cache upgrade && \
   apk add --no-cache git
 
 # ---- Back-end builder image ----
