@@ -50,8 +50,11 @@ server {
         # Get resource from Object Storage
         proxy_pass <%= ENV["AWS_S3_BUCKET_INTERNAL_URL"] %>;
         proxy_set_header Host <%= ENV["AWS_S3_BUCKET_INTERNAL_HOST"] %>;
-        add_header Content-Security-Policy "default-src 'none'" always;
+        # Drop the Content-Disposition stored with the object, ours is the only one.
+        proxy_hide_header Content-Disposition;
+        add_header Content-Security-Policy "default-src 'none'; sandbox" always;
         add_header Content-Disposition "attachment";
+        add_header X-Content-Type-Options "nosniff" always;
     }
 
     location /media/preview/ {
@@ -69,7 +72,13 @@ server {
         # Get resource from Object Storage
         proxy_pass <%= ENV["AWS_S3_BUCKET_INTERNAL_URL"] %>;
         proxy_set_header Host <%= ENV["AWS_S3_BUCKET_INTERNAL_HOST"] %>;
-        add_header Content-Security-Policy "default-src 'none'" always;
+        # Relay the Content-Disposition of the media-auth response, which forces the
+        # download of active content. An empty value adds no header.
+        auth_request_set $mediaContentDisposition $upstream_http_content_disposition;
+        proxy_hide_header Content-Disposition;
+        add_header Content-Disposition $mediaContentDisposition;
+        add_header Content-Security-Policy "default-src 'none'; sandbox" always;
+        add_header X-Content-Type-Options "nosniff" always;
     }
 
     location /media-auth {
