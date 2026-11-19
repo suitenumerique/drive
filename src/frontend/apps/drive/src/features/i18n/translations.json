@@ -294,8 +294,10 @@
           }
         },
         "filters": {
+          "heading": "Filters",
           "location": {
             "label": "Location",
+            "reset_name": "Reset the location filter",
             "options": {
               "my_files": "My files",
               "shared_with_me": "Shared with me",
@@ -321,6 +323,7 @@
           },
           "category": {
             "label": "Type",
+            "reset_name": "Reset the type filter",
             "options": {
               "doc": "Text document",
               "powerpoint": "Slides",
@@ -337,10 +340,12 @@
             "label": "Shared with",
             "placeholder": "Search for a name",
             "empty": "No contact found",
-            "reset": "Reset"
+            "reset": "Reset",
+            "reset_name": "Reset the \"Shared with\" filter"
           },
           "modified": {
             "label": "Modified",
+            "reset_name": "Reset the modified filter",
             "options": {
               "today": "Today",
               "last_7_days": "Last 7 days",
@@ -1043,8 +1048,10 @@
           }
         },
         "filters": {
+          "heading": "Filtres",
           "location": {
             "label": "Emplacement",
+            "reset_name": "Réinitialiser le filtre par emplacement",
             "options": {
               "my_files": "Mes fichiers",
               "shared_with_me": "Partagés avec moi",
@@ -1070,6 +1077,7 @@
           },
           "category": {
             "label": "Type",
+            "reset_name": "Réinitialiser le filtre par type",
             "options": {
               "doc": "Document texte",
               "powerpoint": "Présentation",
@@ -1086,10 +1094,12 @@
             "label": "Partagé avec",
             "placeholder": "Rechercher un nom",
             "empty": "Aucun contact trouvé",
-            "reset": "Réinitialiser"
+            "reset": "Réinitialiser",
+            "reset_name": "Réinitialiser le filtre par personne"
           },
           "modified": {
             "label": "Modifié",
+            "reset_name": "Réinitialiser le filtre par date",
             "options": {
               "today": "Aujourd'hui",
               "last_7_days": "7 derniers jours",
@@ -1792,8 +1802,10 @@
           }
         },
         "filters": {
+          "heading": "Filters",
           "location": {
             "label": "Locatie",
+            "reset_name": "Locatiefilter resetten",
             "options": {
               "my_files": "Mijn bestanden",
               "shared_with_me": "Gedeeld met mij",
@@ -1819,6 +1831,7 @@
           },
           "category": {
             "label": "Type",
+            "reset_name": "Typefilter resetten",
             "options": {
               "doc": "Tekstdocument",
               "powerpoint": "Presentatie",
@@ -1835,10 +1848,12 @@
             "label": "Gedeeld met",
             "placeholder": "Zoek een naam",
             "empty": "Geen contacten gevonden",
-            "reset": "Opnieuw instellen"
+            "reset": "Opnieuw instellen",
+            "reset_name": "Filter 'Gedeeld met' resetten"
           },
           "modified": {
             "label": "Gewijzigd",
+            "reset_name": "Wijzigingsfilter resetten",
             "options": {
               "today": "Vandaag",
               "last_7_days": "Laatste 7 dagen",

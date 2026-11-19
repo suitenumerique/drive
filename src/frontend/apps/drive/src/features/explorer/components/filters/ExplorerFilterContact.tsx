@@ -41,6 +41,7 @@ export const ExplorerFilterContact = (props: {
   return (
     <UserSearchFilter
       label={t("explorer.filters.contact.label")}
+      resetLabel={t("explorer.filters.contact.reset_name")}
       activeLabel={selectedUser ? contactLabel(selectedUser) : undefined}
       searchValue={search}
       onSearchChange={setSearch}

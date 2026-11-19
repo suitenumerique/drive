@@ -99,6 +99,7 @@ export const ExplorerFilterModified = (props: {
   return (
     <Filter
       label={t("explorer.filters.modified.label")}
+      resetLabel={t("explorer.filters.modified.reset_name")}
       options={options}
       value={props.value?.key}
       onChange={(key) => {

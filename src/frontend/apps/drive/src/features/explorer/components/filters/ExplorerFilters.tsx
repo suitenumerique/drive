@@ -5,10 +5,12 @@ import { ExplorerFilterCategory } from "./ExplorerFilterCategory";
 import { ExplorerFilterContact } from "./ExplorerFilterContact";
 import { ExplorerFilterModified } from "./ExplorerFilterModified";
 import { SmartScroller } from "@gouvfr-lasuite/ui-components";
+import { useTranslation } from "react-i18next";
 
 export const ExplorerFilters = () => {
   const { filters, onFiltersChange } = useAppExplorer();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const onChange = (name: string, value: unknown) => {
     onFiltersChange?.(handleFilterChange(filters, name, value));
@@ -16,6 +18,9 @@ export const ExplorerFilters = () => {
 
   return (
     <div className="explorer__filters__container">
+      <h2 className="explorer__filters__heading">
+        {t("explorer.filters.heading")}
+      </h2>
       <SmartScroller>
         <div className="explorer__filters">
           <ExplorerFilterCategory

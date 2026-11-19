@@ -154,6 +154,9 @@ export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
           placeholder={t("explorer.search.modal.placeholder")}
         >
           <SmartScroller className="explorer__search__modal__filters">
+            <h3 className="explorer__filters__heading">
+              {t("explorer.filters.heading")}
+            </h3>
             <div className="explorer__search__modal__filters__inputs">
               <ExplorerFilterLocation
                 value={filters?.location ?? null}
