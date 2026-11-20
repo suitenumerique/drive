@@ -1775,6 +1775,35 @@ class Base(Configuration):
             environ_prefix=None,
         ),
     }
+    # Who the share modal suggests (django-lasuite's lasuite.contact_search):
+    # Drive's own users by default, or the user's contacts (people and
+    # groups) in La Suite Contacts with
+    # lasuite.contact_search.backends.lasuite_contacts.LaSuiteContactsBackend
+    # and {"base_url": "https://contacts.example.org"} as parameters (it
+    # needs OIDC_STORE_ACCESS_TOKEN and OIDC_STORE_REFRESH_TOKEN). When it
+    # can't answer, Drive's users are searched instead (the fallback; set it
+    # to lasuite.contact_search.backends.dummy.DummyContactSearchBackend to
+    # find nobody). See docs/contact-search.md.
+    LASUITE_CONTACT_SEARCH = {
+        "BACKEND": values.Value(
+            "core.contact_search.LocalContactSearchBackend",
+            environ_name="CONTACT_SEARCH_BACKEND",
+            environ_prefix=None,
+        ),
+        "PARAMETERS": values.DictValue(
+            default={},
+            environ_name="CONTACT_SEARCH_BACKEND_PARAMETERS",
+            environ_prefix=None,
+        ),
+        "FALLBACK": {
+            "BACKEND": values.Value(
+                "core.contact_search.LocalContactSearchBackend",
+                environ_name="CONTACT_SEARCH_FALLBACK_BACKEND",
+                environ_prefix=None,
+            ),
+        },
+    }
+
     # Delay in seconds for the development SleepyDummyBackend safe result.
     MALWARE_DETECTION_DUMMY_SLEEP = values.PositiveIntegerValue(
         3,
