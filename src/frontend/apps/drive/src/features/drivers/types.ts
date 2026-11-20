@@ -209,6 +209,31 @@ export type User = {
 
 export type UserLight = Pick<User, "id" | "full_name" | "short_name">;
 
+/**
+ * A person found by the contact search. An id equal to the email means the
+ * person has no Drive account: sharing with them sends an invitation.
+ */
+export type ContactUser = Pick<
+  User,
+  "id" | "email" | "full_name" | "short_name"
+> & {
+  kind: "user";
+};
+
+/**
+ * A group found by the contact search (La Suite Contacts). Drive has no
+ * groups of its own: sharing with a group shares with each of its members.
+ */
+export type ContactGroup = {
+  kind: "group";
+  id: string;
+  name: string;
+  email: string;
+  members_count: number | null;
+};
+
+export type Contact = ContactUser | ContactGroup;
+
 export type LocalizedThemeCustomization<T> = {
   default: T;
   [key: string]: T;

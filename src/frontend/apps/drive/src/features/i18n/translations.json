@@ -84,6 +84,12 @@
             "inherited_edit": "Inherited. To lower role or remove access, edit",
             "parent_folder": "the parent folder."
           }
+        },
+        "group": {
+          "description_one": "Group · {{count}} member",
+          "description_other": "Group · {{count}} members",
+          "description_unknown": "Group",
+          "members_unavailable": "The group's members couldn't be listed. Please try again later."
         }
       },
       "file_download_modal": {
@@ -833,6 +839,12 @@
             "inherited_edit": "Hérité. Pour réduire le rôle ou supprimer l'accès, modifiez",
             "parent_folder": "le dossier parent."
           }
+        },
+        "group": {
+          "description_one": "Groupe · {{count}} membre",
+          "description_other": "Groupe · {{count}} membres",
+          "description_unknown": "Groupe",
+          "members_unavailable": "Impossible de récupérer les membres du groupe. Veuillez réessayer plus tard."
         }
       },
       "file_download_modal": {
@@ -1582,6 +1594,12 @@
             "inherited_edit": "Herediteerd. Om de rol te verlagen of het toegang te verwijderen, bewerkt u",
             "parent_folder": "de bovenliggende map."
           }
+        },
+        "group": {
+          "description_one": "Groep · {{count}} lid",
+          "description_other": "Groep · {{count}} leden",
+          "description_unknown": "Groep",
+          "members_unavailable": "De leden van de groep konden niet worden opgehaald. Probeer het later opnieuw."
         }
       },
       "file_download_modal": {
