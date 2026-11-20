@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v1.1.0] - 2026-11-20
+
 ### Added
 
 - ✨(backend) record the provenance of items in a new source field
@@ -725,7 +727,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v1.0.1...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v1.1.0...main
+[v1.1.0]: https://github.com/suitenumerique/drive/releases/v1.1.0
 [v1.0.1]: https://github.com/suitenumerique/drive/releases/v1.0.1
 [v1.0.0]: https://github.com/suitenumerique/drive/releases/v1.0.0
 [v0.27.0]: https://github.com/suitenumerique/drive/releases/v0.27.0
