@@ -1,11 +1,46 @@
 ## Purpose
 
-Description...
-
+Describe the purpose of this pull request.
 
 ## Proposal
 
-Description...
+* [ ] item 1...
+* [ ] item 2...
 
-- [] item 1...
-- [] item 2...
+## External contributions
+
+Thank you for your contribution! 🎉
+
+Please ensure the following items are checked before submitting your pull request:
+
+### General requirements
+
+* [ ] I have read and followed the [contributing guidelines](https://github.com/suitenumerique/drive/blob/main/CONTRIBUTING.md)
+* [ ] I have read and agreed to the [Code of Conduct](https://github.com/suitenumerique/drive/blob/main/CODE_OF_CONDUCT.md)
+* [ ] I have added corresponding tests for new features or bug fixes (if applicable)
+
+*Skip the checkbox below 👇 if you're fixing an issue or adding documentation*
+* [ ] Before submitting a PR for a new feature I made sure to contact the product manager
+
+### CI requirements
+
+* [ ] I made sure that all existing tests are passing (`make test`)
+* [ ] I made sure that the linters are passing (`make lint && make frontend-lint`)
+* [ ] I have signed off my commits with `git commit --signoff` (DCO compliance)
+* [ ] I have signed my commits with my SSH or GPG key (`git commit -S`)
+* [ ] My commit messages follow the required format: `<gitmoji>(type) title description`
+* [ ] I have added a changelog entry under `## [Unreleased]` section (if noticeable change)
+
+### Upgrade requirements
+
+*Skip the checkbox below 👇 if your change doesn't touch the configuration or the deployment*
+
+* [ ] I documented the changes that self-hosters need to apply (environment variables, nginx configuration, Helm chart, migrations…) under `## [Unreleased]` in [UPGRADE.md](https://github.com/suitenumerique/drive/blob/main/UPGRADE.md), and updated `env.d/` and `docs/env.md` accordingly
+
+### AI requirements
+
+*Skip the checkboxes below 👇 If you didn't use AI for your contribution*
+
+* [ ] I used AI assistance to produce part or all of this contribution
+* [ ] I have read, reviewed, understood and can explain the code I am submitting
+* [ ] I can jump in a call or a chat to explain my work to a maintainer
