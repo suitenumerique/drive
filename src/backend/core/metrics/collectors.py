@@ -3,6 +3,8 @@
 import logging
 import socket
 
+from django.conf import settings
+
 from prometheus_client import CollectorRegistry
 from prometheus_client.core import GaugeMetricFamily, Metric
 from prometheus_client.multiprocess import MultiProcessCollector
@@ -12,6 +14,35 @@ from drive.celery_app import app as celery_app
 logger = logging.getLogger(__name__)
 
 HOSTNAME_LABEL = "hostname"
+
+
+def search_indexer_label():
+    """Return the class name of the indexer, or "none" when none is configured."""
+    classpath = settings.SEARCH_INDEXER_CLASS
+    return str(classpath).rsplit(".", 1)[-1] if classpath else "none"
+
+
+class BuildInfoCollector:
+    """What the backend runs, as a single series."""
+
+    def collect(self):
+        """Yield the single series describing this deployment."""
+        gauge = GaugeMetricFamily(
+            "drive_build_info",
+            "Version and query-affecting configuration of the running backend, "
+            "as a single series at 1 (read the most recent one after a rollout)",
+            labels=["environment", "indexed_search", "search_indexer", "version"],
+        )
+        gauge.add_metric(
+            [
+                str(settings.ENVIRONMENT),
+                str(settings.FEATURES_INDEXED_SEARCH).lower(),
+                search_indexer_label(),
+                str(settings.RELEASE),
+            ],
+            1,
+        )
+        yield gauge
 
 
 class CeleryQueueCollector:
