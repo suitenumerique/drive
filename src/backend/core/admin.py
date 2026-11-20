@@ -591,12 +591,20 @@ class ItemAdmin(admin.ModelAdmin):
                 "fields": (
                     "id",
                     "title",
+                    "type",
                     "filename",
+                    "mimetype",
+                    "description",
                     "size_display",
                     "quota_excluded",
                     "source",
+                    "main_workspace",
+                    "target",
+                    "created_at",
+                    "updated_at",
                     "deleted_at",
                     "ancestors_deleted_at",
+                    "hard_deleted_at",
                     "malware_detection_info",
                 )
             },
@@ -608,6 +616,8 @@ class ItemAdmin(admin.ModelAdmin):
                     "creator",
                     "link_reach",
                     "link_role",
+                    "link_expires_at",
+                    "has_link_password",
                 )
             },
         ),
@@ -654,6 +664,16 @@ class ItemAdmin(admin.ModelAdmin):
         "malware_detection_info",
         "source",
         "tree",
+        "type",
+        "mimetype",
+        "description",
+        "main_workspace",
+        "target",
+        "created_at",
+        "updated_at",
+        "hard_deleted_at",
+        "link_expires_at",
+        "has_link_password",
     )
     search_fields = ("id", "title", "creator__email")
     list_filter = ("upload_state", "link_reach", "link_role", "quota_excluded")
@@ -679,6 +699,11 @@ class ItemAdmin(admin.ModelAdmin):
         if obj.size is None:
             return None
         return format_size(obj.size)
+
+    @admin.display(boolean=True, description=_("link password"))
+    def has_link_password(self, obj):
+        """Return whether the item link is protected by a password."""
+        return bool(obj.link_password)
 
     def trigger_file_analysis(self, request, queryset):
         """Reanalyse the file of the items."""

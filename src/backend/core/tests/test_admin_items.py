@@ -298,3 +298,24 @@ def test_admin_items_tree_node_permission(client):
     response = client.get(f"/admin/core/item/{folder.pk}/tree/")
 
     assert response.status_code == 403
+
+
+@override_settings(
+    STORAGES={
+        **settings.STORAGES,
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
+)
+def test_admin_items_change_view(client):
+    """The change view should show the item attributes and never the link password hash."""
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FILE, mimetype="text/x-drive-test")
+    item.set_link_password("secret")
+    item.save()
+    client.force_login(factories.UserFactory(is_staff=True, is_superuser=True))
+
+    response = client.get(f"/admin/core/item/{item.pk}/change/")
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "text/x-drive-test" in html
+    assert item.link_password not in html

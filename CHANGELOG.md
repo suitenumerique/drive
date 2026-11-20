@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(backend) record the provenance of items in a new source field
+- ✨(backend) show every item attribute in the admin change view
 
 ## [v1.0.1] - 2026-11-20
 
