@@ -159,6 +159,9 @@ This document lists all configurable environment variables for the Drive applica
 | `CLEAN_PENDING_ITEMS_SCHEDULE` | Schedule `clean_pending_items` with celery beat: a crontab expression (m h dom mon dow) followed by the command arguments, e.g. `30 0 * * * --hours=48`. Do not set it if the command already runs as a cron job (the Helm chart does), it would run twice. An invalid value stops the application at startup | |
 | `PURGE_DELETED_ITEMS_SCHEDULE` | Schedule `purge_deleted_items` with celery beat, same format, e.g. `45 0 * * *`. Do not set it if the command already runs as a cron job (the Helm chart does), it would run twice | |
 | `USER_RECONCILIATION_FORM_URL` | URL of a third-party form for user reconciliation requests, used in the email sent when a request fails | `None` |
+| `CONTACT_SEARCH_BACKEND` | Who the share modal suggests: Drive's users (`core.contact_search.LocalContactSearchBackend`) or the user's contacts and groups in La Suite Contacts (`lasuite.contact_search.backends.lasuite_contacts.LaSuiteContactsBackend`), see [contact-search.md](contact-search.md) | `core.contact_search.LocalContactSearchBackend` |
+| `CONTACT_SEARCH_BACKEND_PARAMETERS` | JSON parameters of the contact search backend, e.g. `{"base_url": "https://contacts.example.org"}` for La Suite Contacts | `{}` |
+| `CONTACT_SEARCH_FALLBACK_BACKEND` | Who the share modal suggests when the contact search backend can't answer; `lasuite.contact_search.backends.dummy.DummyContactSearchBackend` finds nobody | `core.contact_search.LocalContactSearchBackend` |
 | `WOPI_CLIENTS` | List of client name. These client names will be used in the post_setup | [] |
 | `WOPI_{CLIENT_NAME}_DISCOVERY_URL` | The discovery url for each client present in the `WOPI_CLIENTS`. if `WOPI_CLIENTS=vendorA` then set `WOPI_VENDORA_DISCOVERY_URL` | |
 | `WOPI_EXCLUDED_MIMETYPES` | List of mimetypes excluded when parsing the discovery url | See settings.py module |
