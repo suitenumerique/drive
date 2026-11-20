@@ -82,7 +82,7 @@ Make sure you follow the following best practices:
 Before asking for a human review make sure that:
 
 * all tests have passed in the CI
-* you ticked all the checkboxes of the PR checklist
+* you ticked all the checkboxes of the [PR checklist](.github/PULL_REQUEST_TEMPLATE.md)
 * you addressed the Code Rabbit comments - if relevant
 
 ### Don't forget to: 
