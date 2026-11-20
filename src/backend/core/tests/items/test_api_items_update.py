@@ -721,6 +721,38 @@ def test_api_items_update_file_rename_unchanged_extension_not_allowed(settings):
     rename_file_mock.assert_called_once_with(item.id, "new_title.exe")
 
 
+@pytest.mark.parametrize("mode", ["allowlist", "denylist"])
+def test_api_items_update_file_rename_without_extension(settings, mode):
+    """
+    The frontend sends the title without its extension on rename. It should work
+    whatever the screening mode, as rename_file keeps the extension of the filename.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = mode
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        title="old_title.pdf",
+        type=models.ItemTypeChoices.FILE,
+        filename="old_title.pdf",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    with mock.patch.object(rename_file, "delay") as rename_file_mock:
+        response = client.patch(
+            f"/api/v1.0/items/{item.id!s}/",
+            {"title": "new title"},
+            format="json",
+        )
+    assert response.status_code == 200
+    item.refresh_from_db()
+    assert item.title == "new title"
+    rename_file_mock.assert_called_once_with(item.id, "new title")
+
+
 def test_api_items_update_no_title_should_not_rename_file():
     """
     Test the update of a file without title should not rename the file.

@@ -17,6 +17,10 @@ and this project adheres to
 - 📈(backend) track folder restriction changes in posthog
 - 📈(backend) flag deletions holding restricted folders in posthog
 
+### Fixed
+
+- 🐛(backend) allow renaming a file without its extension in allowlist mode
+
 ## [v1.0.1] - 2026-11-20
 
 ### Added
