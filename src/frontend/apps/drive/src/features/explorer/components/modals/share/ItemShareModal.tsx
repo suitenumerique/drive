@@ -6,7 +6,6 @@ import {
   LinkReach,
   LinkRole,
   Role,
-  User,
 } from "@/features/drivers/types";
 import {
   useMutationBatchShare,
@@ -27,7 +26,17 @@ import {
   useItem,
   useItemAccesses,
 } from "@/features/explorer/hooks/useQueries";
-import { useUsers } from "@/features/users/hooks/useUserQueries";
+import { useContactSearch } from "@/features/users/hooks/useUserQueries";
+import { getDriver } from "@/features/config/Config";
+import {
+  expandShareCandidates,
+  ShareCandidate,
+  toShareCandidates,
+} from "@/features/explorer/utils/shareContacts";
+import {
+  addToast,
+  ToasterItem,
+} from "@/features/ui/components/toaster/Toaster";
 import { useClipboard } from "@/hooks/useCopyToClipboard";
 import {
   CustomTranslations,
@@ -85,7 +94,7 @@ export const ItemShareModal = ({
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [queryValue, setQueryValue] = useState("");
-  const previousSearchResult = useRef<User[]>([]);
+  const previousSearchResult = useRef<ShareCandidate[]>([]);
   // A restriction's target can be readable through a link without granting
   // access to its member list. Wait for the target's own permissions.
   const canViewAccesses = isOpen && !!item?.abilities.accesses_view;
@@ -140,12 +149,24 @@ export const ItemShareModal = ({
    * Keep previous search result when changing the query value to avoid flickering
    * Because when it's the first time we have this value, the queryKey changes and by default react-query returns undefined
    */
-  const { data: users, isLoading: isLoadingUsers } = useUsers(
+  const { data: contacts, isLoading: isLoadingUsers } = useContactSearch(
     { q: queryValue },
     {
       enabled: queryValue !== undefined && queryValue !== "",
       placeholderData: (previousData) => previousData,
     },
+  );
+
+  // The modal lists people only: a group is one row, expanded on share.
+  const users = useMemo(
+    () =>
+      contacts &&
+      toShareCandidates(contacts, (count) =>
+        count === null
+          ? t("share_modal.group.description_unknown")
+          : t("share_modal.group.description", { count }),
+      ),
+    [contacts, t],
   );
 
   // Used for the initial data
@@ -157,7 +178,21 @@ export const ItemShareModal = ({
     }
   }, [users]);
 
-  const onInviteUser = async (users: User[], role: Role) => {
+  const onInviteUser = async (candidates: ShareCandidate[], role: Role) => {
+    let users: ShareCandidate[];
+    try {
+      users = await expandShareCandidates(candidates, (groupId) =>
+        getDriver().getContactGroupMembers(groupId),
+      );
+    } catch {
+      addToast(
+        <ToasterItem type="error">
+          <span>{t("share_modal.group.members_unavailable")}</span>
+        </ToasterItem>,
+      );
+      return;
+    }
+
     const inviteByEmail = users.filter((user) => user.email === user.id);
     const inviteByUsername = users.filter((user) => user.email !== user.id);
 
@@ -367,7 +402,8 @@ export const ItemShareModal = ({
 
   return (
     <DragEventBarrier>
-      <ShareModal
+      {/* Rows are people or groups (ShareCandidate), not only Drive users. */}
+      <ShareModal<ShareCandidate, Invitation, Access>
         isOpen={isOpen}
         loading={!item || isLoadingUsers || updateRestriction.isPending}
         onClose={onClose}

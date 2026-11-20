@@ -14,6 +14,7 @@ from core.external_api import viewsets as external_api_viewsets
 router = DefaultRouter()
 router.register("items", viewsets.ItemViewSet, basename="items")
 router.register("users", viewsets.UserViewSet, basename="users")
+router.register("contacts", viewsets.ContactViewSet, basename="contacts")
 
 # - Routes nested under a item
 item_related_router = DefaultRouter()

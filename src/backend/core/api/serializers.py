@@ -14,6 +14,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from drf_spectacular.utils import PolymorphicProxySerializer
+from lasuite.contact_search import serializers as contact_search_serializers
 from lasuite.drf.models.choices import LinkReachChoices
 from rest_framework import serializers
 
@@ -24,6 +26,23 @@ from core.storage import get_storage_compute_backend
 from wopi import utils as wopi_utils
 
 logger = logging.getLogger(__name__)
+
+
+class UserContactSerializer(contact_search_serializers.UserContactSerializer):  # pylint: disable=abstract-method
+    """A user the share modal suggests (for the schema)."""
+
+    short_name = serializers.CharField(allow_blank=True)
+
+
+CONTACT_SEARCH_RESULT = PolymorphicProxySerializer(
+    component_name="ContactSearchResult",
+    serializers={
+        "user": UserContactSerializer,
+        "group": contact_search_serializers.GroupContactSerializer,
+    },
+    resource_type_field_name="kind",
+    many=True,
+)
 
 
 class UserSerializer(serializers.ModelSerializer):

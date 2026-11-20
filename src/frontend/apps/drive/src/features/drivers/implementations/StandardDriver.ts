@@ -1,5 +1,6 @@
 import { fetchAPI } from "@/features/api/fetchApi";
 import {
+  ContactFilters,
   Driver,
   Entitlements,
   ItemFilters,
@@ -21,6 +22,8 @@ import {
   Access,
   ApiConfig,
   APIList,
+  Contact,
+  ContactUser,
   Invitation,
   Item,
   ItemBreadcrumb,
@@ -137,6 +140,20 @@ export class StandardDriver extends Driver {
     const response = await fetchAPI(`users/contacts/`, {
       params: filters,
     });
+    const data = await response.json();
+    return data;
+  }
+
+  async searchContacts(filters?: ContactFilters): Promise<Contact[]> {
+    const response = await fetchAPI(`contacts/`, {
+      params: filters,
+    });
+    const data = await response.json();
+    return data;
+  }
+
+  async getContactGroupMembers(groupId: string): Promise<ContactUser[]> {
+    const response = await fetchAPI(`contacts/groups/${groupId}/members/`);
     const data = await response.json();
     return data;
   }

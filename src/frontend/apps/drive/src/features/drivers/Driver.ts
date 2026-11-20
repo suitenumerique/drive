@@ -15,6 +15,8 @@ import {
   Access,
   ApiConfig,
   APIList,
+  Contact,
+  ContactUser,
   Invitation,
   Item,
   ItemBreadcrumb,
@@ -64,6 +66,12 @@ export type PaginatedChildrenResult = {
 };
 export type UserFilters = {
   q?: string;
+};
+
+export type ContactFilters = {
+  q?: string;
+  // Leave out the users who already have an access to this item.
+  item_id?: string;
 };
 
 // Reason is a string that describes the reason for the entitlement result.
@@ -168,6 +176,8 @@ export abstract class Driver {
   // Users
   abstract getUsers(filters?: UserFilters): Promise<User[]>;
   abstract getContacts(filters?: UserFilters): Promise<UserLight[]>;
+  abstract searchContacts(filters?: ContactFilters): Promise<Contact[]>;
+  abstract getContactGroupMembers(groupId: string): Promise<ContactUser[]>;
   abstract updateUser(payload: Partial<User> & { id: string }): Promise<User>;
   // Tree
   abstract getTree(id: string): Promise<Item>;
