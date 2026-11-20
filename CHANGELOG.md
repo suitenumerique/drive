@@ -39,6 +39,10 @@ and this project adheres to
 - ⚡️(backend) answer the business metrics counts from indexes
 - 🐛(backend) compute the business metrics once for all the scrapes
 
+### Fixed
+
+- ♿️(frontend) describe file and folder type icons
+
 ## [v0.27.0] - 2026-11-09
 
 ### Added
