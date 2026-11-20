@@ -377,7 +377,6 @@ def test_api_item_batch_share_owner_can_grant_owner():
         [{"email": "not-an-email", "role": "reader"}],
         [{"email": "bob@example.com", "role": "unknown-role"}],
         [{"email": "bob@example.com"}],
-        [{"email": f"contact{index}@example.com", "role": "reader"} for index in range(101)],
     ],
 )
 def test_api_item_batch_share_invalid_payload(rows):
@@ -393,6 +392,52 @@ def test_api_item_batch_share_invalid_payload(rows):
     assert response.status_code == 400
     assert models.Invitation.objects.count() == 0
     assert models.ItemAccess.objects.filter(item=item).count() == 1
+
+
+@override_settings(ALLOW_SHARE_IMPORT_FILE=True, SHARE_IMPORT_FILE_MAX_ROWS=2)
+@pytest.mark.parametrize("row_count, expected_status", [(2, 200), (3, 400)])
+def test_api_item_batch_share_max_rows(row_count, expected_status):
+    """Batches larger than the configured max rows should be rejected."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(users=[(user, "owner")])
+
+    client = APIClient()
+    client.force_login(user)
+
+    rows = [
+        {"email": f"contact{index}@example.com", "role": "reader"} for index in range(row_count)
+    ]
+    response = client.post(batch_share_url(item), {"rows": rows}, format="json")
+
+    assert response.status_code == expected_status
+    expected_invitations = row_count if expected_status == 200 else 0
+    assert models.Invitation.objects.count() == expected_invitations
+
+
+@override_settings(ALLOW_SHARE_IMPORT_FILE=True)
+def test_api_item_batch_share_default_max_rows():
+    """Batches should be limited to 500 rows by default."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(users=[(user, "owner")])
+
+    client = APIClient()
+    client.force_login(user)
+
+    rows = [{"email": f"contact{index}@example.com", "role": "reader"} for index in range(501)]
+    response = client.post(batch_share_url(item), {"rows": rows}, format="json")
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "type": "validation_error",
+        "errors": [
+            {
+                "attr": "rows",
+                "code": "batch_share_too_many_rows",
+                "detail": "Ensure this field has no more than 500 rows.",
+            }
+        ],
+    }
+    assert models.Invitation.objects.count() == 0
 
 
 @override_settings(ALLOW_SHARE_IMPORT_FILE=True)

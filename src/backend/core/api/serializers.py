@@ -1047,9 +1047,6 @@ class MoveItemSerializer(serializers.Serializer):
     target_item_id = serializers.UUIDField(required=False)
 
 
-BATCH_SHARE_MAX_ROWS = 100  # Keep in sync with the ui-kit share import modal max rows
-
-
 class BatchShareRowSerializer(serializers.Serializer):
     """One row of a batch share payload: a contact email and the role to grant."""
 
@@ -1064,7 +1061,17 @@ class BatchShareRowSerializer(serializers.Serializer):
 class BatchShareSerializer(serializers.Serializer):
     """Validate the payload of the item batch-share action."""
 
-    rows = BatchShareRowSerializer(many=True, allow_empty=False, max_length=BATCH_SHARE_MAX_ROWS)
+    rows = BatchShareRowSerializer(many=True, allow_empty=False)
+
+    def validate_rows(self, value):
+        """Reject batches larger than the configured import file limit."""
+        max_rows = settings.SHARE_IMPORT_FILE_MAX_ROWS
+        if len(value) > max_rows:
+            raise serializers.ValidationError(
+                _("Ensure this field has no more than %(max_rows)s rows.") % {"max_rows": max_rows},
+                code="batch_share_too_many_rows",
+            )
+        return value
 
 
 class SDKRelayEventSerializer(serializers.Serializer):

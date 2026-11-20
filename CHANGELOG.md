@@ -23,6 +23,11 @@ and this project adheres to
 
 - 🔧(docker) add a CACHEBUST build arg to force the system packages upgrade
 - ✨(backend) monitor the malware detection queue in the business metrics
+- ✨(frontend) accept the translated role names in the share import file
+
+### Changed
+
+- ✨(backend) raise the share import file limit to 500 rows, make it configurable
 
 ### Removed
 
