@@ -38,6 +38,7 @@ from drf_spectacular.utils import (
     extend_schema_view,
     inline_serializer,
 )
+from lasuite.contact_search.sharing import report_share
 from lasuite.contact_search.views import ContactSearchViewSet
 from lasuite.drf.models.choices import (
     PRIVILEGED_ROLES,
@@ -1933,6 +1934,7 @@ class ItemViewSet(
                 request.user,
                 request.user.language or settings.LANGUAGE_CODE,
             )
+        report_share(request, [email for email, _role in created_accesses + created_invitations])
 
         posthog_capture(
             "item_batch_share",
@@ -2566,6 +2568,7 @@ class ItemAccessViewSet(
                 self.request.user,
                 self.request.user.language or settings.LANGUAGE_CODE,
             )
+            report_share(self.request, [access.user.email])
 
         posthog_capture(
             "item_access_created",
@@ -2682,6 +2685,7 @@ class InvitationViewset(
             self.request.user,
             self.request.user.language or settings.LANGUAGE_CODE,
         )
+        report_share(self.request, [invitation.email])
 
         posthog_capture(
             "item_invitation_created",
