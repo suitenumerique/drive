@@ -16,6 +16,8 @@ the following command inside your docker container:
 
 ## [Unreleased]
 
+## [v1.0.1] - 2026-11-20
+
 - ⚠️ Media responses carry new security headers. The Helm chart and
   `src/nginx/servers.conf.erb` add them by default. If you set your own
   `nginx.ingress.kubernetes.io/configuration-snippet` on the media ingresses, or
