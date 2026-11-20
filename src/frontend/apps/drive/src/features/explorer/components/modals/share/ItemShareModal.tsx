@@ -596,6 +596,7 @@ export const ItemShareModal = ({
           });
         }}
         allowFileImport={config.ALLOW_SHARE_IMPORT_FILE ?? false}
+        maxImportRows={config.SHARE_IMPORT_FILE_MAX_ROWS}
         onImportContacts={async (rows) => {
           try {
             await batchShare({
