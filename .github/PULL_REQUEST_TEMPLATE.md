@@ -31,12 +31,6 @@ Please ensure the following items are checked before submitting your pull reques
 * [ ] My commit messages follow the required format: `<gitmoji>(type) title description`
 * [ ] I have added a changelog entry under `## [Unreleased]` section (if noticeable change)
 
-### Upgrade requirements
-
-*Skip the checkbox below 👇 if your change doesn't touch the configuration or the deployment*
-
-* [ ] I documented the changes that self-hosters need to apply (environment variables, nginx configuration, Helm chart, migrations…) under `## [Unreleased]` in [UPGRADE.md](https://github.com/suitenumerique/drive/blob/main/UPGRADE.md), and updated `env.d/` and `docs/env.md` accordingly
-
 ### AI requirements
 
 *Skip the checkboxes below 👇 If you didn't use AI for your contribution*
