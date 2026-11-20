@@ -14,6 +14,7 @@ import structlog
 from cryptography.fernet import Fernet
 
 from core import factories
+from core.tests.utils.menshen import introspection_mock, menshen_backend_setup
 from core.tests.utils.urls import reload_urls
 
 USER = "user"
@@ -27,16 +28,15 @@ def clear_cache():
     yield
     cache.clear()
     # Clear functools.cache for functions decorated with @functools.cache
+    # pylint:disable=import-outside-toplevel
 
-    from core.entitlements import (  # pylint:disable=import-outside-toplevel # noqa: PLC0415
-        get_entitlements_backend,
-    )
-    from core.storage import (  # pylint:disable=import-outside-toplevel # noqa: PLC0415
-        get_storage_compute_backend,
-    )
+    from core.entitlements import get_entitlements_backend  # noqa: PLC0415
+    from core.external_api.authentication import _get_token_exchange_client  # noqa: PLC0415
+    from core.storage import get_storage_compute_backend  # noqa: PLC0415
 
     get_entitlements_backend.cache_clear()
     get_storage_compute_backend.cache_clear()
+    _get_token_exchange_client.cache_clear()
 
 
 @pytest.fixture(autouse=True)
@@ -99,20 +99,25 @@ def resource_server_backend_setup(settings):
 def resource_server_backend_conf(settings):
     """
     A fixture to create a user token for testing.
+
+    Register the external API routes, and unregisters them again afterwards:
+    the url configuration is module level state shared by the whole session.
     """
     resource_server_backend_setup(settings)
+    reload_urls()
+
+    yield settings
+
+    settings.OIDC_RESOURCE_SERVER_ENABLED = False
     reload_urls()
 
 
 @pytest.fixture
-def resource_server_backend(settings):
+def resource_server_backend(resource_server_backend_conf):
     """
     A fixture to create a user token for testing.
     Including a mocked introspection endpoint.
     """
-    resource_server_backend_setup(settings)
-    reload_urls()
-
     with responses.RequestsMock() as rsps:
         rsps.add(
             responses.POST,
@@ -120,7 +125,7 @@ def resource_server_backend(settings):
             json={
                 "iss": "https://oidc.example.com",
                 "aud": "some_client_id",  # settings.OIDC_RS_CLIENT_ID
-                "sub": "very-specific-sub",
+                "sub": "specific-sub",
                 "client_id": "some_service_provider",
                 "scope": "openid groups",
                 "active": True,
@@ -135,7 +140,7 @@ def user_specific_sub():
     """
     A fixture to create a user token for testing.
     """
-    user = factories.UserFactory(sub="very-specific-sub")
+    user = factories.UserFactory(sub="specific-sub")
 
     yield user
 
@@ -159,6 +164,33 @@ def user_token():
     A fixture to create a user token for testing.
     """
     return build_authorization_bearer("some_token")
+
+
+@pytest.fixture
+def menshen_backend_conf(settings):
+    """
+    A fixture enabling the Menshen token exchange backend, resource server off.
+    Register the external API routes, and unregisters them again afterwards.
+    """
+    menshen_backend_setup(settings)
+    reload_urls()
+
+    yield settings
+
+    settings.MENSHEN_ENABLED = False
+    settings.OIDC_RESOURCE_SERVER_ENABLED = False
+    reload_urls()
+
+
+@pytest.fixture
+def menshen_backend(menshen_backend_conf, httpx2_mock):
+    """
+    A fixture enabling the Menshen token exchange backend.
+    Including a mocked introspection endpoint answering with an active token.
+    """
+    introspection_mock(httpx2_mock)
+
+    yield httpx2_mock
 
 
 @pytest.fixture(name="indexer_settings")
