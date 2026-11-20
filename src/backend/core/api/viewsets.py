@@ -2785,6 +2785,7 @@ class ConfigView(drf.views.APIView):
             "LANGUAGE_CODE",
             "SDK_ENABLED",
             "SENTRY_DSN",
+            "SHARE_IMPORT_FILE_MAX_ROWS",
         ]
         dict_settings = {}
         for setting in array_settings:

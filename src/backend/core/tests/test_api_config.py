@@ -46,6 +46,7 @@ pytestmark = pytest.mark.django_db
     POSTHOG_HOST="https://eu.i.posthog-test.com",
     SDK_ENABLED=True,
     SENTRY_DSN="https://sentry.test/123",
+    SHARE_IMPORT_FILE_MAX_ROWS=250,
     THEME_CUSTOMIZATION_FILE_PATH="",
     FRONTEND_EXTERNAL_HOME_URL="https://test.com",
     FRONTEND_ENTITLEMENTS_DISCLAIMERS={},
@@ -102,6 +103,7 @@ def test_api_config(is_authenticated):
         "POSTHOG_HOST": "https://eu.i.posthog-test.com",
         "SDK_ENABLED": True,
         "SENTRY_DSN": "https://sentry.test/123",
+        "SHARE_IMPORT_FILE_MAX_ROWS": 250,
         "theme_customization": {},
     }
 

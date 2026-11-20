@@ -1272,6 +1272,9 @@ class Base(Configuration):
     ALLOW_SHARE_IMPORT_FILE = values.BooleanValue(
         default=False, environ_name="ALLOW_SHARE_IMPORT_FILE", environ_prefix=None
     )
+    SHARE_IMPORT_FILE_MAX_ROWS = values.PositiveIntegerValue(
+        default=500, environ_name="SHARE_IMPORT_FILE_MAX_ROWS", environ_prefix=None
+    )
 
     # Frontend
     FRONTEND_THEME = values.Value(None, environ_name="FRONTEND_THEME", environ_prefix=None)
