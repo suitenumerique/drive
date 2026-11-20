@@ -48,6 +48,7 @@ import {
   getLinkExpirationReset,
 } from "@/features/explorer/utils/linkExpiration";
 import posthog from "posthog-js";
+import { createImportRoleResolver } from "@/features/explorer/utils/shareImport";
 
 type WorkspaceShareModalProps = {
   isOpen: boolean;
@@ -62,7 +63,7 @@ export const ItemShareModal = ({
   item: initialItem,
   onRestrictionUpdated,
 }: WorkspaceShareModalProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const { config } = useConfig();
   const { user } = useAuth();
@@ -598,12 +599,13 @@ export const ItemShareModal = ({
         allowFileImport={config.ALLOW_SHARE_IMPORT_FILE ?? false}
         maxImportRows={config.SHARE_IMPORT_FILE_MAX_ROWS}
         onImportContacts={async (rows) => {
+          const toImportRole = createImportRoleResolver(i18n);
           try {
             await batchShare({
               itemId,
               rows: rows.map((row) => ({
                 email: row.email,
-                role: row.role as Role,
+                role: toImportRole(row.role),
               })),
             });
             posthog.capture("import_share_contacts", {
