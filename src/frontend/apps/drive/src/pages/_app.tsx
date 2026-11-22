@@ -135,6 +135,7 @@ const MyAppInner = ({ Component, pageProps }: AppPropsWithLayout) => {
       <Head>
         <title>{t("app_title")}</title>
         <link
+          key="favicon"
           rel="icon"
           href={removeQuotes(themeTokens.components.favicon.src)}
           type="image/png"

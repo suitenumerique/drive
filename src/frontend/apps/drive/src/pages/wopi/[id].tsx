@@ -1,10 +1,12 @@
 import { useEffect } from "react";
+import Head from "next/head";
 import { useRouter } from "next/router";
 import { useTranslation } from "react-i18next";
 import { FilePreviewType, Icon, Button } from "@gouvfr-lasuite/ui-components";
 
 import { GenericDisclaimer } from "@/features/ui/components/generic-disclaimer/GenericDisclaimer";
 import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
+import { getItemIconSrc } from "@/features/explorer/components/icons/ItemIcon";
 import { useItem } from "@/features/explorer/hooks/useQueries";
 import { useRefreshItemCache } from "@/features/explorer/hooks/useRefreshItems";
 import { itemToPreviewFile } from "@/features/explorer/utils/utils";
@@ -52,6 +54,11 @@ export default function WopiPage() {
 
   return (
     <div className="wopi-page">
+      <Head>
+        {/* The file type rather than the app, to tell editor tabs apart. Same
+            key as the app's favicon in _app, so it replaces it on this page. */}
+        <link key="favicon" rel="icon" href={getItemIconSrc(item)} />
+      </Head>
       <WopiEditorFrame
         item={itemToPreviewFile(item)}
         onFileRename={handleRename}
