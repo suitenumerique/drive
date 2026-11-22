@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- 💄(frontend) show the file type icon in the browser tab of the editor
+
 ## [v1.1.0] - 2026-11-20
 
 ### Added

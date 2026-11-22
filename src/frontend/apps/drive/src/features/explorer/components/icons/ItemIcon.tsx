@@ -8,6 +8,7 @@ import {
   IconSize,
   MimeCategory,
 } from "@gouvfr-lasuite/ui-components";
+import { getItemMimeCategory } from "../../utils/mimeTypes";
 import { itemToPreviewFile } from "../../utils/utils";
 
 type ItemIconProps = {
@@ -57,3 +58,13 @@ export const getItemExtendedIcon = (
 
   return null;
 };
+
+/**
+ * The URL of the icon shown for an item, for places that need an image URL
+ * rather than a component, such as the browser tab of the editor.
+ */
+export const getItemIconSrc = (
+  item: Item,
+  type: "normal" | "mini" = "normal",
+): string =>
+  getItemExtendedIcon(item, type) ?? ICONS[type][getItemMimeCategory(item)];
