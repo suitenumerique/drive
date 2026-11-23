@@ -7,9 +7,9 @@ import i18n from "@/features/i18n/initI18n";
 
 export const messageModalTrashNavigate = (
   modals: ReturnType<typeof useModals>,
-  isFile: boolean = false,
+  kind: "folder" | "file" | "link" = "folder",
 ) => {
-  const key = isFile ? "modal_file" : "modal_folder";
+  const key = `modal_${kind}`;
   modals.messageModal({
     messageType: VariantType.INFO,
     size: ModalSize.MEDIUM,

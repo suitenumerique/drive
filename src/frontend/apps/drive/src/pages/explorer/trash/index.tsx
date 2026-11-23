@@ -77,7 +77,7 @@ export default function TrashPage() {
         messageModalTrashNavigate(modals);
       }}
       onFileClick={() => {
-        messageModalTrashNavigate(modals, true);
+        messageModalTrashNavigate(modals, "file");
       }}
       isLoading={isLoading || isPlaceholderData}
     />
