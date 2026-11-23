@@ -17,6 +17,7 @@ and this project adheres to
 ### Changed
 
 - ✨(backend) raise the share import file limit to 500 rows, make it configurable
+- ⚡️(backend) speed up the share import on large folders
 
 ### Removed
 

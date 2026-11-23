@@ -472,7 +472,7 @@ def test_api_item_batch_share_synchronizes_descendants():
 @override_settings(ALLOW_SHARE_IMPORT_FILE=True)
 @pytest.mark.parametrize(
     "users_count, expected_queries, expected_cache_calls",
-    [(1, 22, 1), (20, 307, 20), (500, 7507, 500)],
+    [(1, 10, 1), (20, 10, 1), (500, 10, 1)],
 )
 def test_api_item_batch_share_cost(
     users_count, expected_queries, expected_cache_calls, django_assert_num_queries
@@ -504,3 +504,29 @@ def test_api_item_batch_share_cost(
     assert response.status_code == 200
     assert response.json()["accesses_created"] == users_count
     assert cache_delete.call_count + cache_delete_many.call_count == expected_cache_calls
+
+
+@override_settings(ALLOW_SHARE_IMPORT_FILE=True)
+def test_api_item_batch_share_invalidates_nb_accesses_cache():
+    """The nb_accesses cache of the item and its descendants should be invalidated."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER)
+    child = factories.ItemFactory(parent=item)
+    factories.UserFactory(email="alice@example.com")
+
+    client = APIClient()
+    client.force_login(user)
+
+    # Warm the cache for both items
+    assert item.nb_accesses == 1
+    assert child.nb_accesses == 1
+
+    response = client.post(
+        batch_share_url(item),
+        {"rows": [{"email": "alice@example.com", "role": "editor"}]},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert cache.get(item.get_nb_accesses_cache_key()) is None
+    assert cache.get(child.get_nb_accesses_cache_key()) is None
