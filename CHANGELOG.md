@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- ⚡️(backend) count the admin item filter choices on demand
+
 ## [v1.1.0] - 2026-11-20
 
 ### Added

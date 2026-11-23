@@ -677,7 +677,8 @@ class ItemAdmin(admin.ModelAdmin):
     )
     search_fields = ("id", "title", "creator__email")
     list_filter = ("upload_state", "link_reach", "link_role", "quota_excluded")
-    show_facets = admin.ShowFacets.ALWAYS
+    # Counted on demand only: each facet reads the whole item table.
+    show_facets = admin.ShowFacets.ALLOW
     actions = (
         "trigger_file_analysis",
         "mark_items_ready",

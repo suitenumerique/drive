@@ -4,7 +4,9 @@ from unittest import mock
 
 from django.conf import settings
 from django.contrib import admin
+from django.db import connection
 from django.test import RequestFactory, override_settings
+from django.test.utils import CaptureQueriesContext
 
 import pytest
 from lasuite.malware_detection.models import MalwareDetection, MalwareDetectionStatus
@@ -319,3 +321,27 @@ def test_admin_items_change_view(client):
     html = response.content.decode()
     assert "text/x-drive-test" in html
     assert item.link_password not in html
+
+
+@override_settings(
+    STORAGES={
+        **settings.STORAGES,
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
+)
+def test_admin_items_changelist_facets_on_demand(client):
+    """The changelist should count the filter choices only on demand."""
+    factories.ItemFactory()
+    client.force_login(factories.UserFactory(is_staff=True, is_superuser=True))
+
+    with CaptureQueriesContext(connection) as queries:
+        response = client.get("/admin/core/item/")
+
+    assert response.status_code == 200
+    assert not [query for query in queries if "FILTER (WHERE" in query["sql"]]
+
+    with CaptureQueriesContext(connection) as queries:
+        response = client.get("/admin/core/item/?_facets=True")
+
+    assert response.status_code == 200
+    assert [query for query in queries if "FILTER (WHERE" in query["sql"]]
