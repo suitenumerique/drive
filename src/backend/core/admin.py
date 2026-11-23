@@ -856,7 +856,7 @@ class ItemAdmin(admin.ModelAdmin):
             "core/admin/item_tree_node.html",
             {
                 "accesses": item.accesses.select_related("user").order_by("user__email", "team"),
-                "children": item.children().order_by("-type", "title"),
+                "children": item.children().order_by(models.ITEM_TYPE_RANK.desc(), "title"),
             },
         )
 

@@ -334,3 +334,25 @@ def test_api_items_link_ordering_by_type(ordering, expected):
 
     assert response.status_code == 200
     assert [r["type"] for r in response.json()["results"]] == expected
+
+
+def test_api_items_link_trashbin_ordering_by_type():
+    """The trashbin applies the requested ordering, links between folders and files."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    for item_type in ["file", "link", "folder"]:
+        item = factories.ItemFactory(
+            type=item_type,
+            title=item_type,
+            users=[(user, models.RoleChoices.OWNER)],
+            update_upload_state=models.ItemUploadStateChoices.READY
+            if item_type == "file"
+            else None,
+        )
+        item.soft_delete()
+
+    response = client.get("/api/v1.0/items/trashbin/?ordering=-type")
+
+    assert response.status_code == 200
+    assert [r["type"] for r in response.json()["results"]] == ["folder", "link", "file"]

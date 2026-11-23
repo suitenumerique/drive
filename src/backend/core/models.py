@@ -89,6 +89,17 @@ class ItemTypeChoices(models.TextChoices):
     LINK = "link", _("Link")
 
 
+# Ordering on the raw type text would put links among the folders: rank links
+# between files and folders, keeping restriction > folder > file as before.
+ITEM_TYPE_RANK = models.Case(
+    models.When(type=ItemTypeChoices.FILE, then=0),
+    models.When(type=ItemTypeChoices.LINK, then=1),
+    models.When(type=ItemTypeChoices.FOLDER, then=2),
+    models.When(type=ItemTypeChoices.RESTRICTION, then=3),
+    output_field=models.IntegerField(),
+)
+
+
 # Links are opened by the browser: only web URLs are accepted, never javascript: or data:
 validate_link_url = validators.URLValidator(schemes=["http", "https"])
 

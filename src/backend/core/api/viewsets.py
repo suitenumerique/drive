@@ -1164,6 +1164,7 @@ class ItemViewSet(
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_user_has_direct_access(user)
         queryset = queryset.annotate_with_numchild()
+        queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
         return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
