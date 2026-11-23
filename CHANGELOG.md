@@ -11,6 +11,7 @@ and this project adheres to
 ### Fixed
 
 - ⚡️(backend) count the admin item filter choices on demand
+- ⚡️(backend) index the item creation date to order the admin item list
 
 ## [v1.1.0] - 2026-11-20
 

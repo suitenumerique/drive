@@ -1423,6 +1423,8 @@ class Item(TreeModel, BaseModel):
                 condition=models.Q(hard_deleted_at__isnull=True, quota_excluded=False),
                 name="item_creator_size_quota_idx",
             ),
+            # Orders the admin item list without reading the whole table.
+            models.Index(fields=["created_at"], name="item_created_at_idx"),
         ]
 
     def __str__(self):
