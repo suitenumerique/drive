@@ -422,6 +422,10 @@
             "modal_file": {
               "title": "This file is in the trash",
               "description": "To display this file, you need to restore it first."
+            },
+            "modal_link": {
+              "title": "This link is in the trash",
+              "description": "To open this link, you need to restore it first."
             }
           },
           "hard_delete": {
@@ -656,6 +660,9 @@
           },
           "duplicating": "duplication in progress",
           "converting": "conversion in progress"
+        },
+        "link": {
+          "open": "Open"
         }
       },
       "anonymous_cta": {
@@ -1172,6 +1179,10 @@
             "modal_file": {
               "title": "Ce fichier est dans la corbeille",
               "description": "Pour afficher ce fichier, vous devez d'abord le restaurer."
+            },
+            "modal_link": {
+              "title": "Ce lien est dans la corbeille",
+              "description": "Pour ouvrir ce lien, vous devez d'abord le restaurer."
             }
           },
           "hard_delete": {
@@ -1406,6 +1417,9 @@
           },
           "duplicating": "duplication en cours",
           "converting": "conversion en cours"
+        },
+        "link": {
+          "open": "Ouvrir"
         }
       },
       "anonymous_cta": {
@@ -1922,6 +1936,10 @@
             "modal_file": {
               "title": "Dit bestand bevindt zich in de prullenbak",
               "description": "Om dit bestand weer te geven, moet u het eerst herstellen."
+            },
+            "modal_link": {
+              "title": "Deze link bevindt zich in de prullenbak",
+              "description": "Om deze link te openen, moet u deze eerst herstellen."
             }
           },
           "hard_delete": {
@@ -2156,6 +2174,9 @@
           },
           "duplicating": "duplicatie bezig",
           "converting": "conversie bezig"
+        },
+        "link": {
+          "open": "Openen"
         }
       },
       "anonymous_cta": {

@@ -6,10 +6,14 @@ export const isFolder = (item: Item) =>
 export const isLink = (item: Pick<Item, "type">) =>
   item.type === ItemType.LINK;
 
+// Only web URLs are ever opened, never javascript: or data: ones.
+export const isWebUrl = (url: string | null | undefined): url is string =>
+  !!url && /^https?:\/\//i.test(url);
+
 // A link points outside of Drive: open it in a new tab that cannot reach back
 // to the opener nor learn where it was opened from.
 export const openLink = (item: Pick<Item, "link_url">) => {
-  if (item.link_url) {
+  if (isWebUrl(item.link_url)) {
     window.open(item.link_url, "_blank", "noopener,noreferrer");
   }
 };
