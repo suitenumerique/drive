@@ -11,7 +11,12 @@ and this project adheres to
 ### Added
 
 - ✨(backend) add a link item type pointing to an external URL
-- ✨(frontend) open link items in a new tab
+- ✨(frontend) show link items on a page that opens their URL in a new tab
+- ✨(backend) expose ancestors_deleted_at on items
+
+### Changed
+
+- 🐛(backend) only allow children_create on folders
 
 ### Fixed
 
