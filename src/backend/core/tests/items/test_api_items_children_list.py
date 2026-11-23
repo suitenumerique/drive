@@ -73,6 +73,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -124,6 +125,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -209,6 +211,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "url": f"http://localhost:8083/media/item/{child1.id!s}/{child1.filename}",
                 "url_permalink": f"http://testserver/api/v1.0/items/{child1.id!s}/download/",
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -254,6 +257,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "url": f"http://localhost:8083/media/item/{child2.id!s}/logo.png",
                 "url_permalink": f"http://testserver/api/v1.0/items/{child2.id!s}/download/",
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": f"http://localhost:8083/media/preview/item/{child2.id!s}/logo.png",
                 "mimetype": "image/png",
                 "main_workspace": False,
@@ -359,6 +363,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -410,6 +415,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -498,6 +504,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -549,6 +556,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -662,6 +670,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -713,6 +722,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -804,6 +814,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -855,6 +866,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -1003,6 +1015,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -1054,6 +1067,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -1139,6 +1153,7 @@ def test_api_items_children_list_filter_type():
                 "url": None,
                 "url_permalink": None,
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -1203,6 +1218,7 @@ def test_api_items_children_list_filter_type():
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -1511,6 +1527,7 @@ def test_api_items_children_list_computed_link_reach_and_role():
                 "url": None,
                 "url_permalink": None,
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -1566,6 +1583,7 @@ def test_api_items_children_list_computed_link_reach_and_role():
                 "url": None,
                 "url_permalink": None,
                 "link_url": None,
+                "ancestors_deleted_at": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,

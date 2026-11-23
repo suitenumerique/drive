@@ -2670,6 +2670,12 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "ancestors_deleted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "deleted_at": {
                         "type": "string",
                         "format": "date-time",
@@ -2698,6 +2704,7 @@
                 },
                 "required": [
                     "abilities",
+                    "ancestors_deleted_at",
                     "ancestors_link_reach",
                     "ancestors_link_role",
                     "computed_link_reach",
@@ -3108,6 +3115,12 @@
                         "readOnly": true,
                         "nullable": true
                     },
+                    "ancestors_deleted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "deleted_at": {
                         "type": "string",
                         "format": "date-time",
@@ -3136,6 +3149,7 @@
                 },
                 "required": [
                     "abilities",
+                    "ancestors_deleted_at",
                     "ancestors_link_reach",
                     "ancestors_link_role",
                     "computed_link_reach",
@@ -3350,6 +3364,12 @@
                         "readOnly": true,
                         "nullable": true
                     },
+                    "ancestors_deleted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "deleted_at": {
                         "type": "string",
                         "format": "date-time",
@@ -3378,6 +3398,7 @@
                 },
                 "required": [
                     "abilities",
+                    "ancestors_deleted_at",
                     "created_at",
                     "creator",
                     "deleted_at",
@@ -3842,6 +3863,12 @@
                         "readOnly": true,
                         "nullable": true
                     },
+                    "ancestors_deleted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "deleted_at": {
                         "type": "string",
                         "format": "date-time",
@@ -3877,6 +3904,7 @@
                 },
                 "required": [
                     "abilities",
+                    "ancestors_deleted_at",
                     "ancestors_link_reach",
                     "ancestors_link_role",
                     "computed_link_reach",

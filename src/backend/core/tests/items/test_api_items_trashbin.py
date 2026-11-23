@@ -99,6 +99,7 @@ def test_api_items_trashbin_format(settings):
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "link_url": None,
+        "ancestors_deleted_at": item.ancestors_deleted_at.isoformat().replace("+00:00", "Z"),
         "url_preview": None,
         "mimetype": None,
         "main_workspace": False,

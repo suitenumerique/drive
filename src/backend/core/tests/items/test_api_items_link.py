@@ -229,6 +229,23 @@ def test_api_items_link_cannot_have_children(item_type):
     assert not item.children().exists()
 
 
+def test_api_items_link_under_trashed_folder_exposes_ancestors_deletion():
+    """The owner retrieving a link under a trashed folder learns it is in the trash."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    folder = _owned_folder(user)
+    link = factories.ItemFactory(parent=folder, type=models.ItemTypeChoices.LINK)
+    folder.soft_delete()
+
+    response = client.get(f"/api/v1.0/items/{link.id!s}/")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["deleted_at"] is None
+    folder.refresh_from_db()
+    assert payload["ancestors_deleted_at"] == folder.deleted_at.isoformat().replace("+00:00", "Z")
+
 
 def test_api_items_link_update_url():
     """An editor can change the URL of a link, with the same validation as on creation."""
