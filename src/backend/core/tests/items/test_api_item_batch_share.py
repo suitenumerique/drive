@@ -472,7 +472,7 @@ def test_api_item_batch_share_synchronizes_descendants():
 @override_settings(ALLOW_SHARE_IMPORT_FILE=True)
 @pytest.mark.parametrize(
     "users_count, expected_queries, expected_cache_calls",
-    [(1, 22, 3), (20, 307, 60), (500, 7507, 1500)],
+    [(1, 22, 1), (20, 307, 20), (500, 7507, 500)],
 )
 def test_api_item_batch_share_cost(
     users_count, expected_queries, expected_cache_calls, django_assert_num_queries
