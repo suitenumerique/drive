@@ -28,6 +28,7 @@ import { useState } from "react";
 import { HardDeleteConfirmationModal } from "@/features/explorer/components/modals/HardDeleteConfirmationModal";
 import { messageModalTrashNavigate } from "@/features/explorer/components/trash/utils";
 import { DefaultRoute } from "@/utils/defaultRoutes";
+import { isLink } from "@/features/drivers/utils";
 import { useDefaultRoute } from "@/hooks/useDefaultRoute";
 
 export default function TrashPage() {
@@ -76,8 +77,8 @@ export default function TrashPage() {
       onNavigate={() => {
         messageModalTrashNavigate(modals);
       }}
-      onFileClick={() => {
-        messageModalTrashNavigate(modals, "file");
+      onFileClick={(item) => {
+        messageModalTrashNavigate(modals, isLink(item) ? "link" : "file");
       }}
       isLoading={isLoading || isPlaceholderData}
     />
