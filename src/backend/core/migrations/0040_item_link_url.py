@@ -36,19 +36,42 @@ class Migration(migrations.Migration):
                 max_length=30,
             ),
         ),
-        migrations.AddConstraint(
-            model_name="item",
-            constraint=models.CheckConstraint(
-                condition=models.Q(
-                    models.Q(
-                        ("type", "link"),
-                        ("link_url__isnull", False),
-                        ("link_url__iregex", "^https?://"),
+        # Adding the constraint NOT VALID skips the scan of existing rows, which would
+        # hold an ACCESS EXCLUSIVE lock on the item table for its whole duration. Rows
+        # are checked by 0041, under a lock that lets reads and writes go on.
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.AddConstraint(
+                    model_name="item",
+                    constraint=models.CheckConstraint(
+                        condition=models.Q(
+                            models.Q(
+                                ("type", "link"),
+                                ("link_url__isnull", False),
+                                ("link_url__iregex", "^https?://"),
+                            ),
+                            models.Q(
+                                models.Q(("type", "link"), _negated=True),
+                                ("link_url__isnull", True),
+                            ),
+                            _connector="OR",
+                        ),
+                        name="check_link_url_only_on_links",
                     ),
-                    models.Q(models.Q(("type", "link"), _negated=True), ("link_url__isnull", True)),
-                    _connector="OR",
                 ),
-                name="check_link_url_only_on_links",
-            ),
+            ],
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        'ALTER TABLE "drive_item" ADD CONSTRAINT "check_link_url_only_on_links" '
+                        'CHECK ((("type" = \'link\' AND "link_url" IS NOT NULL '
+                        "AND \"link_url\"::text ~* '^https?://') "
+                        'OR (NOT ("type" = \'link\') AND "link_url" IS NULL))) NOT VALID'
+                    ),
+                    reverse_sql=(
+                        'ALTER TABLE "drive_item" DROP CONSTRAINT "check_link_url_only_on_links"'
+                    ),
+                ),
+            ],
         ),
     ]
