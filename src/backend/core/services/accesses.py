@@ -16,6 +16,10 @@ def batch_share_process_rows(item, issuer, rows):
     an invitation unless one already exists. Return the created shares and the
     skipped emails.
     """
+    # A concurrent batch share of the same item waits here, then sees the shares
+    # created by this one. Inserts referencing the item are not blocked.
+    models.Item.objects.select_for_update(no_key=True).get(pk=item.pk)
+
     # Emails are normalized by the serializer, like the stored ones.
     # Active users come last, so they win over inactive ones sharing their email.
     users_by_email = {

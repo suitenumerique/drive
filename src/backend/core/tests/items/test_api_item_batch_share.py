@@ -2,10 +2,13 @@
 Test the item batch share API endpoint in drive's core app.
 """
 
+import time
+from concurrent.futures import ThreadPoolExecutor
 from unittest import mock
 
 from django.core import mail
 from django.core.cache import cache
+from django.db import transaction
 from django.test import override_settings
 
 import pytest
@@ -472,7 +475,7 @@ def test_api_item_batch_share_synchronizes_descendants():
 @override_settings(ALLOW_SHARE_IMPORT_FILE=True)
 @pytest.mark.parametrize(
     "users_count, expected_queries, expected_cache_calls",
-    [(1, 10, 1), (20, 10, 1), (500, 10, 1)],
+    [(1, 11, 1), (20, 11, 1), (500, 11, 1)],
 )
 def test_api_item_batch_share_cost(
     users_count, expected_queries, expected_cache_calls, django_assert_num_queries
@@ -530,3 +533,37 @@ def test_api_item_batch_share_invalidates_nb_accesses_cache():
     assert response.status_code == 200
     assert cache.get(item.get_nb_accesses_cache_key()) is None
     assert cache.get(child.get_nb_accesses_cache_key()) is None
+
+
+@pytest.mark.django_db(transaction=True)
+@override_settings(ALLOW_SHARE_IMPORT_FILE=True)
+def test_api_item_batch_share_concurrent():
+    """A batch share should wait for a running one and skip the shares it created."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(users=[(user, "owner")])
+    shared_user = factories.UserFactory(email="alice@example.com")
+
+    def batch_share():
+        client = APIClient()
+        client.force_login(user)
+        return client.post(
+            batch_share_url(item),
+            {"rows": [{"email": "alice@example.com", "role": "reader"}]},
+            format="json",
+        )
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        # Act as a running batch share: the item is locked and the access not committed
+        with transaction.atomic():
+            models.Item.objects.select_for_update(no_key=True).get(pk=item.pk)
+            models.ItemAccess.objects.create(item=item, user=shared_user, role="reader")
+            future = executor.submit(batch_share)
+            time.sleep(0.5)
+        response = future.result()
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "accesses_created": 0,
+        "invitations_created": 0,
+        "skipped": [{"email": "alice@example.com", "reason": "already_shared"}],
+    }

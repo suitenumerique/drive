@@ -27,6 +27,7 @@ and this project adheres to
 ### Fixed
 
 - 🔒️(backend) force the download of active content previews
+- 🐛(backend) fix concurrent share imports failing on the same item
 
 ## [v1.0.0] - 2026-11-17
 
