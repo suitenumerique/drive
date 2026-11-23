@@ -56,6 +56,10 @@ and this project adheres to
 - ⚡️(backend) answer the business metrics counts from indexes
 - 🐛(backend) compute the business metrics once for all the scrapes
 
+### Fixed
+
+- 📝(doc) fix the README links and the Find indexer docs
+
 ## [v0.27.0] - 2026-11-09
 
 ### Added
