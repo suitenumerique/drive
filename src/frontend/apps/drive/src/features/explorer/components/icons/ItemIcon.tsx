@@ -1,6 +1,8 @@
 import { Item, ItemType, ItemUploadState } from "@/features/drivers/types";
 import folderIcon from "@/assets/folder/folder.svg";
 import folderRestrictedIcon from "@/assets/folder/folder-restricted.svg";
+import linkIcon from "@/assets/files/icons/mime-link.svg";
+import linkMiniIcon from "@/assets/files/icons/mime-link-mini.svg";
 import {
   FileIcon,
   FileIconContent,
@@ -32,7 +34,7 @@ export const ItemIcon = ({
 
 /**
  * The ui-kit already provides lots of icons for different mime types, but
- * on drive we support additional icons for suspicious items and folders.
+ * on drive we support additional icons for suspicious items, folders and links.
  *
  * This function returns the appropriate icon for those extended cases, if
  * the item is not an extended case, it returns null. That way we can use the
@@ -48,6 +50,10 @@ export const getItemExtendedIcon = (
 
   if (item.type === ItemType.FOLDER) {
     return folderIcon.src;
+  }
+
+  if (item.type === ItemType.LINK) {
+    return type === "mini" ? linkMiniIcon.src : linkIcon.src;
   }
 
   const uploadState = item.upload_state;

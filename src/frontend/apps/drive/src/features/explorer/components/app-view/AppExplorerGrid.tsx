@@ -1,5 +1,9 @@
 import { Item } from "@/features/drivers/types";
-import { isFolderAccessDenied } from "@/features/drivers/utils";
+import {
+  isFolderAccessDenied,
+  isLink,
+  openLink,
+} from "@/features/drivers/utils";
 import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
 import clsx from "clsx";
@@ -56,6 +60,10 @@ export const AppExplorerGrid = () => {
   const handleFileClick =
     appExplorer.onFileClick ??
     ((item: Item) => {
+      if (isLink(item)) {
+        openLink(item);
+        return;
+      }
       const accessDenied = isFolderAccessDenied(item);
       if (!accessDenied && item.abilities.convert) {
         setItemToConvert(item);

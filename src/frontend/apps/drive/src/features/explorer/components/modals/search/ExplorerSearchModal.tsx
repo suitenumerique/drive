@@ -17,6 +17,8 @@ import {
   getNavigableItem,
   isFolder,
   isFolderAccessDenied,
+  isLink,
+  openLink,
 } from "@/features/drivers/utils";
 import { getDriver } from "@/features/config/Config";
 import { ItemIcon } from "../../icons/ItemIcon";
@@ -106,6 +108,9 @@ export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
         });
         props.onClose();
       }
+    } else if (isLink(item)) {
+      openLink(item);
+      props.onClose();
     } else {
       if (!isFolderAccessDenied(item) && item.is_wopi_supported) {
         openWopiInNewTab(itemToPreviewFile(item));

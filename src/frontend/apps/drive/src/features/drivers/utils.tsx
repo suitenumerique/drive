@@ -3,6 +3,17 @@ import { Item, ItemType } from "./types";
 export const isFolder = (item: Item) =>
   item.type === ItemType.FOLDER || item.type === ItemType.RESTRICTION;
 
+export const isLink = (item: Pick<Item, "type">) =>
+  item.type === ItemType.LINK;
+
+// A link points outside of Drive: open it in a new tab that cannot reach back
+// to the opener nor learn where it was opened from.
+export const openLink = (item: Pick<Item, "link_url">) => {
+  if (item.link_url) {
+    window.open(item.link_url, "_blank", "noopener,noreferrer");
+  }
+};
+
 // A restricted folder may still be accessible through a direct grant.
 // Deleted or missing targets remain unavailable rather than asking for access.
 export const isFolderAccessDenied = (item: Pick<Item, "type" | "target">) =>

@@ -248,6 +248,7 @@
             "file_type": "File type",
             "file_size": "File size",
             "folder": "Folder",
+            "link": "Link",
             "default_suffix": "(default)"
           },
           "size_units": {
@@ -997,6 +998,7 @@
             "file_type": "Type de fichier",
             "file_size": "Taille",
             "folder": "Dossier",
+            "link": "Lien",
             "default_suffix": "(par défaut)"
           },
           "size_units": {
@@ -1746,6 +1748,7 @@
             "file_type": "Bestandstype",
             "file_size": "Bestandsgrootte",
             "folder": "Map",
+            "link": "Link",
             "default_suffix": "(standaard)"
           },
           "size_units": {

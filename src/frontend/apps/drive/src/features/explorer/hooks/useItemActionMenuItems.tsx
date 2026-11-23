@@ -2,6 +2,7 @@ import { Item, ItemType } from "@/features/drivers/types";
 import {
   getRestrictionTarget,
   isFolder,
+  isLink,
   isUnavailableRestriction,
 } from "@/features/drivers/utils";
 import {
@@ -195,7 +196,7 @@ export const useItemActionMenuItems = ({
       {
         icon: <Download />,
         label: t("explorer.item.actions.download"),
-        isHidden: isFolder(item) || minimal,
+        isHidden: isFolder(item) || isLink(item) || minimal,
         callback: () => {
           handleDownloadItem(item);
         },

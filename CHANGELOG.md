@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(backend) add a link item type pointing to an external URL
+- ✨(frontend) open link items in a new tab
 
 ### Fixed
 

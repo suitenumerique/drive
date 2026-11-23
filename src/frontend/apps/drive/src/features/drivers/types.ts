@@ -8,6 +8,7 @@ export enum ItemType {
   FILE = "file",
   FOLDER = "folder",
   RESTRICTION = "restriction",
+  LINK = "link",
 }
 
 export enum LinkReach {
@@ -97,6 +98,7 @@ export type Item = {
   path: string;
   url?: string;
   url_preview?: string;
+  link_url?: string | null;
   size?: number;
   mimetype?: string;
   user_roles?: Role[];

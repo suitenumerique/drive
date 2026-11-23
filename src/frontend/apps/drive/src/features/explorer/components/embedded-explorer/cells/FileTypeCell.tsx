@@ -1,6 +1,6 @@
 import { CellContext } from "@tanstack/react-table";
 import { Item } from "@/features/drivers/types";
-import { isFolder } from "@/features/drivers/utils";
+import { isFolder, isLink } from "@/features/drivers/utils";
 import { Draggable } from "@/features/explorer/components/Draggable";
 import { useDisableDragGridItem } from "@/features/explorer/components/embedded-explorer/hooks";
 import { useTranslation } from "react-i18next";
@@ -11,10 +11,12 @@ export const FileTypeCell = (params: CellContext<Item, unknown>) => {
   const item = params.row.original;
   const disableDrag = useDisableDragGridItem(item);
 
-  const extension = isFolder(item) ? null : getExtension(item);
+  const extension = isFolder(item) || isLink(item) ? null : getExtension(item);
   const label = isFolder(item)
     ? t("explorer.grid.columns.folder")
-    : extension
+    : isLink(item)
+      ? t("explorer.grid.columns.link")
+      : extension
       ? `.${extension}`
       : "-";
 
