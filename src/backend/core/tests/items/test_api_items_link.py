@@ -305,3 +305,32 @@ def test_models_items_link_url_enforced_by_the_database():
     ]:
         with pytest.raises(IntegrityError), transaction.atomic():
             queryset.update(**values)
+
+
+@pytest.mark.parametrize(
+    "ordering,expected",
+    [
+        ("-type,title", ["folder", "link", "file"]),
+        ("type,title", ["file", "link", "folder"]),
+    ],
+)
+def test_api_items_link_ordering_by_type(ordering, expected):
+    """Links sort between folders and files, not among the folders."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    folder = _owned_folder(user)
+    for item_type in ["file", "link", "folder"]:
+        factories.ItemFactory(
+            parent=folder,
+            type=item_type,
+            title=item_type,
+            update_upload_state=models.ItemUploadStateChoices.READY
+            if item_type == "file"
+            else None,
+        )
+
+    response = client.get(f"/api/v1.0/items/{folder.id!s}/children/?ordering={ordering}")
+
+    assert response.status_code == 200
+    assert [r["type"] for r in response.json()["results"]] == expected

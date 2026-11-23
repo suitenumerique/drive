@@ -2,7 +2,7 @@
 
 from itertools import chain
 
-from django.db.models import Exists, F, OuterRef, Q, TextChoices
+from django.db.models import Case, Exists, F, IntegerField, OuterRef, Q, TextChoices, When
 from django.utils.translation import gettext_lazy as _
 
 import django_filters
@@ -103,6 +103,29 @@ class ItemOrdering(OrderingFilter):
     """Ordering filter dedicated to the ItemViewset"""
 
     extra_ordering = ["-updated_at"]
+
+    # Ordering on the raw type text would put links among the folders: rank links
+    # between files and folders, keeping restriction > folder > file as before.
+    type_rank = Case(
+        When(type=models.ItemTypeChoices.FILE, then=0),
+        When(type=models.ItemTypeChoices.LINK, then=1),
+        When(type=models.ItemTypeChoices.FOLDER, then=2),
+        When(type=models.ItemTypeChoices.RESTRICTION, then=3),
+        output_field=IntegerField(),
+    )
+
+    def filter_queryset(self, request, queryset, view):
+        """Order on the type rank wherever the type ordering is requested."""
+        ordering = self.get_ordering(request, queryset, view)
+        if not ordering:
+            return queryset
+
+        return queryset.order_by(
+            *[
+                {"type": self.type_rank.asc(), "-type": self.type_rank.desc()}.get(field, field)
+                for field in ordering
+            ]
+        )
 
     def get_ordering(self, request, queryset, view):
         """Add the extra_ordering to the current ordering if not already present."""
