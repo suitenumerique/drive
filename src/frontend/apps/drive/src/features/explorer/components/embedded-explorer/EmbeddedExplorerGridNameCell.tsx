@@ -9,6 +9,8 @@ import {
   removeFileExtension,
 } from "@gouvfr-lasuite/ui-components";
 import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
+import { getItemIconAltKey } from "@/features/explorer/utils/mimeTypes";
+import { useTranslation } from "react-i18next";
 import { useDisableDragGridItem } from "@/features/explorer/components/embedded-explorer/hooks";
 import { LoadingRing } from "@/features/ui/components/loading-ring/LoadingRing";
 import { useEmbeddedExplorerGirdContext } from "./EmbeddedExplorerGrid";
@@ -23,6 +25,8 @@ const EmbeddedExplorerGridNameCellComponent = (
   params: EmbeddedExplorerGridNameCellProps,
 ) => {
   const item = params.row.original;
+  const { t } = useTranslation();
+  const iconAltKey = getItemIconAltKey(item, removeFileExtension(item.title));
   const ref = useRef<HTMLSpanElement>(null);
   const [isOverflown, setIsOverflown] = useState(false);
   const { disableItemDragAndDrop } = useEmbeddedExplorerGirdContext();
@@ -105,7 +109,12 @@ const EmbeddedExplorerGridNameCellComponent = (
             <LoadingRing size="md" />
           </div>
         ) : (
-          <ItemIcon key={item.id} item={item} size={IconSize.LARGE} />
+          <ItemIcon
+            key={item.id}
+            item={item}
+            size={IconSize.LARGE}
+            alt={iconAltKey ? t(iconAltKey) : undefined}
+          />
         )}
         {isOverflown ? (
           <Tooltip content={item.title}>
