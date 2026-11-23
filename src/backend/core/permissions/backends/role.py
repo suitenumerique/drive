@@ -125,8 +125,12 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods,too-many-instanc
         return (self.is_owner_or_admin or self.role == RoleChoices.EDITOR) and not self.is_deleted
 
     def can_create_children(self) -> bool:
-        """Return whether the user can create children in the item."""
-        return self.can_update() and self.user.is_authenticated
+        """Return whether the user can create children in the item: only in folders."""
+        return (
+            self.item.type == models.ItemTypeChoices.FOLDER
+            and self.can_update()
+            and self.user.is_authenticated
+        )
 
     def can_hard_delete(self) -> bool:
         """Return whether the user can delete the item permanently."""

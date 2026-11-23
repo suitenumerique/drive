@@ -469,17 +469,9 @@ def test_api_items_children_create_not_a_folder(item_type):
         format="json",
     )
 
-    assert response.status_code == 400
-    assert response.json() == {
-        "errors": [
-            {
-                "attr": "type",
-                "code": "item_create_child_type_folder_only",
-                "detail": "Only folders can have children.",
-            },
-        ],
-        "type": "validation_error",
-    }
+    # The abilities of a non-folder refuse children, before any payload validation
+    assert response.status_code == 403
+    assert not item.children().exists()
 
 
 def test_api_items_children_create_title_already_existing_at_the_same_level():

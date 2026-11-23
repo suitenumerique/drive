@@ -204,21 +204,30 @@ def test_api_items_link_url_forbidden_on_other_types(payload):
     assert not models.Item.objects.exists()
 
 
-def test_api_items_link_cannot_have_children():
-    """Nothing can be created under a link."""
+@pytest.mark.parametrize("item_type", ["link", "file"])
+def test_api_items_link_cannot_have_children(item_type):
+    """Only folders take children: the abilities of a link or a file say so to its owner."""
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
-    link = factories.ItemFactory(parent=_owned_folder(user), type=models.ItemTypeChoices.LINK)
+    folder = _owned_folder(user)
+    item = factories.ItemFactory(parent=folder, type=item_type)
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+    assert response.status_code == 200
+    assert response.json()["abilities"]["children_create"] is False
+    response = client.get(f"/api/v1.0/items/{folder.id!s}/")
+    assert response.json()["abilities"]["children_create"] is True
 
     response = client.post(
-        f"/api/v1.0/items/{link.id!s}/children/",
+        f"/api/v1.0/items/{item.id!s}/children/",
         {"type": "folder", "title": "Folder"},
         format="json",
     )
 
-    assert _error(response) == ("type", "item_create_child_type_folder_only")
-    assert not link.children().exists()
+    assert response.status_code == 403
+    assert not item.children().exists()
+
 
 
 def test_api_items_link_update_url():

@@ -468,7 +468,7 @@ def test_models_items_get_abilities_editor(  # noqa: PLR0913, PLR0917
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": False,
-        "children_create": is_authenticated,
+        "children_create": is_authenticated and item_type == models.ItemTypeChoices.FOLDER,
         "breadcrumb": True,
         "children_list": True,
         "destroy": False,
@@ -538,7 +538,7 @@ def test_models_items_not_root_get_abilities_owner(
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
-        "children_create": True,
+        "children_create": item_type == models.ItemTypeChoices.FOLDER,
         "breadcrumb": True,
         "children_list": True,
         "destroy": True,
@@ -636,7 +636,7 @@ def test_models_items_not_root_get_abilities_administrator(
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
-        "children_create": True,
+        "children_create": item_type == models.ItemTypeChoices.FOLDER,
         "breadcrumb": True,
         "children_list": True,
         "destroy": False,
@@ -717,7 +717,7 @@ def test_models_items_not_root_get_abilities_editor_user(
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": True,
-        "children_create": True,
+        "children_create": item_type == models.ItemTypeChoices.FOLDER,
         "breadcrumb": True,
         "children_list": True,
         "destroy": False,
@@ -863,7 +863,7 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "accesses_manage": True,
         "accesses_view": True,
         "breadcrumb": True,
-        "children_create": True,
+        "children_create": False,
         "children_list": True,
         "destroy": True,
         "download": True,

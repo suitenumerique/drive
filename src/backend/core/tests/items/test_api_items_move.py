@@ -362,9 +362,9 @@ def test_api_items_move_authenticated_target_not_folder_should_fail():
     assert response.json() == {
         "errors": [
             {
-                "attr": "target",
-                "code": "item_move_target_not_a_folder",
-                "detail": "Only folders can be targeted when moving an item",
+                "attr": "target_item_id",
+                "code": "item_move_missing_permission",
+                "detail": "You do not have permission to move items as a child to this target item.",
             },
         ],
         "type": "validation_error",
