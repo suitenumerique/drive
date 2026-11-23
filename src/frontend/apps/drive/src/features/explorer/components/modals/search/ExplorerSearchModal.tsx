@@ -109,9 +109,13 @@ export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
         props.onClose();
       }
     } else if (isLink(item)) {
-      // A link under a trashed folder has no deleted_at of its own: the trash
-      // location is what tells it is trashed.
-      if (item.deleted_at || filters.location === "trashbin") {
+      // A link under a trashed folder has no deleted_at of its own: its
+      // ancestors_deleted_at, or the trash location, tells it is trashed.
+      if (
+        item.deleted_at ||
+        item.ancestors_deleted_at ||
+        filters.location === "trashbin"
+      ) {
         messageModalTrashNavigate(modals, "link");
       } else {
         openLink(item);

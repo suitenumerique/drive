@@ -82,6 +82,7 @@ export type Item = {
   computed_link_reach: LinkReach | null;
   computed_link_role: LinkRole | null;
   deleted_at?: Date;
+  ancestors_deleted_at?: Date | null;
   upload_state: string;
   updated_at: Date;
   description: string;

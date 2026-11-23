@@ -21,7 +21,11 @@ export default function ItemPage() {
 
   // Shared item URLs all land here, links included: know the type before
   // loading any children, a link has none.
-  const { data: item, isLoading: isItemLoading } = useItem(itemId, {
+  const {
+    data: item,
+    isLoading: isItemLoading,
+    isError: isItemError,
+  } = useItem(itemId, {
     enabled: !!itemId,
   });
   const currentItem = item?.id === itemId ? item : undefined;
@@ -32,7 +36,7 @@ export default function ItemPage() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    isLoading,
+    isPending,
     isPlaceholderData,
   } = useInfiniteChildren(itemId, filters, !!currentItem && !isLinkItem);
 
@@ -58,7 +62,9 @@ export default function ItemPage() {
       hasNextPage={hasNextPage}
       isFetchingNextPage={isFetchingNextPage}
       fetchNextPage={fetchNextPage}
-      isLoading={isLoading || isPlaceholderData}
+      // The children query waits for the item: no children yet is a load, not
+      // an empty folder, unless the item itself failed to load.
+      isLoading={(isPending && !isItemError) || isPlaceholderData}
     />
   );
 }
@@ -67,7 +73,8 @@ export default function ItemPage() {
 const LinkInterstitial = ({ item }: { item: Item }) => {
   const { t } = useTranslation();
 
-  if (item.deleted_at) {
+  // A link under a trashed folder keeps a null deleted_at of its own.
+  if (item.deleted_at || item.ancestors_deleted_at) {
     return (
       <GenericDisclaimer
         message={t("explorer.trash.navigate.modal_link.title")}
