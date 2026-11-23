@@ -109,8 +109,12 @@ export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
         props.onClose();
       }
     } else if (isLink(item)) {
-      openLink(item);
-      props.onClose();
+      if (item.deleted_at) {
+        messageModalTrashNavigate(modals);
+      } else {
+        openLink(item);
+        props.onClose();
+      }
     } else {
       if (!isFolderAccessDenied(item) && item.is_wopi_supported) {
         openWopiInNewTab(itemToPreviewFile(item));
