@@ -72,6 +72,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "url_permalink": f"http://testserver/api/v1.0/items/{child1.id!s}/download/"
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -122,6 +123,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "url_permalink": f"http://testserver/api/v1.0/items/{child2.id!s}/download/"
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -206,6 +208,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "upload_state": models.ItemUploadStateChoices.READY,
                 "url": f"http://localhost:8083/media/item/{child1.id!s}/{child1.filename}",
                 "url_permalink": f"http://testserver/api/v1.0/items/{child1.id!s}/download/",
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -250,6 +253,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "upload_state": models.ItemUploadStateChoices.READY,
                 "url": f"http://localhost:8083/media/item/{child2.id!s}/logo.png",
                 "url_permalink": f"http://testserver/api/v1.0/items/{child2.id!s}/download/",
+                "link_url": None,
                 "url_preview": f"http://localhost:8083/media/preview/item/{child2.id!s}/logo.png",
                 "mimetype": "image/png",
                 "main_workspace": False,
@@ -354,6 +358,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "url_permalink": f"http://testserver/api/v1.0/items/{child1.id!s}/download/"
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -404,6 +409,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "url_permalink": f"http://testserver/api/v1.0/items/{child2.id!s}/download/"
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -491,6 +497,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "url_permalink": f"http://testserver/api/v1.0/items/{child1.id!s}/download/"
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -541,6 +548,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "url_permalink": f"http://testserver/api/v1.0/items/{child2.id!s}/download/"
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -653,6 +661,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "url_permalink": f"http://testserver/api/v1.0/items/{child1.id!s}/download/"
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -703,6 +712,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "url_permalink": f"http://testserver/api/v1.0/items/{child2.id!s}/download/"
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -793,6 +803,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "url_permalink": f"http://testserver/api/v1.0/items/{child1.id!s}/download/"
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -843,6 +854,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "url_permalink": f"http://testserver/api/v1.0/items/{child2.id!s}/download/"
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -990,6 +1002,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "url_permalink": f"http://testserver/api/v1.0/items/{child1.id!s}/download/"
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -1040,6 +1053,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "url_permalink": f"http://testserver/api/v1.0/items/{child2.id!s}/download/"
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -1124,6 +1138,7 @@ def test_api_items_children_list_filter_type():
                 else None,
                 "url": None,
                 "url_permalink": None,
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -1187,6 +1202,7 @@ def test_api_items_children_list_filter_type():
                 "url_permalink": f"http://testserver/api/v1.0/items/{child2.id!s}/download/"
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -1494,6 +1510,7 @@ def test_api_items_children_list_computed_link_reach_and_role():
                 "upload_state": None,
                 "url": None,
                 "url_permalink": None,
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
@@ -1548,6 +1565,7 @@ def test_api_items_children_list_computed_link_reach_and_role():
                 "upload_state": None,
                 "url": None,
                 "url_permalink": None,
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,

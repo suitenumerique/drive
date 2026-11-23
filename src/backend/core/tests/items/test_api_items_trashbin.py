@@ -98,6 +98,7 @@ def test_api_items_trashbin_format(settings):
         "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/"
         if item.type == models.ItemTypeChoices.FILE
         else None,
+        "link_url": None,
         "url_preview": None,
         "mimetype": None,
         "main_workspace": False,

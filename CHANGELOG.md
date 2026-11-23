@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) add a link item type pointing to an external URL
+
 ### Fixed
 
 - ⚡️(backend) count the admin item filter choices on demand

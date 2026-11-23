@@ -726,7 +726,7 @@ class ItemViewSet(
         attributes = self.get_create_extra_attributes()
         if extension:
             source = models.ItemSourceChoices.TEMPLATE
-        elif data["type"] == models.ItemTypeChoices.FOLDER:
+        elif data["type"] in (models.ItemTypeChoices.FOLDER, models.ItemTypeChoices.LINK):
             source = models.ItemSourceChoices.CREATE
         else:
             source = models.ItemSourceChoices.UPLOAD

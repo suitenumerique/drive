@@ -86,6 +86,11 @@ class ItemTypeChoices(models.TextChoices):
     FOLDER = "folder", _("Folder")
     FILE = "file", _("File")
     RESTRICTION = "restriction", _("Restriction")
+    LINK = "link", _("Link")
+
+
+# Links are opened by the browser: only web URLs are accepted, never javascript: or data:
+validate_link_url = validators.URLValidator(schemes=["http", "https"])
 
 
 class ItemUploadStateChoices(models.TextChoices):
@@ -1379,6 +1384,14 @@ class Item(TreeModel, BaseModel):
             "or the client_id of the resource server that created it."
         ),
     )
+    link_url = models.URLField(
+        _("link URL"),
+        max_length=2048,
+        null=True,
+        blank=True,
+        validators=[validate_link_url],
+        help_text=_("External URL a link item points to, only set on links."),
+    )
 
     label_size = 7
 
@@ -1403,6 +1416,17 @@ class Item(TreeModel, BaseModel):
                     | (~models.Q(type=ItemTypeChoices.RESTRICTION) & models.Q(target__isnull=True))
                 ),
                 name="check_target_only_on_restrictions",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    (
+                        models.Q(type=ItemTypeChoices.LINK)
+                        & models.Q(link_url__isnull=False)
+                        & models.Q(link_url__iregex=r"^https?://")
+                    )
+                    | (~models.Q(type=ItemTypeChoices.LINK) & models.Q(link_url__isnull=True))
+                ),
+                name="check_link_url_only_on_links",
             ),
         ]
         indexes = [
@@ -1459,6 +1483,8 @@ class Item(TreeModel, BaseModel):
                 }
             )
 
+        self._validate_link_url()
+
         if (
             self.created_at is None
             and self.type == ItemTypeChoices.FILE
@@ -1476,6 +1502,34 @@ class Item(TreeModel, BaseModel):
         super().save(*args, **kwargs)
 
         self._invalidate_storage_used_cache(kwargs.get("update_fields"))
+
+    def _validate_link_url(self):
+        """Require a web URL on links and forbid it on any other type."""
+        if self.type != ItemTypeChoices.LINK:
+            if self.link_url is not None:
+                raise ValidationError(
+                    {
+                        "link_url": ValidationError(
+                            _("A link URL is only allowed for links."),
+                            code="item_link_url_only_allowed_for_links",
+                        )
+                    }
+                )
+            return
+
+        if not self.link_url:
+            raise ValidationError(
+                {
+                    "link_url": ValidationError(
+                        _("A link URL is required for links."),
+                        code="item_link_url_required_for_links",
+                    )
+                }
+            )
+        try:
+            self._meta.get_field("link_url").run_validators(self.link_url)
+        except ValidationError as error:
+            raise ValidationError({"link_url": error.error_list}) from error
 
     def _invalidate_storage_used_cache(self, update_fields):
         """

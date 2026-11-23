@@ -95,6 +95,7 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/"
                 if item.type == models.ItemTypeChoices.FILE
                 else None,
+                "link_url": None,
                 "url_preview": None,
                 "mimetype": None,
                 "user_role": "reader",

@@ -2243,6 +2243,12 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "link_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true,
+                        "maxLength": 2048
+                    },
                     "filename": {
                         "type": "string",
                         "nullable": true,
@@ -2313,6 +2319,13 @@
                     },
                     "type": {
                         "$ref": "#/components/schemas/TypeEnum"
+                    },
+                    "link_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true,
+                        "minLength": 1,
+                        "maxLength": 2048
                     },
                     "filename": {
                         "type": "string",
@@ -2593,6 +2606,12 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "link_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true,
+                        "maxLength": 2048
+                    },
                     "filename": {
                         "type": "string",
                         "readOnly": true,
@@ -2798,6 +2817,13 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 255
+                    },
+                    "link_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true,
+                        "minLength": 1,
+                        "maxLength": 2048
                     },
                     "description": {
                         "type": "string",
@@ -3016,6 +3042,13 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "link_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "readOnly": true,
+                        "nullable": true,
+                        "description": "External URL a link item points to, only set on links."
+                    },
                     "filename": {
                         "type": "string",
                         "nullable": true,
@@ -3086,6 +3119,7 @@
                     "link_expires_at",
                     "link_reach",
                     "link_role",
+                    "link_url",
                     "main_workspace",
                     "mimetype",
                     "nb_accesses",
@@ -3250,6 +3284,13 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "link_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "readOnly": true,
+                        "nullable": true,
+                        "description": "External URL a link item points to, only set on links."
+                    },
                     "filename": {
                         "type": "string",
                         "nullable": true,
@@ -3316,6 +3357,7 @@
                     "link_expires_at",
                     "link_reach",
                     "link_role",
+                    "link_url",
                     "main_workspace",
                     "mimetype",
                     "numchild",
@@ -3495,6 +3537,13 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 255
+                    },
+                    "link_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true,
+                        "minLength": 1,
+                        "maxLength": 2048
                     },
                     "description": {
                         "type": "string",
@@ -3758,6 +3807,13 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "link_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "readOnly": true,
+                        "nullable": true,
+                        "description": "External URL a link item points to, only set on links."
+                    },
                     "filename": {
                         "type": "string",
                         "nullable": true,
@@ -3835,6 +3891,7 @@
                     "link_expires_at",
                     "link_reach",
                     "link_role",
+                    "link_url",
                     "main_workspace",
                     "mimetype",
                     "nb_accesses",
@@ -3860,10 +3917,11 @@
                 "enum": [
                     "folder",
                     "file",
-                    "restriction"
+                    "restriction",
+                    "link"
                 ],
                 "type": "string",
-                "description": "* `folder` - Folder\n* `file` - File\n* `restriction` - Restriction"
+                "description": "* `folder` - Folder\n* `file` - File\n* `restriction` - Restriction\n* `link` - Link"
             },
             "UploadStateEnum": {
                 "enum": [

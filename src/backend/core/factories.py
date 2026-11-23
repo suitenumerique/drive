@@ -72,6 +72,9 @@ class ItemFactory(factory.django.DjangoModelFactory):
     filename = factory.lazy_attribute(
         lambda o: fake.file_name() if o.type == models.ItemTypeChoices.FILE else None
     )
+    link_url = factory.lazy_attribute(
+        lambda o: fake.url() if o.type == models.ItemTypeChoices.LINK else None
+    )
     upload_state = None
     size = None
 

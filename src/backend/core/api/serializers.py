@@ -313,6 +313,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "url",
             "url_permalink",
             "url_preview",
+            "link_url",
             "filename",
             "mimetype",
             "main_workspace",
@@ -350,6 +351,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "url",
             "url_permalink",
             "url_preview",
+            "link_url",
             "mimetype",
             "main_workspace",
             "size",
@@ -495,6 +497,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "url",
             "url_permalink",
             "url_preview",
+            "link_url",
             "filename",
             "mimetype",
             "main_workspace",
@@ -527,6 +530,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "url",
             "url_permalink",
             "url_preview",
+            "link_url",
             "mimetype",
             "main_workspace",
             "size",
@@ -552,6 +556,8 @@ class SearchItemSerializer(ListItemSerializer):
 
 class ItemSerializer(ListItemSerializer):
     """Serialize items with all fields for display in detail views."""
+
+    link_url = serializers.URLField(max_length=2048, required=False, allow_null=True)
 
     class Meta:
         model = models.Item
@@ -584,6 +590,7 @@ class ItemSerializer(ListItemSerializer):
             "url",
             "url_permalink",
             "url_preview",
+            "link_url",
             "filename",
             "mimetype",
             "main_workspace",
@@ -630,6 +637,28 @@ class ItemSerializer(ListItemSerializer):
             "quota_excluded",
             "source",
         ]
+
+    def validate_link_url(self, value):
+        """Narrow the URLs accepted by URLField to the web schemes a browser can open."""
+        if value:
+            models.validate_link_url(value)
+        return value
+
+    def validate(self, attrs):
+        """Only a link carries a link URL, and it cannot be removed from it."""
+        if self.instance is not None and "link_url" in attrs:
+            if self.instance.type != models.ItemTypeChoices.LINK:
+                if attrs["link_url"] is not None:
+                    raise serializers.ValidationError(
+                        {"link_url": _("This field is only allowed for links.")},
+                        code="item_update_link_url_only_allowed_for_links",
+                    )
+            elif not attrs["link_url"]:
+                raise serializers.ValidationError(
+                    {"link_url": _("This field is required for links.")},
+                    code="item_update_link_url_required",
+                )
+        return super().validate(attrs)
 
     def create(self, validated_data):
         raise NotImplementedError("Create method can not be used.")
@@ -702,6 +731,7 @@ class CreateItemSerializer(ItemSerializer):
             "upload_state",
             "url",
             "url_permalink",
+            "link_url",
             "filename",
             "policy",
             "main_workspace",
@@ -802,6 +832,14 @@ class CreateItemSerializer(ItemSerializer):
                         code="item_create_file_extension_not_allowed",
                     )
 
+        if attrs["type"] == models.ItemTypeChoices.LINK:
+            self._validate_link(attrs)
+        elif attrs.get("link_url") is not None:
+            raise serializers.ValidationError(
+                {"link_url": _("This field is only allowed for links.")},
+                code="item_create_link_url_only_allowed_for_links",
+            )
+
         if attrs["type"] == models.ItemTypeChoices.FOLDER and attrs.get("title") is None:
             raise serializers.ValidationError(
                 {"title": _("This field is required for folders.")},
@@ -810,6 +848,25 @@ class CreateItemSerializer(ItemSerializer):
 
         self._validate_upload_size(attrs)
         return super().validate(attrs)
+
+    def _validate_link(self, attrs):
+        """A link is a titled pointer to a web URL, it has no content of its own."""
+        if not attrs.get("link_url"):
+            raise serializers.ValidationError(
+                {"link_url": _("This field is required for links.")},
+                code="item_create_link_url_required",
+            )
+        if not attrs.get("title"):
+            raise serializers.ValidationError(
+                {"title": _("This field is required for links.")},
+                code="item_create_link_title_required",
+            )
+        for field in ("extension", "filename"):
+            if attrs.get(field) is not None:
+                raise serializers.ValidationError(
+                    {field: _("This field is not allowed for links.")},
+                    code=f"item_create_link_{field}_not_allowed",
+                )
 
     def _validate_upload_size(self, attrs):
         """Require a bounded reservation only for client-uploaded files."""

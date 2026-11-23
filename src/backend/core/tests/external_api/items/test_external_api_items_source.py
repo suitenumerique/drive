@@ -78,3 +78,36 @@ def test_api_items_create_resource_server_aud_attributes_override_source(
     assert response.status_code == 201
     child = models.Item.objects.get(id=response.json()["id"])
     assert child.source == "custom_source"
+
+
+def test_api_items_create_link_child_resource_server(
+    user_token, resource_server_backend, user_specific_sub
+):
+    """A link can be created in a folder through the external API, without upload policy."""
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+    item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    factories.UserItemAccessFactory(
+        item=item, user=user_specific_sub, role=models.RoleChoices.OWNER
+    )
+
+    response = client.post(
+        f"/external_api/v1.0/items/{item.id!s}/children/",
+        {
+            "type": models.ItemTypeChoices.LINK,
+            "title": "Example",
+            "link_url": "https://example.com/page",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert response.json()["link_url"] == "https://example.com/page"
+    assert response.json()["policy"] is None
+    child = models.Item.objects.get(id=response.json()["id"])
+    assert child.link_url == "https://example.com/page"
+    assert child.upload_state is None
+    assert child.source == "some_service_provider"
