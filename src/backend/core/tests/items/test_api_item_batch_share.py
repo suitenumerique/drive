@@ -2,7 +2,10 @@
 Test the item batch share API endpoint in drive's core app.
 """
 
+from unittest import mock
+
 from django.core import mail
+from django.core.cache import cache
 from django.test import override_settings
 
 import pytest
@@ -464,3 +467,40 @@ def test_api_item_batch_share_synchronizes_descendants():
     assert response.status_code == 200
     assert models.ItemAccess.objects.filter(item=item, user=shared_user, role="editor").exists()
     assert not models.ItemAccess.objects.filter(item=child, user=shared_user).exists()
+
+
+@override_settings(ALLOW_SHARE_IMPORT_FILE=True)
+@pytest.mark.parametrize(
+    "users_count, expected_queries, expected_cache_calls",
+    [(1, 22, 3), (20, 307, 60), (500, 7507, 1500)],
+)
+def test_api_item_batch_share_cost(
+    users_count, expected_queries, expected_cache_calls, django_assert_num_queries
+):
+    """
+    Sharing a folder of 3 items with 1, 20 or 500 users should run the pinned
+    number of queries and cache invalidation calls.
+    """
+    user = factories.UserFactory()
+    item = factories.ItemFactory(users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER)
+    child = factories.ItemFactory(parent=item, type=models.ItemTypeChoices.FOLDER)
+    factories.ItemFactory(parent=child)
+    rows = [
+        {"email": f"contact{index}@example.com", "role": "reader"} for index in range(users_count)
+    ]
+    for row in rows:
+        factories.UserFactory(email=row["email"])
+
+    client = APIClient()
+    client.force_login(user)
+
+    with (
+        mock.patch.object(cache, "delete") as cache_delete,
+        mock.patch.object(cache, "delete_many") as cache_delete_many,
+        django_assert_num_queries(expected_queries),
+    ):
+        response = client.post(batch_share_url(item), {"rows": rows}, format="json")
+
+    assert response.status_code == 200
+    assert response.json()["accesses_created"] == users_count
+    assert cache_delete.call_count + cache_delete_many.call_count == expected_cache_calls
