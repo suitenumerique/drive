@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Security
+
+- 🔒️(backend) keep the admin actions and staff accounts to the right users
+
 ## [v1.1.1] - 2026-11-23
 
 ### Fixed

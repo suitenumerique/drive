@@ -1,4 +1,5 @@
 """Admin classes and registrations for core app."""
+# pylint: disable=too-many-lines
 
 import csv
 import io
@@ -293,7 +294,39 @@ class UserAdmin(auth_admin.UserAdmin):
             return ("email", "created_at")
         return super().get_ordering(request)
 
-    @admin.action(description=_("Merge into another user"))
+    @staticmethod
+    def _is_protected(request, user):
+        """Return whether the user is a staff user out of reach of a user who is not superuser."""
+        return (user.is_staff or user.is_superuser) and not request.user.is_superuser
+
+    def _refuse_protected(self, request, users):
+        """Tell and return whether some users are staff users out of reach of the requester."""
+        if any(self._is_protected(request, user) for user in users):
+            self.message_user(request, _("Only superusers can act on staff users."), messages.ERROR)
+            return True
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        """Leave the staff users to the superusers."""
+        if obj is not None and self._is_protected(request, obj):
+            return False
+        return super().has_change_permission(request, obj)
+
+    def get_readonly_fields(self, request, obj=None):
+        """Keep the login and the permissions of the accounts to the superusers."""
+        readonly_fields = super().get_readonly_fields(request, obj)
+        if request.user.is_superuser:
+            return readonly_fields
+        return (
+            *readonly_fields,
+            "admin_email",
+            "is_staff",
+            "is_superuser",
+            "groups",
+            "user_permissions",
+        )
+
+    @admin.action(description=_("Merge into another user"), permissions=["change"])
     def merge_users(self, request, queryset):
         """Merge the selected users into the chosen user, then deactivate them."""
         form = MergeUsersForm(request.POST if "apply" in request.POST else None)
@@ -312,6 +345,8 @@ class UserAdmin(auth_admin.UserAdmin):
 
         target = form.cleaned_data["user"]
         merged = queryset.exclude(pk=target.pk)
+        if self._refuse_protected(request, [target, *merged]):
+            return None
         if not target.email or any(not user.email for user in merged):
             self.message_user(request, _("Users without email cannot be merged."), messages.ERROR)
             return None
@@ -330,9 +365,13 @@ class UserAdmin(auth_admin.UserAdmin):
         self.message_user(request, f"{len(merged)} users merged into {target}.")
         return None
 
-    @admin.action(description=_("Deactivate the least recently used duplicates"))
+    @admin.action(
+        description=_("Deactivate the least recently used duplicates"), permissions=["change"]
+    )
     def deactivate_duplicates(self, request, queryset):
         """Keep the most recently used user of each shared email, deactivate the others."""
+        if self._refuse_protected(request, queryset):
+            return
         kept = {}
         deactivated = []
         for user in queryset.order_by(Coalesce("last_login", "created_at").desc()):
@@ -519,7 +558,7 @@ class UserReconciliationCsvImportAdmin(admin.ModelAdmin):
         return redirect("..")
 
 
-@admin.action(description=_("Process selected user reconciliations"))
+@admin.action(description=_("Process selected user reconciliations"), permissions=["change"])
 def process_reconciliation(_modeladmin, _request, queryset):
     """
     Admin action to process selected user reconciliations.
@@ -706,6 +745,7 @@ class ItemAdmin(admin.ModelAdmin):
         """Return whether the item link is protected by a password."""
         return bool(obj.link_password)
 
+    @admin.action(permissions=["change"])
     def trigger_file_analysis(self, request, queryset):
         """Reanalyse the file of the items."""
 
@@ -726,12 +766,12 @@ class ItemAdmin(admin.ModelAdmin):
             f"{updated} items marked as {upload_state}, {deleted} detections deleted.",
         )
 
-    @admin.action(description=_("Mark items as ready"))
+    @admin.action(description=_("Mark items as ready"), permissions=["change"])
     def mark_items_ready(self, request, queryset):
         """Force selected file items to the ready state."""
         self._force_upload_state(request, queryset, models.ItemUploadStateChoices.READY)
 
-    @admin.action(description=_("Mark items as too large to analyze"))
+    @admin.action(description=_("Mark items as too large to analyze"), permissions=["change"])
     def mark_items_file_too_large(self, request, queryset):
         """Force selected file items to the too large to analyze state."""
         self._force_upload_state(
@@ -743,12 +783,12 @@ class ItemAdmin(admin.ModelAdmin):
         updated = sum(item.set_quota_excluded(value) for item in queryset)
         self.message_user(request, f"{updated} items updated.")
 
-    @admin.action(description=_("Exclude from storage quota"))
+    @admin.action(description=_("Exclude from storage quota"), permissions=["change"])
     def exclude_from_quota(self, request, queryset):
         """Exclude the selected items and their descendants from the storage quota."""
         self._set_quota_excluded(request, queryset, True)
 
-    @admin.action(description=_("Include in storage quota"))
+    @admin.action(description=_("Include in storage quota"), permissions=["change"])
     def include_in_quota(self, request, queryset):
         """Count the selected items and their descendants in the storage quota."""
         self._set_quota_excluded(request, queryset, False)
@@ -769,7 +809,7 @@ class ItemAdmin(admin.ModelAdmin):
             access.user = target
             access.save()
 
-    @admin.action(description=_("Transfer to another user"))
+    @admin.action(description=_("Transfer to another user"), permissions=["change"])
     def transfer_items(self, request, queryset):
         """Transfer the selected items and their descendants from a user to another."""
         form = TransferItemsForm(request.POST if "apply" in request.POST else None)
@@ -943,12 +983,15 @@ class MalwareDetectionAdmin(BaseMalwareDetectionAdmin):
             f"{deleted} detections deleted, {updated} items marked as {upload_state}.",
         )
 
-    @admin.action(description=_("Abandon analysis and mark item as ready"))
+    @admin.action(description=_("Abandon analysis and mark item as ready"), permissions=["change"])
     def abandon_analysis_mark_item_ready(self, request, queryset):
         """Delete selected detections and mark their items as ready."""
         self._abandon_analyses(request, queryset, models.ItemUploadStateChoices.READY)
 
-    @admin.action(description=_("Abandon analysis and mark item as too large to analyze"))
+    @admin.action(
+        description=_("Abandon analysis and mark item as too large to analyze"),
+        permissions=["change"],
+    )
     def abandon_analysis_mark_item_file_too_large(self, request, queryset):
         """Delete selected detections and mark their items as too large to analyze."""
         self._abandon_analyses(
