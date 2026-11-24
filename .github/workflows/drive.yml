@@ -12,30 +12,13 @@ permissions:
   contents: read
 
 jobs:
-  lint-git:
-    runs-on: ubuntu-latest
+  project-quality:
     if: github.event_name == 'pull_request' # Makes sense only for pull requests
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - name: show
-        run: git log
-      - name: Enforce absence of print statements in code
-        if: always()
-        run: |
-          ! git diff origin/${{ github.event.pull_request.base.ref }}..HEAD -- . ':(exclude)**/drive.yml' ':(exclude)**/pdf.worker.mjs' ':(exclude)**/printImage.ts' ':(exclude)**/image-preview.spec.ts' | grep "print("
-      - name: Check absence of fixup commits
-        if: always()
-        run: |
-          ! git log | grep 'fixup!'
-      - name: Install gitlint
-        if: always()
-        run: pip install --user requests gitlint
-      - name: Lint commit messages added to main
-        if: always()
-        run: ~/.local/bin/gitlint --commits origin/${{ github.event.pull_request.base.ref }}..HEAD
+    permissions:
+      contents: read
+    uses: suitenumerique/ci/.github/workflows/_project-quality.yml@ca6401ac83e981e5b0a94f06f68baaa6e6d0a436 # v0.0.1
+    with:
+      print_check_paths: src/backend
 
   changelog:
     permissions:
