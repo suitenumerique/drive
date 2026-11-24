@@ -160,6 +160,35 @@ class MergeUsersForm(forms.Form):
     )
 
 
+class TransferContentsForm(MergeUsersForm):
+    """Form choosing the user the contents of the selected users are transferred to."""
+
+    keep_source_accesses = forms.BooleanField(
+        label=_("keep the accesses of the selected users"), required=False
+    )
+
+    def __init__(self, *args, **kwargs):
+        """Label the chosen user as the recipient of the transfer."""
+        super().__init__(*args, **kwargs)
+        self.fields["user"].label = _("transfer to")
+
+
+def _transfer_access(access, target, target_access, keep_source_access):
+    """Give the role of a source access to the target, moving or copying it."""
+    if target_access:
+        role = models.RoleChoices.max(access.role, target_access.role)
+        if role != target_access.role:
+            target_access.role = role
+            target_access.save()
+        if not keep_source_access:
+            access.delete()
+    elif keep_source_access:
+        models.ItemAccess.objects.create(item=access.item, user=target, role=access.role)
+    else:
+        access.user = target
+        access.save()
+
+
 @admin.register(models.User)
 class UserAdmin(auth_admin.UserAdmin):
     """Admin class for the User model"""
@@ -243,7 +272,7 @@ class UserAdmin(auth_admin.UserAdmin):
         "updated_at",
     )
     list_filter = ("is_staff", "is_superuser", "is_device", "is_active", DuplicateEmailFilter)
-    actions = ("merge_users", "deactivate_duplicates")
+    actions = ("merge_users", "transfer_contents", "deactivate_duplicates")
     ordering = (
         "is_active",
         "-is_superuser",
@@ -363,6 +392,61 @@ class UserAdmin(auth_admin.UserAdmin):
                     status="ready",
                 ).process_reconciliation_request()
         self.message_user(request, f"{len(merged)} users merged into {target}.")
+        return None
+
+    @staticmethod
+    def _transfer_contents(source, target, keep_source_accesses):
+        """Transfer the items created by the source and its accesses to the target."""
+        items = models.Item.objects.filter(creator=source).update(creator=target)
+        accesses = list(models.ItemAccess.objects.filter(user=source).select_related("item"))
+        target_accesses = {
+            access.item_id: access
+            for access in models.ItemAccess.objects.filter(
+                user=target, item_id__in=[access.item_id for access in accesses]
+            )
+        }
+        for access in accesses:
+            _transfer_access(
+                access, target, target_accesses.get(access.item_id), keep_source_accesses
+            )
+        return items, len(accesses)
+
+    @admin.action(description=_("Transfer all contents to another user"), permissions=["change"])
+    def transfer_contents(self, request, queryset):
+        """Transfer the created items and the accesses of the selected users to the chosen user."""
+        form = TransferContentsForm(request.POST if "apply" in request.POST else None)
+        if not form.is_valid():
+            return TemplateResponse(
+                request,
+                "core/admin/transfer_contents.html",
+                {
+                    **self.admin_site.each_context(request),
+                    "title": _("Transfer contents"),
+                    "form": form,
+                    "users": queryset,
+                    "action_checkbox_name": helpers.ACTION_CHECKBOX_NAME,
+                },
+            )
+
+        target = form.cleaned_data["user"]
+        sources = list(queryset.exclude(pk=target.pk))
+        if self._refuse_protected(request, [target, *sources]):
+            return None
+        items = accesses = 0
+        with transaction.atomic():
+            # One source at a time, so each sees the accesses the previous gave the target
+            for source in sources:
+                source_items, source_accesses = self._transfer_contents(
+                    source, target, form.cleaned_data["keep_source_accesses"]
+                )
+                items += source_items
+                accesses += source_accesses
+            # The update bypasses Item.save, which invalidates the storage used cache
+            user_ids = [target.pk, *(source.pk for source in sources)]
+            transaction.on_commit(lambda: invalidate_storage_used_cache(user_ids))
+        self.message_user(
+            request, f"{items} items and {accesses} accesses transferred to {target}."
+        )
         return None
 
     @admin.action(
@@ -793,22 +877,6 @@ class ItemAdmin(admin.ModelAdmin):
         """Count the selected items and their descendants in the storage quota."""
         self._set_quota_excluded(request, queryset, False)
 
-    @staticmethod
-    def _transfer_access(access, target, target_access, keep_source_access):
-        """Give the role of a source access to the target, moving or copying it."""
-        if target_access:
-            role = models.RoleChoices.max(access.role, target_access.role)
-            if role != target_access.role:
-                target_access.role = role
-                target_access.save()
-            if not keep_source_access:
-                access.delete()
-        elif keep_source_access:
-            models.ItemAccess.objects.create(item=access.item, user=target, role=access.role)
-        else:
-            access.user = target
-            access.save()
-
     @admin.action(description=_("Transfer to another user"), permissions=["change"])
     def transfer_items(self, request, queryset):
         """Transfer the selected items and their descendants from a user to another."""
@@ -851,14 +919,14 @@ class ItemAdmin(admin.ModelAdmin):
             items = subtree.filter(creator=source).update(creator=target)
             transaction.on_commit(lambda: invalidate_storage_used_cache([source.pk, target.pk]))
             for access in accesses:
-                self._transfer_access(
+                _transfer_access(
                     access,
                     target,
                     target_accesses.get(access.item_id),
                     form.cleaned_data["keep_source_accesses"],
                 )
             for access in inherited:
-                self._transfer_access(access, target, target_accesses.get(access.item_id), True)
+                _transfer_access(access, target, target_accesses.get(access.item_id), True)
         self.message_user(
             request,
             f"{items} items and {len(accesses) + len(inherited)} accesses transferred "

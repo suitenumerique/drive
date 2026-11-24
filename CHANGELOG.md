@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(backend) add the read-only and operations support groups to the admin
+- ✨(backend) transfer all the contents of a user to another in the admin
 
 ### Security
 

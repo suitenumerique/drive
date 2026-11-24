@@ -96,6 +96,7 @@ def test_admin_support_change_actions(client):
     assert [name for name, _label in actions.choices] == [
         "",
         "merge_users",
+        "transfer_contents",
         "deactivate_duplicates",
     ]
     assert client.get("/admin/core/item/").context["action_form"] is None
@@ -140,9 +141,9 @@ def test_admin_support_change_staff(client, staff):
     assert user.storage_limit_override is None
 
 
-@pytest.mark.parametrize("action", ["merge_users"])
+@pytest.mark.parametrize("action", ["merge_users", "transfer_contents"])
 def test_admin_support_merge_staff(client, action):
-    """Staff users who are not superusers should not merge a staff user."""
+    """Staff users who are not superusers should not merge a staff user nor its contents."""
     staff = factories.UserFactory(is_superuser=True, email="john.doe@example.com")
     target = factories.UserFactory(email="john.doe@example.com")
     item = factories.ItemFactory(creator=staff, users=[(staff, "owner")])

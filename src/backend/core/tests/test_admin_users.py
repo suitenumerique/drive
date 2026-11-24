@@ -409,6 +409,61 @@ def test_admin_users_merge_users_into_inactive_user(client):
     assert not models.UserReconciliation.objects.exists()
 
 
+@override_settings(STORAGES=STATIC_STORAGES)
+def test_admin_users_transfer_contents_form(client):
+    """The transfer action should first ask for the user to transfer to."""
+    user = factories.UserFactory()
+
+    response = _admin_client(client).post(
+        "/admin/core/user/",
+        {"action": "transfer_contents", "_selected_action": [user.pk], "index": 0},
+    )
+
+    assert response.status_code == 200
+    assert response.templates[0].name == "core/admin/transfer_contents.html"
+    assert f'value="{user.pk}"' in response.content.decode()
+
+
+@pytest.mark.parametrize("keep_source_accesses", [False, True])
+def test_admin_users_transfer_contents(client, keep_source_accesses):
+    """The transfer action should move the items and accesses of the selected users."""
+    alice, bob, carol = factories.UserFactory.create_batch(3)
+    folder = factories.ItemFactory(
+        creator=alice,
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(alice, "owner"), (bob, "editor")],
+    )
+    file = factories.ItemFactory(creator=bob, parent=folder, type=models.ItemTypeChoices.FILE)
+    shared = factories.ItemFactory(users=[(alice, "reader"), (bob, "administrator")])
+    owned = factories.ItemFactory(users=[(carol, "owner"), (alice, "editor")])
+    data = {
+        "action": "transfer_contents",
+        "_selected_action": [alice.pk, bob.pk],
+        "apply": "1",
+        "user": carol.pk,
+    }
+    if keep_source_accesses:
+        data["keep_source_accesses"] = "on"
+
+    response = _admin_client(client).post("/admin/core/user/", data)
+
+    assert response.status_code == 302
+    folder.refresh_from_db()
+    file.refresh_from_db()
+    assert folder.creator == file.creator == carol
+    kept = {alice.pk: "owner", bob.pk: "editor"} if keep_source_accesses else {}
+    assert dict(folder.accesses.values_list("user", "role")) == {**kept, carol.pk: "owner"}
+    kept = {alice.pk: "reader", bob.pk: "administrator"} if keep_source_accesses else {}
+    assert dict(shared.accesses.values_list("user", "role")) == {
+        **kept,
+        carol.pk: "administrator",
+    }
+    kept = {alice.pk: "editor"} if keep_source_accesses else {}
+    assert dict(owned.accesses.values_list("user", "role")) == {**kept, carol.pk: "owner"}
+    alice.refresh_from_db()
+    assert alice.is_active
+
+
 def test_admin_users_deactivate_duplicates():
     """The action should keep the most recently used user of each email."""
     now = timezone.now()
