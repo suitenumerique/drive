@@ -23,11 +23,32 @@ MENSHEN_REQUIRED_SCOPES = {
         },
         "upload_ended": "drive:item:upload-ended",
     },
+    "item_access": {
+        "list": "drive:item-access:list",
+        "create": "drive:item-access:create",
+        "partial_update": "drive:item-access:update-partial",
+        "destroy": "drive:item-access:delete",
+    },
+    "item_invitation": {
+        "list": "drive:item-invitation:list",
+        "create": "drive:item-invitation:create",
+        "partial_update": "drive:item-invitation:update-partial",
+        "destroy": "drive:item-invitation:delete",
+    },
+    "users": {
+        "list": "drive:user:list",
+        "get_me": "drive:user:me",
+    },
 }
 
 ALL_SCOPES = (
     "drive:item:list drive:item:retrieve drive:item:create "
-    "drive:item:list-children drive:item:create-children drive:item:upload-ended"
+    "drive:item:list-children drive:item:create-children drive:item:upload-ended "
+    "drive:item-access:list drive:item-access:create "
+    "drive:item-access:update-partial drive:item-access:delete "
+    "drive:item-invitation:list drive:item-invitation:create "
+    "drive:item-invitation:update-partial drive:item-invitation:delete "
+    "drive:user:list drive:user:me"
 )
 
 
