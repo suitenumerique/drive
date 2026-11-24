@@ -6,7 +6,31 @@ Drive implements resource server, so it means it can be used from an external ap
 
 ## Prerequisites
 
-In order to activate the resource server on Drive you need to setup the following environement variables
+In order to activate the resource server, you must choose to enable one or both of these authentication methods:
+- Token Exchange (using [Menshen](https://github.com/suitenumerique/menshen), LaSuite's Token Exchange Server implementation)
+- Access token from the IdP
+
+### Token Exchange (Menshen) setup
+
+```
+MENSHEN_ENABLED=True
+MENSHEN_SERVER_URL=
+MENSHEN_CLIENT_ID=
+MENSHEN_CLIENT_SECRET=
+MENSHEN_REQUIRED_SCOPES=
+```
+
+Current integration follows the reference implementation, see the [documentation](https://github.com/suitenumerique/menshen/blob/main/docs/la-suite.md)
+
+`MENSHEN_REQUIRED_SCOPES` maps a resource to its actions, and each action to the scope it requires. Here is an example of a valid value, on a single line as an environment file expects it.
+
+```
+MENSHEN_REQUIRED_SCOPES={"items": {"list": "drive:item:list", "retrieve": "drive:item:retrieve", "create": "drive:item:create", "children": {"GET": "drive:item:list-children", "POST": "drive:item:create-children"}, "upload_ended": "drive:item:upload-ended"}}
+```
+
+### Access token setup
+
+On Drive you need to setup the following environment variables
 
 ```
 OIDC_RESOURCE_SERVER_ENABLED=True
@@ -18,7 +42,8 @@ OIDC_RS_AUDIENCE_CLAIM=
 OIDC_RS_ALLOWED_AUDIENCES=
 ```
 
-It implements the resource server using `django-lasuite`, see the [documentation](https://github.com/suitenumerique/django-lasuite/blob/main/documentation/how-to-use-oidc-resource-server-backend.md)
+Current integration follows the reference implementation in `django-lasuite`, see the [documentation](https://github.com/suitenumerique/django-lasuite/blob/main/documentation/how-to-use-oidc-resource-server-backend.md)
+
 
 ## Customise allowed routes
 
@@ -59,8 +84,8 @@ Each endpoint has `enabled` (boolean) and `actions` (list of allowed actions). O
 
 Configure the `EXTERNAL_API_AUD_ITEM_ATTRIBUTES` setting to apply extra attributes to items
 created through the external API, depending on the token audience of the request (the claim
-configured by `OIDC_RS_AUDIENCE_CLAIM`). Set it via the `EXTERNAL_API_AUD_ITEM_ATTRIBUTES`
-environment variable (as JSON) or in Django settings.
+configured by `OIDC_RS_AUDIENCE_CLAIM` if using access token or by `client_id` if using Menshen)
+. Set it via the `EXTERNAL_API_AUD_ITEM_ATTRIBUTES` environment variable (as JSON) or in Django settings.
 
 ```python
 EXTERNAL_API_AUD_ITEM_ATTRIBUTES = {
@@ -118,7 +143,7 @@ Invitations target emails with no Drive account yet, through `/external_api/v1.0
 
 ## Request Drive
 
-In order to request drive from an external resource provider, you need to implement the basic setup of `django-lasuite` [Using the OIDC Authentication Backend to request a resource server](https://github.com/suitenumerique/django-lasuite/blob/main/documentation/how-to-use-oidc-call-to-resource-server.md)
+In order to request drive from an external resource provider, you need to implement the basic setup of `django-lasuite` [Using the OIDC Authentication Backend to request a resource server](https://github.com/suitenumerique/django-lasuite/blob/main/documentation/how-to-use-oidc-call-to-resource-server.md), or [Menshen, LaSuite's Token Exchange Server](https://github.com/suitenumerique/menshen/blob/main/docs/la-suite.md).
 
 Then you can requests some routes that are available at `/external_api/v1.0/*`, here are some examples of what you can do.
 

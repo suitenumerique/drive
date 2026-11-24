@@ -95,6 +95,7 @@ This document lists all configurable environment variables for the Drive applica
 | `MAX_PAGE_SIZE` | Limit the maximum page size the client may request | `200` |
 | `MEDIA_ACTIVE_CONTENT_MIMETYPES` | Mimetypes served as downloads instead of inline previews on `/media/` (SVG, HTML, XML); any `+xml` mimetype is always active. PDF previews stay inline for printing by default. Comma-separated list | See in the settings.py file |
 | `MEDIA_BASE_URL` | Base URL for media files | `None` |
+| `MENSHEN_CREATE_USER` | Automatically create users on token exchange login | `True` |
 | `OIDC_AUTH_REQUEST_EXTRA_PARAMS` | Extra parameters for OIDC auth requests | `{}` |
 | `OIDC_ALLOW_DUPLICATE_EMAILS` | Allow multiple users with same email | `False` |
 | `OIDC_CREATE_USER` | Automatically create users on OIDC login | `True` |

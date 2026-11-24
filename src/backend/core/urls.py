@@ -66,8 +66,12 @@ urlpatterns = [
 ]
 
 
-if settings.OIDC_RESOURCE_SERVER_ENABLED:
+if settings.OIDC_RESOURCE_SERVER_ENABLED or settings.MENSHEN_ENABLED:
     # - Resource server routes
+    # Items accept both a resource server token and a token exchanged through Menshen.
+    # The other resources carry no Menshen authentication. They are therefore
+    # registered only when the resource server is enabled. This may change in the
+    # future.
     external_api_router = DefaultRouter()
     items_config = settings.EXTERNAL_API.get("items", {})
     if items_config.get("enabled", False):
@@ -78,7 +82,7 @@ if settings.OIDC_RESOURCE_SERVER_ENABLED:
         )
 
     users_access_config = settings.EXTERNAL_API.get("users", {})
-    if users_access_config.get("enabled", False):
+    if settings.OIDC_RESOURCE_SERVER_ENABLED and users_access_config.get("enabled", False):
         external_api_router.register(
             "users",
             external_api_viewsets.ResourceServerUserViewSet,
@@ -92,7 +96,7 @@ if settings.OIDC_RESOURCE_SERVER_ENABLED:
     # Its root view would answer on items/{id}/ when the items route is disabled
     external_api_item_related_router.include_root_view = False
     item_access_config = settings.EXTERNAL_API.get("item_access", {})
-    if item_access_config.get("enabled", False):
+    if settings.OIDC_RESOURCE_SERVER_ENABLED and item_access_config.get("enabled", False):
         external_api_item_related_router.register(
             "accesses",
             external_api_viewsets.ResourceServerItemAccessViewSet,
@@ -100,7 +104,7 @@ if settings.OIDC_RESOURCE_SERVER_ENABLED:
         )
 
     item_invitation_config = settings.EXTERNAL_API.get("item_invitation", {})
-    if item_invitation_config.get("enabled", False):
+    if settings.OIDC_RESOURCE_SERVER_ENABLED and item_invitation_config.get("enabled", False):
         external_api_item_related_router.register(
             "invitations",
             external_api_viewsets.ResourceServerInvitationViewSet,
@@ -121,7 +125,7 @@ if settings.OIDC_RESOURCE_SERVER_ENABLED:
         )
     )
 
-    if settings.OIDC_RS_PRIVATE_KEY_STR:
+    if settings.OIDC_RESOURCE_SERVER_ENABLED and settings.OIDC_RS_PRIVATE_KEY_STR:
         urlpatterns.append(
             path(
                 f"api/{settings.API_VERSION}/",
