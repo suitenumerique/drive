@@ -4,6 +4,7 @@ Test restoring items after a soft delete via the detail action API endpoint.
 
 from datetime import timedelta
 
+from django.contrib.admin.models import CHANGE, LogEntry
 from django.utils import timezone
 
 import pytest
@@ -90,6 +91,9 @@ def test_api_items_restore_authenticated_owner_success():
     item.refresh_from_db()
     assert item.deleted_at is None
     assert item.ancestors_deleted_at is None
+    log = LogEntry.objects.get()
+    assert (log.user, log.object_id, log.action_flag) == (user, str(item.id), CHANGE)
+    assert log.change_message == "Restored from the trash."
 
 
 def test_api_items_restore_authenticated_owner_not_deleted():

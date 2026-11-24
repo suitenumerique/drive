@@ -23,6 +23,10 @@ account, and act on staff users through the user actions.
 - **Item**: link reach and role, set and combined with the ancestors, whether
   the folder is restricted, direct accesses, pending invitations, and the tree
   of its ancestors with their accesses.
+- **History of an item**: the "History" button of the item lists who moved it
+  to the trash, restored it, deleted it from the trash, moved it (with its
+  previous and new parent folders), restricted it or lifted its restriction.
+  Only the item the user acted on is recorded, not its descendants.
 
 ## Actions on users
 
