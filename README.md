@@ -80,7 +80,7 @@ We use Kubernetes for our [production instance](https://fichiers.numerique.gouv
 
 For now we only have a documentation to install it on Kubernetes. We will be more than happy to improve this documentation with other methods. Feel free to make a PR !
 
-**Questions?** Open an issue on [GitHub](https://github.com/suitenumerique/drive/issues/new?template=Bug_report.md) or join our [Matrix community](https://matrix.to/#/#drive-official:matrix.org).
+**Questions?** Open an issue on [GitHub](https://github.com/suitenumerique/drive/issues/new/choose) or join our [Matrix community](https://matrix.to/#/#drive-official:matrix.org).
 
 #### Known instances
 
@@ -237,7 +237,7 @@ This project is community-driven and PRs are welcome. Do not hesitate to get in 
 - [Translations](https://github.com/suitenumerique/drive/blob/main/CONTRIBUTING.md#translations)
 - [Chat with us!](https://matrix.to/#/#drive-official:matrix.org)
 - Open a PR (see our instructions on [developing La Suite Drive locally](https://github.com/suitenumerique/drive/blob/main/docs/installation/README.md))
-- Submit a [feature request](https://github.com/suitenumerique/drive/issues/new?assignees=&labels=enhancement&template=Feature_request.md) or [bug report](https://github.com/suitenumerique/drive/issues/new?assignees=&labels=bug&template=Bug_report.md)
+- Submit a [feature request](https://github.com/suitenumerique/drive/issues/new?template=feature_request.yml) or [bug report](https://github.com/suitenumerique/drive/issues/new?template=bug_report.yml)
 
 #### Gov ❤️ open source
 

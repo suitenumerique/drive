@@ -40,7 +40,7 @@ If your contribution needs design, we'll tag it with the `✏️ Needs design` l
 
 ### Issues
 
-We use issues for bug reports and feature requests. Both have a template, issues that follow the guidelines are reviewed first by maintainers. As maintainers, we will add the appropriate labels when new issues get posted.
+We use issues for bug reports and feature requests. Both have a form, issues that follow the guidelines are reviewed first by maintainers. For a question, reach out on Matrix instead. As maintainers, we will add the appropriate labels when new issues get posted.
 
 **Best practices for filing your issues:**
 
@@ -86,6 +86,7 @@ Make sure you follow the following best practices:
 
 **Before asking for a human review make sure that:**
 * all tests have passed in the CI
+* you ticked all the checkboxes of the [PR checklist](.github/PULL_REQUEST_TEMPLATE.md)
 
 *Skip if you see no Code Rabbit review on your PR*
 
