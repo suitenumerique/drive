@@ -437,7 +437,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
     <>
       {/* The context is only here to avoid the rerendering of react table cells
       when passing props to cells, with a context // we avoid that by passing
-      props via context, but it's quite overkill, unfortunatly we did not find a
+      props via context, but it's quite overkill, unfortunately we did not find a
       better solution. */}
       <EmbeddedExplorerGridContext.Provider value={contextValue}>
         <div

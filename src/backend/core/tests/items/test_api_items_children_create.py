@@ -631,7 +631,7 @@ def test_api_items_children_create_related_success_sanitize_filename(
     """
     Authenticated users with a specific write access on an item should be
     able to create a nested item.
-    When the filename is not well formated, it should be sanitizes in order to be used with a
+    When the filename is not well formatted, it should be sanitizes in order to be used with a
     filesystem.
     """
     user = factories.UserFactory()

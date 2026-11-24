@@ -51,7 +51,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-transform dictionnary of environment variables
+transform dictionary of environment variables
 Usage : {{ include "drive.env.transformDict" .Values.envVars }}
 
 Example:

@@ -7,24 +7,13 @@ on:
     branches:
       - 'main'
 
+permissions:
+  contents: read
+
 jobs:
   helmfile-lint:
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/helmfile/helmfile:v0.171.0
-    steps:
-    -
-      name: Checkout repository
-      uses: actions/checkout@v7
-    -
-      name: Helmfile lint
-      shell: bash
-      run: |
-        set -e
-        HELMFILE=src/helm/helmfile.yaml.gotmpl
-        environments=$(awk 'BEGIN {in_env=0} /^environments:/ {in_env=1; next} /^---/ {in_env=0} in_env && /^  [^ ]/ {gsub(/^  /,""); gsub(/:.*$/,""); print}' "$HELMFILE")
-        for env in $environments; do
-          echo "################### $env lint ###################"
-          helmfile -e $env lint -f $HELMFILE || exit 1
-          echo -e "\n"
-        done
+    permissions:
+      contents: read
+    uses: suitenumerique/ci/.github/workflows/_helmfile-lint.yml@ca6401ac83e981e5b0a94f06f68baaa6e6d0a436 # v0.0.1
+    with:
+      helmfile_version: v0.171.0

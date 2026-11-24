@@ -94,7 +94,7 @@ def verify_wopi_proof(
     expected_proof: bytes,
 ) -> bool:
     """
-    Verify the RSA-SHA256 signature for a WOPI singature using PKCS#1 v1.5 padding.
+    Verify the RSA-SHA256 signature for a WOPI signature using PKCS#1 v1.5 padding.
 
     https://learn.microsoft.com/en-us/microsoft-365/cloud-storage-partner-program/online/scenarios/proofkeys#verifying-the-proof-keys
     """
@@ -110,7 +110,7 @@ def verify_wopi_proof(
         # A malformed base64 signature cannot be valid
         return False
 
-    # Frist try if the current signature is valid with the current public key
+    # First try if the current signature is valid with the current public key
     try:
         public_key.verify(
             signed_proof,

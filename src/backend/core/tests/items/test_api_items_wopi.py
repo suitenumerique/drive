@@ -119,7 +119,7 @@ def test_api_items_wopi_anonymous_user_not_item_file():
     assert response.json() == {
         "errors": [
             {
-                "detail": "This item does not suport WOPI integration.",
+                "detail": "This item does not support WOPI integration.",
                 "code": "invalid",
                 "attr": "detail",
             }
@@ -145,7 +145,7 @@ def test_api_items_wopi_anonymous_item_file_mimetype_not_supported():
     assert response.json() == {
         "errors": [
             {
-                "detail": "This item does not suport WOPI integration.",
+                "detail": "This item does not support WOPI integration.",
                 "code": "invalid",
                 "attr": "detail",
             }
@@ -169,7 +169,7 @@ def test_api_items_wopi_anonymous_user_item_not_ready():
     assert response.json() == {
         "errors": [
             {
-                "detail": "This item does not suport WOPI integration.",
+                "detail": "This item does not support WOPI integration.",
                 "code": "invalid",
                 "attr": "detail",
             }
@@ -270,7 +270,7 @@ def test_api_items_wopi_authenticated_user_item_not_file():
     assert response.json() == {
         "errors": [
             {
-                "detail": "This item does not suport WOPI integration.",
+                "detail": "This item does not support WOPI integration.",
                 "code": "invalid",
                 "attr": "detail",
             }
@@ -299,7 +299,7 @@ def test_api_items_wopi_authenticated_user_item_mimetype_not_supported():
     assert response.json() == {
         "errors": [
             {
-                "detail": "This item does not suport WOPI integration.",
+                "detail": "This item does not support WOPI integration.",
                 "code": "invalid",
                 "attr": "detail",
             }

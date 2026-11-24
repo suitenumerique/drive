@@ -118,7 +118,7 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
    * 
    * This approach is quite of bullet proof as the list will have the correct scroll on a tiny height screen and also
    * on a huge height screen too. Which will not be the case with a fixed max-height on the item list, which could be
-   * too big for a tiny screen or a splitted windows, causing uncomplete scroll behavior. :)
+   * too big for a tiny screen or a split window, causing incomplete scroll behavior. :)
    */
   .c__modal__scroller {
     overflow: hidden;

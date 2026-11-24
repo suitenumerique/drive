@@ -1,0 +1,3 @@
+[codespell]
+skip = ./.git/,*.pdf,*.po,*.pot,*.json,uv.lock,yarn.lock,package-lock.json,./load-tests,*/pdf.worker.mjs
+ignore-words-list = usera,statics,excpt,connexion,espace,wll,vist,ines,projets,ressources,collegue,filname,copie
