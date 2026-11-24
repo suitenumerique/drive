@@ -149,6 +149,20 @@ You can check all available Make rules using:
 $ make help
 ```
 
+#### AI agents
+
+`AGENTS.md` holds the guidelines for AI coding agents, and `.agents/skills/`
+the skills they can load (start the stack, backend, frontend, E2E tests,
+reviews, issues). Codex, Cursor and other agents read that folder directly.
+For Claude Code, run `make skills` once (and after each change to them) to
+generate `.claude/skills/`; it needs Node.js with `npx`. Other agents that
+need their own copy can be targeted with `make skills SKILLS_AGENT=<agent>`.
+
+For instance, the `/drive-start` skill checks what is already built, stale or
+running, then runs only the Make targets needed: `make bootstrap` on a first
+run, the rebuild of the images whose dependencies changed after a pull, or
+just `make run`.
+
 #### Running end-to-end tests
 
 Prepare end-to-end test environment database and dependencies using:

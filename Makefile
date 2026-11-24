@@ -55,6 +55,12 @@ CONSUMER_APP_FRONTEND_PATH = $(FRONTEND_PATH)/apps/sdk-consumer
 DRIVE_SDK_FRONTEND_PATH    = $(FRONTEND_PATH)/packages/sdk
 FRONTEND_YARN              = $(COMPOSE_RUN) frontend-dev yarn
 
+# -- Agents
+SKILLS_CLI    = npx --yes skills@1.7.1
+# Agents that do not read .agents/skills and need their own copy of the skills
+SKILLS_AGENTS = claude-code augment continue goose junie kiro-cli mistral-vibe
+SKILLS_AGENT ?= claude-code
+
 # ==============================================================================
 # RULES
 
@@ -395,6 +401,11 @@ help:
 	@echo "Please use 'make $(BOLD)target$(RESET)' where $(BOLD)target$(RESET) is one of:"
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(firstword $(MAKEFILE_LIST)) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "$(GREEN)%-30s$(RESET) %s\n", $$1, $$2}'
 .PHONY: help
+
+skills: ## generate the skills of an agent from .agents/skills (SKILLS_AGENT=claude-code)
+	@$(if $(filter $(SKILLS_AGENT),$(SKILLS_AGENTS)),,$(error SKILLS_AGENT must be one of: $(SKILLS_AGENTS) (got '$(SKILLS_AGENT)')))
+	$(SKILLS_CLI) add ./.agents/skills --skill '*' --agent $(SKILLS_AGENT) --copy --yes
+.PHONY: skills
 
 # Front
 frontend-development-install: ## install the frontend locally
