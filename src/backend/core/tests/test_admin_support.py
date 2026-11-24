@@ -1,6 +1,6 @@
 """Tests for the admin used by the support, staff users who are not superusers."""
 
-from django.contrib.auth.models import Permission
+from django.contrib.auth.models import Group, Permission
 
 import pytest
 
@@ -34,6 +34,20 @@ def _staff_client(client, codenames):
 def _change_data(user, **data):
     """Return the change form data of a user, overridden by the given values."""
     return {"timezone": str(user.timezone), "is_active": "on", **data}
+
+
+def test_admin_support_groups_permissions():
+    """The support groups should be created with their permissions."""
+    permissions = {
+        group.name: set(group.permissions.values_list("codename", flat=True))
+        for group in Group.objects.filter(name__startswith="Support")
+    }
+
+    read = {"view_user", "view_item", "view_itemaccess", "view_invitation"}
+    assert permissions == {
+        "Support read-only": read,
+        "Support operations": {*read, "change_user"},
+    }
 
 
 def test_admin_support_view_no_actions(client):

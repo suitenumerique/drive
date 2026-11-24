@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) add the read-only and operations support groups to the admin
+
 ### Security
 
 - 🔒️(backend) keep the admin actions and staff accounts to the right users
