@@ -227,6 +227,10 @@ reconciliation-demo: resetdb
 	@$(MANAGE) create_reconciliation_demo
 .PHONY: reconciliation-demo
 
+support-demo: ## create support accounts and data to try the admin of the support
+	@$(MANAGE) create_support_demo
+.PHONY: support-demo
+
 perf-dataset: ## flush db then create a production sized dataset to profile queries
 perf-dataset: resetdb
 	@$(MANAGE) create_perf_dataset

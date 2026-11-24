@@ -16,6 +16,10 @@ the app can match users by that email, so the account stays out of the app.
 Only superusers change a staff user, the login and the permissions of an
 account, and act on staff users through the user actions.
 
+In development, `make support-demo` creates the `support1` and `support2`
+accounts (password: pass), one per group, and a few users, items and
+history entries to try them on.
+
 ## What the support finds
 
 - **User**: storage used and limit, last login, number of files created, root
