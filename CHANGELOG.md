@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) accept Menshen tokens on the external API users and sharing
+
 ## [v1.0.0] - 2026-11-17
 
 ### Added
