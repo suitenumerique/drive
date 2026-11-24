@@ -22,10 +22,10 @@ MENSHEN_REQUIRED_SCOPES=
 
 Current integration follows the reference implementation, see the [documentation](https://github.com/suitenumerique/menshen/blob/main/docs/la-suite.md)
 
-`MENSHEN_REQUIRED_SCOPES` maps a resource to its actions, and each action to the scope it requires. Here is an example of a valid value, on a single line as an environment file expects it.
+`MENSHEN_REQUIRED_SCOPES` maps a resource to its actions, and each action to the scope it requires. Resources and actions are named as in `EXTERNAL_API`, which must list the action too. An action left out of either setting is never reachable with an exchanged token. Here is an example of a valid value, on a single line as an environment file expects it.
 
 ```
-MENSHEN_REQUIRED_SCOPES={"items": {"list": "drive:item:list", "retrieve": "drive:item:retrieve", "create": "drive:item:create", "children": {"GET": "drive:item:list-children", "POST": "drive:item:create-children"}, "upload_ended": "drive:item:upload-ended"}}
+MENSHEN_REQUIRED_SCOPES={"items": {"list": "drive:item:list", "retrieve": "drive:item:retrieve", "create": "drive:item:create", "children": {"GET": "drive:item:list-children", "POST": "drive:item:create-children"}, "upload_ended": "drive:item:upload-ended"}, "item_access": {"create": "drive:item-access:create"}, "item_invitation": {"create": "drive:item-invitation:create"}, "users": {"list": "drive:user:list", "get_me": "drive:user:me"}}
 ```
 
 ### Access token setup
@@ -103,12 +103,12 @@ Audiences without an entry keep the default item attributes.
 
 A request acts on behalf of the user identified by the access token. Drive checks that:
 
-- The token holds at least one scope of `OIDC_RS_SCOPES`.
-- The token audience is in `OIDC_RS_ALLOWED_AUDIENCES`.
+- With an access token from the IdP, the token holds at least one scope of `OIDC_RS_SCOPES`, and its audience is in `OIDC_RS_ALLOWED_AUDIENCES`.
+- With a token exchanged through Menshen, the token holds the scope `MENSHEN_REQUIRED_SCOPES` maps the action to, otherwise the API returns a 403.
 - The action is listed in `EXTERNAL_API`, otherwise the API returns a 403. With `enabled: False`, the route does not exist and returns a 404.
 - The user's role on the item allows the action, with the same rules as the main API.
 
-There are no rights specific to the calling application, and scopes do not restrict actions.
+There are no rights specific to the calling application. Scopes restrict the actions of an exchanged token, not those of an access token from the IdP.
 
 ### Roles
 
@@ -235,7 +235,7 @@ response = requests.post(
 
 #### Share an item
 
-In `EXTERNAL_API`, enable `item_access` and `item_invitation` with the `create` action, and add `list` to `users`. The user search tolerates typos in emails, so compare the returned email with the expected one before sharing. It only returns active users: the invitation returns a 400 for the email of an inactive account, unless `OIDC_ALLOW_DUPLICATE_EMAILS` is enabled.
+In `EXTERNAL_API`, enable `item_access` and `item_invitation` with the `create` action, and add `list` to `users`. With Menshen, also map these three actions in `MENSHEN_REQUIRED_SCOPES`. The user search tolerates typos in emails, so compare the returned email with the expected one before sharing. It only returns active users: the invitation returns a 400 for the email of an inactive account, unless `OIDC_ALLOW_DUPLICATE_EMAILS` is enabled.
 
 ```python
 headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
