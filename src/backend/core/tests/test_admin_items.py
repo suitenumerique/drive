@@ -323,6 +323,66 @@ def test_admin_items_change_view(client):
     assert item.link_password not in html
 
 
+def test_admin_items_sharing():
+    """The item should show its restriction and the link combined with its ancestors."""
+    user = factories.UserFactory()
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach="public",
+        link_role="editor",
+        users=[(user, "owner")],
+    )
+    subfolder = factories.ItemFactory(
+        parent=folder, type=models.ItemTypeChoices.FOLDER, link_reach=None
+    )
+    admin_instance = ItemAdmin(models.Item, admin.site)
+
+    assert admin_instance.computed_link(subfolder) == "public / editor"
+    assert admin_instance.is_restricted(subfolder) is False
+
+    subfolder = subfolder.restrict(user)
+
+    assert admin_instance.is_restricted(subfolder) is True
+
+
+@override_settings(
+    STORAGES={
+        **settings.STORAGES,
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
+)
+def test_admin_items_change_view_invitations(client):
+    """The change view should list the pending invitations of the item."""
+    invitation = factories.InvitationFactory(email="john.doe@example.com")
+    client.force_login(factories.UserFactory(is_staff=True, is_superuser=True))
+
+    response = client.get(f"/admin/core/item/{invitation.item.pk}/change/")
+
+    assert response.status_code == 200
+    assert "john.doe@example.com" in response.content.decode()
+
+
+@override_settings(
+    STORAGES={
+        **settings.STORAGES,
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
+)
+def test_admin_items_accesses_of_a_user(client):
+    """The access list filtered on a user should only list its accesses, read only."""
+    alice, bob = factories.UserFactory.create_batch(2)
+    folder = factories.ItemFactory(title="folder", users=[(alice, "owner"), (bob, "reader")])
+    factories.ItemFactory(title="other", users=[(bob, "owner")])
+    client.force_login(factories.UserFactory(is_staff=True, is_superuser=True))
+
+    response = client.get(f"/admin/core/itemaccess/?user={alice.pk}")
+
+    assert response.status_code == 200
+    assert [access.item for access in response.context["cl"].result_list] == [folder]
+    assert f'href="/admin/core/item/{folder.pk}/change/"' in response.content.decode()
+    assert client.get("/admin/core/itemaccess/add/").status_code == 403
+
+
 @override_settings(
     STORAGES={
         **settings.STORAGES,

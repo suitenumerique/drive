@@ -8,7 +8,7 @@ from core import factories, models
 
 pytestmark = pytest.mark.django_db
 
-VIEW = ["view_user", "view_item"]
+VIEW = ["view_user", "view_item", "view_itemaccess"]
 CHANGE = [*VIEW, "change_user"]
 
 
@@ -64,6 +64,7 @@ def test_admin_support_view_no_actions(client):
     assert client.get(f"/admin/core/user/{user.pk}/change/").status_code == 200
     assert client.get(f"/admin/core/item/{item.pk}/change/").status_code == 200
     assert client.get(f"/admin/core/item/{item.pk}/history/").status_code == 200
+    assert client.get(f"/admin/core/itemaccess/?user={user.pk}").status_code == 200
 
     client.post(
         "/admin/core/user/",

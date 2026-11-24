@@ -16,6 +16,14 @@ the app can match users by that email, so the account stays out of the app.
 Only superusers change a staff user, the login and the permissions of an
 account, and act on staff users through the user actions.
 
+## What the support finds
+
+- **User**: storage used and limit, last login, number of files created, root
+  items, and a link to all its direct accesses with their role.
+- **Item**: link reach and role, set and combined with the ancestors, whether
+  the folder is restricted, direct accesses, pending invitations, and the tree
+  of its ancestors with their accesses.
+
 ## Actions on users
 
 - **Merge into another user**: moves the accesses, created items, favorites and

@@ -25,7 +25,7 @@ from django.shortcuts import redirect
 from django.template.loader import render_to_string
 from django.template.response import TemplateResponse
 from django.templatetags.static import static
-from django.urls import path
+from django.urls import path, reverse
 from django.utils.html import format_html
 from django.utils.text import format_lazy
 from django.utils.translation import gettext_lazy as _
@@ -230,7 +230,7 @@ class UserAdmin(auth_admin.UserAdmin):
                 )
             },
         ),
-        (_("Items"), {"fields": ("root_items",)}),
+        (_("Items"), {"fields": ("files_count", "all_accesses", "root_items")}),
         (_("Important dates"), {"fields": ("created_at", "updated_at", "last_login")}),
         (
             _("Permissions"),
@@ -292,6 +292,8 @@ class UserAdmin(auth_admin.UserAdmin):
         "last_login",
         "quota_display",
         "top_files",
+        "files_count",
+        "all_accesses",
         "root_items",
     )
     search_fields = ("id", "sub", "admin_email", "email", "full_name")
@@ -624,6 +626,19 @@ class UserAdmin(auth_admin.UserAdmin):
         )
         return render_to_string("core/admin/user_root_items.html", {"accesses": accesses})
 
+    @admin.display(description=_("files created"))
+    def files_count(self, obj):
+        """Return the number of files created by the user, trash included."""
+        return models.Item.objects.filter(
+            creator=obj, type=models.ItemTypeChoices.FILE, hard_deleted_at__isnull=True
+        ).count()
+
+    @admin.display(description=_("accesses"))
+    def all_accesses(self, obj):
+        """Return a link to the direct accesses of the user on any item."""
+        url = f"{reverse('admin:core_itemaccess_changelist')}?user={obj.pk}"
+        return format_html('<a href="{}">{}</a>', url, _("All the accesses of the user"))
+
 
 @admin.register(models.UserReconciliationCsvImport)
 class UserReconciliationCsvImportAdmin(admin.ModelAdmin):
@@ -670,6 +685,60 @@ class ItemAccessInline(admin.TabularInline):
     autocomplete_fields = ["user"]
     model = models.ItemAccess
     extra = 0
+
+
+class InvitationInline(admin.TabularInline):
+    """Inline admin class listing the pending invitations of an item."""
+
+    model = models.Invitation
+    fields = ("email", "role", "issuer", "created_at", "is_expired")
+    readonly_fields = fields
+    extra = 0
+
+    def has_add_permission(self, request, obj=None):
+        """Leave the invitations to the application."""
+        return False
+
+
+@admin.register(models.ItemAccess)
+class ItemAccessAdmin(admin.ModelAdmin):
+    """Admin class listing the item accesses, read only: they are edited on their item."""
+
+    list_display = ("item_link", "item_type", "item_link_reach", "user", "team", "role")
+    # The item column links to the item, an access has nothing more to show
+    list_display_links = None
+    list_filter = ("role",)
+    list_select_related = ("item", "user")
+    search_fields = ("user__email", "team", "item__title")
+    ordering = ("item__title",)
+
+    def has_add_permission(self, request):
+        """Forbid creating an access out of its item."""
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        """Forbid changing an access out of its item."""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """Forbid deleting an access out of its item."""
+        return False
+
+    @admin.display(description=_("item"), ordering="item__title")
+    def item_link(self, obj):
+        """Return a link to the item of the access."""
+        url = reverse("admin:core_item_change", args=[obj.item_id])
+        return format_html('<a href="{}">{}</a>', url, obj.item.title)
+
+    @admin.display(description=_("type"))
+    def item_type(self, obj):
+        """Return the type of the item."""
+        return obj.item.get_type_display()
+
+    @admin.display(description=_("link reach"))
+    def item_link_reach(self, obj):
+        """Return the link reach set on the item itself."""
+        return obj.item.link_reach
 
 
 class TransferItemsForm(forms.Form):
@@ -737,8 +806,10 @@ class ItemAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "creator",
+                    "is_restricted",
                     "link_reach",
                     "link_role",
+                    "computed_link",
                     "link_expires_at",
                     "has_link_password",
                 )
@@ -760,7 +831,7 @@ class ItemAdmin(admin.ModelAdmin):
             },
         ),
     )
-    inlines = (ItemAccessInline,)
+    inlines = (ItemAccessInline, InvitationInline)
     list_display = (
         "id",
         "title",
@@ -797,6 +868,8 @@ class ItemAdmin(admin.ModelAdmin):
         "hard_deleted_at",
         "link_expires_at",
         "has_link_password",
+        "is_restricted",
+        "computed_link",
     )
     search_fields = ("id", "title", "creator__email")
     list_filter = ("upload_state", "link_reach", "link_role", "quota_excluded")
@@ -828,6 +901,16 @@ class ItemAdmin(admin.ModelAdmin):
     def has_link_password(self, obj):
         """Return whether the item link is protected by a password."""
         return bool(obj.link_password)
+
+    @admin.display(boolean=True, description=_("restricted"))
+    def is_restricted(self, obj):
+        """Return whether a restriction targets the folder."""
+        return obj.is_restricted
+
+    @admin.display(description=_("computed link"))
+    def computed_link(self, obj):
+        """Return the link reach and role combining the item and its ancestors."""
+        return f"{obj.computed_link_reach} / {obj.computed_link_role}"
 
     @admin.action(permissions=["change"])
     def trigger_file_analysis(self, request, queryset):

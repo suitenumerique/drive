@@ -295,6 +295,32 @@ def test_admin_users_root_items():
         assert title not in html
 
 
+def test_admin_users_files_count():
+    """The files created by the user should be counted, trash included."""
+    user = factories.UserFactory()
+    folder = factories.ItemFactory(creator=user, type=models.ItemTypeChoices.FOLDER)
+    factories.ItemFactory(creator=user, parent=folder, type=models.ItemTypeChoices.FILE)
+    trashed = factories.ItemFactory(creator=user, type=models.ItemTypeChoices.FILE)
+    trashed.soft_delete()
+    hard_deleted = factories.ItemFactory(creator=user, type=models.ItemTypeChoices.FILE)
+    hard_deleted.soft_delete()
+    hard_deleted.hard_delete()
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE)
+
+    admin_instance, loaded = _get_user(user)
+
+    assert admin_instance.files_count(loaded) == 2
+
+
+def test_admin_users_all_accesses():
+    """The user should link to the list of its accesses."""
+    user = factories.UserFactory()
+
+    admin_instance, loaded = _get_user(user)
+
+    assert f'href="/admin/core/itemaccess/?user={user.pk}"' in admin_instance.all_accesses(loaded)
+
+
 STATIC_STORAGES = {
     **settings.STORAGES,
     "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
