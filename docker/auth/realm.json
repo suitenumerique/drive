@@ -65,6 +65,34 @@
         "realmRoles": ["user"]
       },
       {
+        "username": "support1",
+        "email": "support1@drive.world",
+        "firstName": "Support",
+        "lastName": "Read",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "pass"
+          }
+        ],
+        "realmRoles": ["user"]
+      },
+      {
+        "username": "support2",
+        "email": "support2@drive.world",
+        "firstName": "Support",
+        "lastName": "Operations",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "pass"
+          }
+        ],
+        "realmRoles": ["user"]
+      },
+      {
         "username": "paige",
         "email": "paige.turner@library.book",
         "firstName": "Paige",
