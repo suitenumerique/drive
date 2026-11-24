@@ -8,7 +8,7 @@ import { getDriver } from "@/features/config/Config";
 import { Item } from "@/features/drivers/types";
 import { ItemFilters } from "@/features/drivers/Driver";
 import { useIsMinimalLayout } from "@/utils/useLayout";
-import { Feedback } from "@/features/feedback/Feedback";
+import { Feedback, FeedbackFormButton } from "@/features/feedback/Feedback";
 import { Gaufre } from "@/features/ui/components/gaufre/Gaufre";
 import { UserProfile } from "@/features/ui/components/user/UserProfile";
 
@@ -53,6 +53,7 @@ export const HeaderRight = ({
 
       {!isTablet && (
         <>
+          <FeedbackFormButton />
           <Gaufre />
           <UserProfile />
         </>

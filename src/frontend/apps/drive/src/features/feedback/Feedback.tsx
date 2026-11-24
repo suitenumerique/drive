@@ -11,6 +11,38 @@ import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useConfig } from "../config/ConfigProvider";
 import { useMessagesWidget } from "./useMessagesWidget";
+import { QuestionMark } from "@gouvfr-lasuite/ui-components/icons";
+
+/**
+ * Link to FRONTEND_FEEDBACK_FORM_URL, shown next to the user menu. When it is
+ * set, it replaces the FRONTEND_FEEDBACK_BUTTON_SHOW button and its modal.
+ */
+export const FeedbackFormButton = (props: {
+  buttonProps?: Partial<ButtonProps>;
+}) => {
+  const { t } = useTranslation();
+  const { config } = useConfig();
+  const url = config?.FRONTEND_FEEDBACK_FORM_URL;
+
+  if (!url) {
+    return null;
+  }
+
+  return (
+    <Button
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      color="error"
+      variant="secondary"
+      size="small"
+      icon={<QuestionMark aria-hidden size={20} />}
+      {...props.buttonProps}
+    >
+      {t("feedback.button")}
+    </Button>
+  );
+};
 
 export const Feedback = (props: { buttonProps?: Partial<ButtonProps> }) => {
   const { t } = useTranslation();
@@ -47,7 +79,10 @@ export const Feedback = (props: { buttonProps?: Partial<ButtonProps> }) => {
   }, []);
 
   const showFeedbackButton = () => {
-    if (!config?.FRONTEND_FEEDBACK_BUTTON_SHOW) {
+    if (
+      !config?.FRONTEND_FEEDBACK_BUTTON_SHOW ||
+      config?.FRONTEND_FEEDBACK_FORM_URL
+    ) {
       return false;
     }
 
@@ -116,6 +151,7 @@ export const FeedbackFooterMobile = () => {
   return (
     <div className="c__feedback__footer">
       <Feedback buttonProps={{ fullWidth: true }} />
+      <FeedbackFormButton buttonProps={{ fullWidth: true }} />
     </div>
   );
 };

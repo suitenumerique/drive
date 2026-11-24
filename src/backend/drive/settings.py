@@ -1062,6 +1062,9 @@ class Base(Configuration):
     FRONTEND_FEEDBACK_ITEMS = values.DictValue(
         {}, environ_name="FRONTEND_FEEDBACK_ITEMS", environ_prefix=None
     )
+    FRONTEND_FEEDBACK_FORM_URL = values.Value(
+        None, environ_name="FRONTEND_FEEDBACK_FORM_URL", environ_prefix=None
+    )
     FRONTEND_FEEDBACK_MESSAGES_WIDGET_ENABLED = values.BooleanValue(
         default=False,
         environ_name="FRONTEND_FEEDBACK_MESSAGES_WIDGET_ENABLED",
