@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛(frontend) prevent page scroll overflow on wopi editor #969
+
 ## [v1.1.1] - 2026-11-23
 
 ### Fixed
