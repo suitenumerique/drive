@@ -234,7 +234,7 @@ We'd love to hear your thoughts and hear about your experiments, so come and say
 This project is community-driven and PRs are welcome. Do not hesitate to get in touch if you have any question related to our implementation or design decisions. We <3 contributions of any kind, big and small :
 
 - [Contribution guide](https://github.com/suitenumerique/drive/blob/main/CONTRIBUTING.md)
-- [Translations](https://crowdin.com/project/lasuite-drive)
+- [Translations](https://github.com/suitenumerique/drive/blob/main/CONTRIBUTING.md#translations)
 - [Chat with us!](https://matrix.to/#/#drive-official:matrix.org)
 - Open a PR (see our instructions on [developing La Suite Drive locally](https://github.com/suitenumerique/drive/blob/main/docs/installation/README.md))
 - Submit a [feature request](https://github.com/suitenumerique/drive/issues/new?assignees=&labels=enhancement&template=Feature_request.md) or [bug report](https://github.com/suitenumerique/drive/issues/new?assignees=&labels=bug&template=Bug_report.md)
