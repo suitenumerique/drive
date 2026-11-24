@@ -832,6 +832,7 @@ class ItemAdmin(admin.ModelAdmin):
         ),
     )
     inlines = (ItemAccessInline, InvitationInline)
+    object_history_template = "core/admin/item_history.html"
     list_display = (
         "id",
         "title",
@@ -910,6 +911,8 @@ class ItemAdmin(admin.ModelAdmin):
     @admin.display(description=_("computed link"))
     def computed_link(self, obj):
         """Return the link reach and role combining the item and its ancestors."""
+        if obj.computed_link_role is None:
+            return obj.computed_link_reach
         return f"{obj.computed_link_reach} / {obj.computed_link_role}"
 
     @admin.action(permissions=["change"])

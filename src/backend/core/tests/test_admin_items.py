@@ -4,6 +4,7 @@ from unittest import mock
 
 from django.conf import settings
 from django.contrib import admin
+from django.contrib.admin.models import CHANGE, LogEntry
 from django.db import connection
 from django.test import RequestFactory, override_settings
 from django.test.utils import CaptureQueriesContext
@@ -343,6 +344,26 @@ def test_admin_items_sharing():
     subfolder = subfolder.restrict(user)
 
     assert admin_instance.is_restricted(subfolder) is True
+    assert admin_instance.computed_link(subfolder) == "restricted"
+
+
+@override_settings(
+    STORAGES={
+        **settings.STORAGES,
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
+)
+def test_admin_items_history_author(client):
+    """The history should name the user of the app who changed the item."""
+    user = factories.UserFactory(full_name="John Doe")
+    item = factories.ItemFactory()
+    LogEntry.objects.log_actions(user.pk, [item], CHANGE, "Moved to the trash.")
+    client.force_login(factories.UserFactory(is_staff=True, is_superuser=True))
+
+    response = client.get(f"/admin/core/item/{item.pk}/history/")
+
+    assert response.status_code == 200
+    assert f"{user.email} (John Doe)" in response.content.decode()
 
 
 @override_settings(
