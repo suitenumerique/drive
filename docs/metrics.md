@@ -131,7 +131,7 @@ Simply customize the setting `METRICS_USER_CLAIMS_EXPOSED=your_claim1,your_claim
 
 ## Organization metrics
 
-It is possibe to fetch usage metric grouped by organization, do to so, provide `account_type=organization`, when using account_type organization it is required that you also provide `account_id_key=siret` and `account_id_value=1234...`.
+It is possible to fetch usage metric grouped by organization, do to so, provide `account_type=organization`, when using account_type organization it is required that you also provide `account_id_key=siret` and `account_id_value=1234...`.
 
 It will sum the storage_used by user that have the same "claims.siret".
 

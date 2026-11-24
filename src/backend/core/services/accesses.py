@@ -71,7 +71,7 @@ def batch_share_process_rows(item, issuer, rows):
 
 def synchronize_descendants_accesses(item, access):
     """
-    Syncronize the accesses of the descendants of the item
+    Synchronize the accesses of the descendants of the item
     by removing accesses with roles lower than the current user's role.
     """
     descendants = item.descendants().filter(ancestors_deleted_at__isnull=True)

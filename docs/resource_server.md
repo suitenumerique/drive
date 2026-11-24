@@ -6,7 +6,7 @@ Drive implements resource server, so it means it can be used from an external ap
 
 ## Prerequisites
 
-In order to activate the resource server on Drive you need to setup the following environement variables
+In order to activate the resource server on Drive you need to setup the following environment variables
 
 ```
 OIDC_RESOURCE_SERVER_ENABLED=True

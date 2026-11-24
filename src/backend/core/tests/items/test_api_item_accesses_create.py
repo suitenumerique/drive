@@ -347,10 +347,10 @@ def test_api_item_accesses_create_authenticated_owner_multiple_accesses():
     assert response.status_code == 201
 
 
-def test_api_item_accesses_create_authenticated_owner_syncronize_descendants_accesses():
+def test_api_item_accesses_create_authenticated_owner_synchronize_descendants_accesses():
     """
     Owners of an item (direct or by heritage) should be able to create item accesses
-    and syncronize the accesses of the descendants of the item.
+    and synchronize the accesses of the descendants of the item.
     """
     user = factories.UserFactory()
     other_user = factories.UserFactory()
@@ -385,10 +385,10 @@ def test_api_item_accesses_create_authenticated_owner_syncronize_descendants_acc
     assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 0
 
 
-def test_api_item_accesses_create_authenticated_owner_syncronize_descendants_accesses_same_role():
+def test_api_item_accesses_create_authenticated_owner_synchronize_descendants_accesses_same_role():
     """
     Owners of an item (direct or by heritage) should be able to create item accesses
-    and syncronize the accesses of the descendants of the item.
+    and synchronize the accesses of the descendants of the item.
     """
     user = factories.UserFactory()
     other_user = factories.UserFactory()
@@ -423,10 +423,10 @@ def test_api_item_accesses_create_authenticated_owner_syncronize_descendants_acc
     assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 0
 
 
-def test_api_item_accesses_create_authenticated_owner_syncronize_descendants_accesses_no_lower():
+def test_api_item_accesses_create_authenticated_owner_synchronize_descendants_accesses_no_lower():
     """
     Owners of an item (direct or by heritage) should be able to create item accesses
-    and syncronize the accesses of the descendants of the item.
+    and synchronize the accesses of the descendants of the item.
     """
     user = factories.UserFactory()
     other_user = factories.UserFactory()

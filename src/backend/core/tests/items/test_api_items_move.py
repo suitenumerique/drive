@@ -439,7 +439,7 @@ def test_api_items_move_authenticated_deleted_target_as_child():
 def test_api_items_move_authenticated_deleted_target_as_sibling():
     """
     It should not be possible to move an item as a sibling of a deleted target item
-    if the user has no rigths on its parent.
+    if the user has no rights on its parent.
     """
     user = factories.UserFactory()
     client = APIClient()

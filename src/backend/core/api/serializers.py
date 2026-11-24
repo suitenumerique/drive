@@ -1079,7 +1079,7 @@ class SDKRelayEventSerializer(serializers.Serializer):
         # Convert the JSON data to a string to check its length
         json_string = json.dumps(value)
         # One selected file could use up to 1000 characters, this limit is set to
-        # avoid DDOS attacks to fullfill the redis.
+        # avoid DDOS attacks to fill the redis.
         max_length = 1000 * 100
 
         if len(json_string) > max_length:

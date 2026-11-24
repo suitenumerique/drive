@@ -555,7 +555,7 @@ class ItemViewSet(
         Filter a queryset on all top level the user has access to
         and all items that are children of the top level items.
 
-        The queryset is not annoated to let the function caller annotate it as needed.
+        The queryset is not annotated to let the function caller annotate it as needed.
         """
 
         user = self.request.user
@@ -914,7 +914,7 @@ class ItemViewSet(
         queryset = queryset.annotate_user_has_link_trace(user)
         queryset = queryset.annotate_user_has_direct_access(user)
 
-        # Apply ordering only now that everyting is filtered and annotated
+        # Apply ordering only now that everything is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
         return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
@@ -1117,7 +1117,7 @@ class ItemViewSet(
         queryset = queryset.annotate_user_has_link_trace(user)
         queryset = queryset.annotate_user_has_direct_access(user)
 
-        # Apply ordering only now that everyting is filtered and annotated
+        # Apply ordering only now that everything is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
         return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
@@ -1434,7 +1434,7 @@ class ItemViewSet(
                 )
 
             # Compute cache for ancestors links to avoid many queries while computing
-            # abilties for his items in the tree!
+            # abilities for his items in the tree!
             ancestors_links.append(ancestor.link_definition)
             paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
 
@@ -1495,7 +1495,7 @@ class ItemViewSet(
         queryset = queryset.annotate_user_has_link_trace(user)
         queryset = queryset.annotate_user_has_direct_access(user)
 
-        # Apply ordering only now that everyting is filtered and annotated
+        # Apply ordering only now that everything is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
         return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
@@ -2232,7 +2232,7 @@ class ItemViewSet(
 
         if not (wopi_client := get_wopi_client_config(item, request.user)):
             raise drf.exceptions.ValidationError(
-                {"detail": "This item does not suport WOPI integration."}
+                {"detail": "This item does not support WOPI integration."}
             )
 
         service = access_service.AccessUserItemService()

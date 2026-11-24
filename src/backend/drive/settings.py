@@ -1684,7 +1684,7 @@ class Base(Configuration):
     # to configure the settings related to the client.
     # Example :
     # WOPI_CLIENTS = ["vendorA"]
-    # Then these settings will be cheked in the post_setup:
+    # Then these settings will be checked in the post_setup:
     # WOPI_VENDORA_DISCOVERY_URL = https://vendorA.com/hosting/discovery
     # If they are missing, a ValueError will be raised.
     WOPI_CLIENTS = values.ListValue([], environ_name="WOPI_CLIENTS", environ_prefix=None)

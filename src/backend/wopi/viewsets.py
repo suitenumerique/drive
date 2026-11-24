@@ -289,7 +289,7 @@ class WopiViewSet(viewsets.ViewSet):
 
     def detail_post(self, request, pk=None):
         """
-        A details view acessible using a POST request.
+        A details view accessible using a POST request.
         WOPI protocol uses multiple time this POST view for different actions.
         The action is determined by the X-WOPI-Override header.
         The actions are:

@@ -3,7 +3,7 @@ import { clearDb, login, runFixture } from "./utils-common";
 import { expectExplorerBreadcrumbs } from "./utils-explorer";
 import { clickToMyFiles } from "./utils-navigate";
 
-test("Search somes items and shows them in the search modal", async ({
+test("Search some items and shows them in the search modal", async ({
   page,
 }) => {
   await clearDb();

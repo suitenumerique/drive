@@ -70,7 +70,7 @@ This document lists all configurable environment variables for the Drive applica
 | `FEATURES_INDEXED_SEARCH` | Enable the search of indexed files through the API | `True` |
 | `FILE_EXTENSIONS_ALLOWED` | List of file extension allowed to be uploaded | See in the settings.py file |
 | `FILE_EXTENSIONS_DENIED` | List of file extension refused at upload in `denylist` mode | See in the settings.py file |
-| `FILE_MIMETYPE_ALLOWED` | List of file mimetype allowed to be uploaded | See in the setings.py file |
+| `FILE_MIMETYPE_ALLOWED` | List of file mimetype allowed to be uploaded | See in the settings.py file |
 | `FILE_MIMETYPE_DENIED` | List of file mimetype refused at upload in `denylist` mode | See in the settings.py file |
 | `FRONTEND_THEME` | Frontend theme configuration | `None` |
 | `FRONTEND_EXTERNAL_HOME_URL` | Frontend external home url to redirect to | `None` |
@@ -82,7 +82,7 @@ This document lists all configurable environment variables for the Drive applica
 | `FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL` | Channel for feedback messages widget | `None` |
 | `FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH` | Path for feedback messages widget | `None` |
 | `FRONTEND_HELP_MENU_CONFIG` | Help menu of the left panel, as a Python dict (JSON with `True` / `False`), see [customization.md](customization.md#help-menu) | `{}` |
-| `FRONTEND_RELEASE_NOTE_ENABLED` | Enable release notes modal on connexion | `True` |
+| `FRONTEND_RELEASE_NOTE_ENABLED` | Enable release notes modal on connection | `True` |
 | `FRONTEND_ENTITLEMENTS_DISCLAIMERS` | Enable entitlements disclaimers with custom params | `{}` |
 | `ITEM_FILE_MAX_SIZE` | Maximum file size for uploads in bytes | `5368709120` (5GB) |
 | `INVITATION_VALIDITY_DURATION` | Duration during which an invitation remains valid, in seconds | `604800` (7 days) |

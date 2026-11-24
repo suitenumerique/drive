@@ -46,7 +46,7 @@ def test_items_api_breadcrumb_anonymous_to_a_non_public_tree_structure():
         link_reach=models.LinkReachChoices.AUTHENTICATED,
     )
 
-    # Populare level1_1 with authenticated link_reach
+    # Populate level1_1 with authenticated link_reach
     factories.ItemFactory.create_batch(
         3,
         parent=level1_1,
@@ -108,7 +108,7 @@ def test_items_api_anonymous_to_a_public_breadcrumb_structure():
         creator=user,
     )
 
-    # Populare level1_1 with authenticated link_reach
+    # Populate level1_1 with authenticated link_reach
     factories.ItemFactory.create_batch(
         3,
         parent=level1_1,

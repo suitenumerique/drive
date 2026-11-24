@@ -368,7 +368,7 @@ def test_api_item_accesses_retrieve_set_role_to_child():
 )
 def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
     """
-    The maximum role accross ancestor items and set_role_to options for
+    The maximum role across ancestor items and set_role_to options for
     a given user should be filled as expected.
     """
     user = factories.UserFactory()
@@ -1041,10 +1041,10 @@ def test_api_item_accesses_update_authenticated_owner_explict_accesses():
     assert response.status_code == 200
 
 
-def test_api_item_accesses_update_authenticated_owner_syncronize_descendants_accesses():
+def test_api_item_accesses_update_authenticated_owner_synchronize_descendants_accesses():
     """
     An owner of an item should be able to update the accesses of an other user
-    and syncronize the accesses of the descendants of the item.
+    and synchronize the accesses of the descendants of the item.
     """
     user = factories.UserFactory()
     other_user = factories.UserFactory()
@@ -1081,10 +1081,10 @@ def test_api_item_accesses_update_authenticated_owner_syncronize_descendants_acc
     assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 0
 
 
-def test_api_item_accesses_update_authenticated_owner_syncronize_descendants_accesses_same_role():
+def test_api_item_accesses_update_authenticated_owner_synchronize_descendants_accesses_same_role():
     """
     An owner of an item should be able to update the accesses of an other user
-    and syncronize the accesses of the descendants of the item.
+    and synchronize the accesses of the descendants of the item.
     """
     user = factories.UserFactory()
     other_user = factories.UserFactory()
@@ -1121,10 +1121,10 @@ def test_api_item_accesses_update_authenticated_owner_syncronize_descendants_acc
     assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 0
 
 
-def test_api_item_accesses_update_authenticated_owner_syncronize_descendants_accesses_no_lower():
+def test_api_item_accesses_update_authenticated_owner_synchronize_descendants_accesses_no_lower():
     """
     An owner of an item should be able to update the accesses of an other user
-    and syncronize the accesses of the descendants of the item.
+    and synchronize the accesses of the descendants of the item.
     """
     user = factories.UserFactory()
     other_user = factories.UserFactory()

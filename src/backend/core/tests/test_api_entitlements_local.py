@@ -318,7 +318,7 @@ def test_api_entitlements_local_upload_blocked_via_items_api():
 
 
 def test_api_entitlements_local_invalid_cutoff_parameter():
-    """An unparseable cutoff datetime should raise ImproperlyConfigured."""
+    """An unparsable cutoff datetime should raise ImproperlyConfigured."""
     with pytest.raises(ImproperlyConfigured):
         LocalEntitlementsBackend(exempt_users_created_before="not-a-date")
 

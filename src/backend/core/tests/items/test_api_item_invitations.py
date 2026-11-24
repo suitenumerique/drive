@@ -528,7 +528,7 @@ def test_api_item_invitations_create_cannot_invite_existing_users():
     item = factories.ItemFactory(users=[(user, "owner")])
     existing_user = factories.UserFactory()
 
-    # Build an invitation to the email of an exising identity in the db
+    # Build an invitation to the email of an existing identity in the db
     invitation_values = {
         "email": existing_user.email,
         "role": random.choice(models.RoleChoices.values),

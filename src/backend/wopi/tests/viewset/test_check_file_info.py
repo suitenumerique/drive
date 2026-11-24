@@ -234,7 +234,7 @@ def test_check_file_info_anonymous_user_with_access():
 
 def test_check_file_info_supports_rename_override(settings, monkeypatch):
     """
-    CheckFileInfo uses optionnal option SupportsRename override
+    CheckFileInfo uses optional option SupportsRename override
     loaded from the WOPI_<CLIENT>_OPTIONS environment variable.
     """
     monkeypatch.setenv(
