@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- 👷(ci) use the shared workflows of suitenumerique/ci
+
 ## [v1.1.1] - 2026-11-23
 
 ### Fixed

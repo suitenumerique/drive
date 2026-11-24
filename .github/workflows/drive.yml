@@ -8,6 +8,9 @@ on:
     branches:
       - "*"
 
+permissions:
+  contents: read
+
 jobs:
   lint-git:
     runs-on: ubuntu-latest
@@ -34,58 +37,21 @@ jobs:
         if: always()
         run: ~/.local/bin/gitlint --commits origin/${{ github.event.pull_request.base.ref }}..HEAD
 
-  check-changelog:
-    runs-on: ubuntu-latest
-    if: |
-      contains(github.event.pull_request.labels.*.name, 'noChangeLog') == false &&
-      github.event_name == 'pull_request'
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 50
-      - name: Check that the CHANGELOG has been modified in the current branch
-        run: git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.after }} | grep 'CHANGELOG.md'
-
-  lint-changelog:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-      - name: Check CHANGELOG max line length
-        run: |
-          max_line_length=$(cat CHANGELOG.md | grep -Ev "^\[.*\]: https://github.com" | wc -L)
-          if [ $max_line_length -ge 80 ]; then
-            echo "ERROR: CHANGELOG has lines longer than 80 characters."
-            exit 1
-          fi
+  changelog:
+    permissions:
+      contents: read
+    uses: suitenumerique/ci/.github/workflows/_changelog.yml@ca6401ac83e981e5b0a94f06f68baaa6e6d0a436 # v0.0.1
 
   build-mails:
     uses: ./.github/workflows/build-mails.yml
 
   lint-back:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: src/backend
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-      - name: "Set up Python"
-        uses: actions/setup-python@v7
-        with:
-          python-version-file: "src/backend/pyproject.toml"
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-      - name: Install the project
-        run: uv sync --locked --all-extras
-
-      - name: Check code formatting with ruff
-        run: uv run ruff format . --diff
-      - name: Lint code with ruff
-        run: uv run ruff check .
-      - name: Lint code with pylint
-        run: uv run pylint .
+    permissions:
+      contents: read
+    uses: suitenumerique/ci/.github/workflows/_python-lint.yml@ca6401ac83e981e5b0a94f06f68baaa6e6d0a436 # v0.0.1
+    with:
+      working_directory: src/backend
+      pylint_targets: .
 
   test-back:
     runs-on: ubuntu-latest
