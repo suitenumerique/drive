@@ -34,8 +34,9 @@ class ResourceServerRestrictionMixin:
     def get_permissions(self):
         """Apply the external API checks to every action, whatever its permission classes.
 
-        MenshenPermission only passes requests authenticated by MenshenAuthentication,
-        so it opens nothing on a viewset that does not list that backend.
+        Each of these permissions only passes requests authenticated by its own backend:
+        an exchanged token needs the scope of the action, a resource server token needs an
+        allowed audience.
         """
         return [
             (MenshenPermission | ResourceServerClientPermission)(),
@@ -60,7 +61,7 @@ class ResourceServerItemViewSet(ResourceServerRestrictionMixin, ItemViewSet):
 class ResourceServerUserViewSet(ResourceServerRestrictionMixin, UserViewSet):
     """Resource Server Viewset for the Drive app."""
 
-    authentication_classes = [ResourceServerAuthentication]
+    authentication_classes = [MenshenAuthentication, ResourceServerAuthentication]
 
     permission_classes = [IsSelf]
     resource = "users"
@@ -69,7 +70,7 @@ class ResourceServerUserViewSet(ResourceServerRestrictionMixin, UserViewSet):
 class ResourceServerItemAccessViewSet(ResourceServerRestrictionMixin, ItemAccessViewSet):
     """Resource Server Viewset for ItemAccess."""
 
-    authentication_classes = [ResourceServerAuthentication]
+    authentication_classes = [MenshenAuthentication, ResourceServerAuthentication]
 
     permission_classes = [ItemAccessPermission]
     resource = "item_access"
@@ -78,7 +79,7 @@ class ResourceServerItemAccessViewSet(ResourceServerRestrictionMixin, ItemAccess
 class ResourceServerInvitationViewSet(ResourceServerRestrictionMixin, InvitationViewset):
     """Resource Server Viewset for Invitations."""
 
-    authentication_classes = [ResourceServerAuthentication]
+    authentication_classes = [MenshenAuthentication, ResourceServerAuthentication]
 
     permission_classes = [InvitationPermission]
     resource = "item_invitation"

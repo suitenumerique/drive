@@ -274,3 +274,18 @@ def test_api_items_list_resource_server_token_unknown_to_menshen(
 
     assert response.status_code == 200
     assert str(item.id) in [result["id"] for result in response.json()["results"]]
+
+
+def test_api_users_me_resource_server_token_unknown_to_menshen(
+    menshen_backend_conf, resource_server_backend, httpx2_mock, user_specific_sub
+):
+    """The users route should defer to the resource server."""
+    httpx2_mock.post(MENSHEN_INTROSPECTION_URL).respond(json={"active": False})
+
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION="Bearer some_resource_server_token")
+
+    response = client.get("/external_api/v1.0/users/me/")
+
+    assert response.status_code == 200
+    assert response.json()["id"] == str(user_specific_sub.id)
