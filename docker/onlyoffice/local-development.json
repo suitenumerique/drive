@@ -25,5 +25,10 @@
         "allowPrivateIPAddress": true
       }
     }
+  },
+  "externalRequest": {
+    "action": {
+      "allow": false
+    }
   }
 }
