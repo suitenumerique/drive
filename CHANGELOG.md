@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🔒️(backend) duplicate at the user root a file they cannot copy in its folder
+
 ## [v1.1.1] - 2026-11-23
 
 ### Fixed
