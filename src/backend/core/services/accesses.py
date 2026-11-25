@@ -1,5 +1,6 @@
 """Service for sharing items with registered users and inviting contacts."""
 
+from django.conf import settings
 from django.db import models as db
 from django.db import transaction
 
@@ -67,6 +68,21 @@ def batch_share_process_rows(item, issuer, rows):
                 created_invitations.append((email, role))
 
     return created_accesses, created_invitations, skipped
+
+
+def apply_item_access(item, access, sender):
+    """
+    Side effects to run after creating or upgrading an ItemAccess:
+    synchronize descendant accesses and notify the user by email.
+    """
+    synchronize_descendants_accesses(item, access)
+    if access.user and access.user.email:
+        item.send_invitation_email(
+            access.user.email,
+            access.role,
+            sender,
+            sender.language or settings.LANGUAGE_CODE,
+        )
 
 
 def synchronize_descendants_accesses(item, access):

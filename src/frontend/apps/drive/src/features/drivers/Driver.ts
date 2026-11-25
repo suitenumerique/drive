@@ -7,6 +7,11 @@ import {
   DTOUpdateLinkConfiguration,
 } from "./DTOs/AccessesDTO";
 import {
+  DTOAcceptAskForAccess,
+  DTOCreateAskForAccess,
+  DTODeleteAskForAccess,
+} from "./DTOs/AskForAccessDTO";
+import {
   DTOCreateInvitation,
   DTODeleteInvitation,
   DTOUpdateInvitation,
@@ -15,6 +20,7 @@ import {
   Access,
   ApiConfig,
   APIList,
+  AskForAccess,
   Invitation,
   Item,
   ItemBreadcrumb,
@@ -159,8 +165,13 @@ export abstract class Driver {
     payload: DTOUpdateLinkConfiguration,
   ): Promise<void>;
   abstract deleteAccess(payload: DTODeleteAccess): Promise<void>;
+  // Ask for access
+  abstract getItemAskForAccesses(itemId: string): Promise<AskForAccess[]>;
+  abstract createAskForAccess(data: DTOCreateAskForAccess): Promise<void>;
+  abstract deleteAskForAccess(payload: DTODeleteAskForAccess): Promise<void>;
+  abstract acceptAskForAccess(payload: DTOAcceptAskForAccess): Promise<void>;
   // Invitations
-  abstract getItemInvitations(itemId: string): Promise<APIList<Invitation>>;
+  abstract getItemInvitations(itemId: string, page?: number): Promise<APIList<Invitation>>;
   abstract createInvitation(data: DTOCreateInvitation): Promise<Invitation>;
   abstract deleteInvitation(payload: DTODeleteInvitation): Promise<void>;
   abstract updateInvitation(payload: DTOUpdateInvitation): Promise<Invitation>;

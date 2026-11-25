@@ -186,8 +186,7 @@ export const useItemActionMenuItems = ({
       {
         icon: <Shared />,
         label: t("explorer.item.actions.share"),
-        isHidden:
-          !folder.abilities?.accesses_view || isUnavailableRestriction(item),
+        isHidden: isUnavailableRestriction(item),
         callback: () => {
           setSharedItem(effectiveItem);
         },

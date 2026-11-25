@@ -303,8 +303,8 @@ test("link-only access opens a target without requesting members or invitations"
   ).json();
   expect(item.abilities.restrict).toBe(false);
   expect(item.abilities.accesses_view).toBe(false);
-  // 4. Accordingly the folder menu offers no Share action, and no member
-  //    request was sent along the way.
+  // 4. The folder menu offers a Share action (link-only users can copy the
+  //    link or request explicit access), but no member request was sent.
   await page
     .getByTestId("explorer-breadcrumbs")
     .getByTestId("breadcrumb-button")
@@ -313,6 +313,6 @@ test("link-only access opens a target without requesting members or invitations"
   await expect(page.getByRole("menu")).toBeVisible();
   await expect(
     page.getByRole("menuitem", { name: "Share", exact: true }),
-  ).toHaveCount(0);
+  ).toBeVisible();
   expect(memberRequests).toEqual([]);
 });

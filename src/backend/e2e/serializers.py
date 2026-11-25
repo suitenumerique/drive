@@ -10,3 +10,4 @@ class E2EAuthSerializer(serializers.Serializer):
     """Serializer for E2E authentication."""
 
     email = serializers.EmailField(required=True)
+    full_name = serializers.CharField(required=False)
