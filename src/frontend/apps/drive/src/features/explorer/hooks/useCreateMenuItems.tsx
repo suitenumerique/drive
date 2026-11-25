@@ -1,11 +1,12 @@
-import { MenuItem, IconSize, useModal } from "@gouvfr-lasuite/ui-components";
+import { MenuItem, IconSize, useModal, FileIconContent } from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import createFolderSvg from "@/assets/icons/create_folder.svg";
 import uploadFileSvg from "@/assets/icons/upload_file.svg";
 import uploadFolderSvg from "@/assets/icons/upload_folder.svg";
-import { ItemIcon } from "../components/icons/ItemIcon";
-import { Item, ItemType } from "@/features/drivers/types";
+import officeTextSvg from "@/assets/icons/office_text.svg";
+import officePresentationSvg from "@/assets/icons/office_presentation.svg";
+import officeSpreadsheetSvg from "@/assets/icons/office_spreadsheet.svg";
 import {
   ExplorerCreateFileModal,
   ExplorerCreateFileType,
@@ -27,10 +28,10 @@ type UseCreateMenuItemsReturn = {
   modals: React.ReactNode;
 };
 
-const renderFileIcon = (item: Partial<Item>) => {
+const renderFileIcon = (icon: string) => {
   return (
     <div>
-      <ItemIcon item={item as Item} size={IconSize.MEDIUM} type="mini" />
+      <FileIconContent icon={icon} size={IconSize.MEDIUM} />
     </div>
   );
 };
@@ -103,36 +104,21 @@ export const useCreateMenuItems = ({
   if (includeCreate) {
     items.push(
       {
-        icon: renderFileIcon({
-          type: ItemType.FILE,
-          filename: "doc.odt",
-          mimetype:
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        }),
+        icon: renderFileIcon(officeTextSvg.src),
         label: t("explorer.tree.create.file.doc"),
         callback: () => openCreateFileModal(ExplorerCreateFileType.DOC),
         isDisabled: !canUpload,
         subText: cannotUploadReason,
       },
       {
-        icon: renderFileIcon({
-          type: ItemType.FILE,
-          filename: "powerpoint.odp",
-          mimetype:
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        }),
+        icon: renderFileIcon(officePresentationSvg.src),
         label: t("explorer.tree.create.file.powerpoint"),
         callback: () => openCreateFileModal(ExplorerCreateFileType.POWERPOINT),
         isDisabled: !canUpload,
         subText: cannotUploadReason,
       },
       {
-        icon: renderFileIcon({
-          type: ItemType.FILE,
-          filename: "calc.ods",
-          mimetype:
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        }),
+        icon: renderFileIcon(officeSpreadsheetSvg.src),
         label: t("explorer.tree.create.file.calc"),
         callback: () => openCreateFileModal(ExplorerCreateFileType.CALC),
         isDisabled: !canUpload,
