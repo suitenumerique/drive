@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🔒️(onlyoffice) block the external requests of the development document server
+
 ## [v1.1.1] - 2026-11-23
 
 ### Fixed
