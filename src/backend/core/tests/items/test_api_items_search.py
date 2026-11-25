@@ -1048,3 +1048,47 @@ def test_api_items_search_unlocked_expired_link_items_hidden():
 
     assert response.status_code == 200
     assert response.json()["results"] == []
+
+
+@pytest.mark.parametrize(
+    "shared_level, root_link_reach, expected_parent_levels",
+    [
+        (2, "restricted", [2]),
+        (0, "restricted", [0, 1, 2]),
+        (2, "public", [0, 1, 2]),
+    ],
+)
+def test_api_items_search_parents_readable_only(
+    shared_level, root_link_reach, expected_parent_levels
+):
+    """Search results should only list the parents the user can read."""
+    user = factories.UserFactory()
+    root = factories.ItemFactory(
+        title="Private root", type=models.ItemTypeChoices.FOLDER, link_reach=root_link_reach
+    )
+    middle = factories.ItemFactory(
+        title="Private middle", type=models.ItemTypeChoices.FOLDER, parent=root, link_reach=None
+    )
+    shared = factories.ItemFactory(
+        title="Shared folder", type=models.ItemTypeChoices.FOLDER, parent=middle, link_reach=None
+    )
+    factories.ItemFactory(
+        title="Searched file",
+        type=models.ItemTypeChoices.FILE,
+        parent=shared,
+        link_reach=None,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    folders = [root, middle, shared]
+    factories.UserItemAccessFactory(item=folders[shared_level], user=user, role="reader")
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.get("/api/v1.0/items/search/", {"title": "Searched"})
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 1
+    assert [parent["id"] for parent in results[0]["parents"]] == [
+        str(folders[level].id) for level in expected_parent_levels
+    ]
