@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🔒️(backend) restrict changes to owner invitations to owners
+
 ## [v1.1.1] - 2026-11-23
 
 ### Fixed

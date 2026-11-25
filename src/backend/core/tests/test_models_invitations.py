@@ -232,7 +232,7 @@ def test_models_item_invitations_get_abilities_privileged_member(role, via, mock
 
     factories.UserItemAccessFactory(item=item)  # another one
 
-    invitation = factories.InvitationFactory(item=item)
+    invitation = factories.InvitationFactory(item=item, role="editor")
     abilities = invitation.get_abilities(user)
 
     assert abilities == {
@@ -240,6 +240,31 @@ def test_models_item_invitations_get_abilities_privileged_member(role, via, mock
         "retrieve": True,
         "partial_update": True,
         "update": True,
+    }
+
+
+@pytest.mark.parametrize("via", VIA)
+@pytest.mark.parametrize("role", ["administrator", "owner"])
+def test_models_item_invitations_get_abilities_owner_invitation(role, via, mock_user_teams):
+    """Only owners should be able to change or cancel an owner invitation."""
+
+    user = factories.UserFactory()
+    item = factories.ItemFactory()
+    if via == USER:
+        factories.UserItemAccessFactory(item=item, user=user, role=role)
+    elif via == TEAM:
+        mock_user_teams.return_value = ["lasuite", "unknown"]
+        factories.TeamItemAccessFactory(item=item, team="lasuite", role=role)
+
+    invitation = factories.InvitationFactory(item=item, role="owner")
+    abilities = invitation.get_abilities(user)
+
+    is_owner = role == "owner"
+    assert abilities == {
+        "destroy": is_owner,
+        "retrieve": True,
+        "partial_update": is_owner,
+        "update": is_owner,
     }
 
 
