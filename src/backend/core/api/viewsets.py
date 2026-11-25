@@ -2286,9 +2286,9 @@ class ItemViewSet(
 
         parent = item_to_duplicate.parent() if item_to_duplicate.depth > 1 else None
 
-        if parent and parent.get_role(user) == models.RoleChoices.READER:
-            # If the user as reader role on the parent folder, then the duplicated
-            # item must be created at the user's root
+        if parent and not parent.get_abilities(user)["children_create"]:
+            # If the user cannot create files in the parent folder, then the
+            # duplicated item must be created at the user's root
             parent = None
         with transaction.atomic():
             duplicated_item = models.Item.objects.create_child(

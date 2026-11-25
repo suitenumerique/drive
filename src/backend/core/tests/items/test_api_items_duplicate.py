@@ -345,6 +345,44 @@ def test_api_items_duplicate_in_folder_reader():
     assert duplicated_item.upload_state == models.ItemUploadStateChoices.DUPLICATING
 
 
+@pytest.mark.parametrize(
+    "link_role, expected_in_folder",
+    [(models.LinkRoleChoices.READER, False), (models.LinkRoleChoices.EDITOR, True)],
+)
+def test_api_items_duplicate_in_folder_through_link(link_role, expected_in_folder):
+    """
+    Duplicating a file reached through a public link should place the duplicate in
+    its folder only if the link lets the user create files there.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    parent_folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.PUBLIC,
+        link_role=link_role,
+    )
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        parent=parent_folder,
+        link_reach=None,
+    )
+
+    with mock.patch("core.tasks.item.duplicate_file.delay"):
+        response = client.post(f"/api/v1.0/items/{item.id!s}/duplicate/")
+
+    assert response.status_code == 201
+    duplicated_item = models.Item.objects.get(id=response.json()["id"])
+
+    if expected_in_folder:
+        assert duplicated_item.parent() == parent_folder
+    else:
+        assert duplicated_item.parent() is None
+        assert duplicated_item.get_role(user) == models.RoleChoices.OWNER
+
+
 def test_api_items_duplicate_at_root():
     """
     Duplicating a file at root level should place the duplicate at root level
