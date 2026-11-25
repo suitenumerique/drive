@@ -56,6 +56,10 @@
     color: var(--c--contextuals--content--semantic--neutral--secondary);
   }
 
+  &__warning {
+    color: var(--c--contextuals--content--semantic--warning--primary);
+  }
+
   &__actions {
     display: flex;
     gap: 12px;

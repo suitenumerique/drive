@@ -694,7 +694,8 @@
           "picker_label_other": "{{count}} files selected",
           "save_label": "Choose a destination for the file",
           "save": "Save",
-          "cannot_pick": "You don't have permission to share this file because you're only a viewer."
+          "cannot_pick": "You don't have permission to share this file because you're only a viewer.",
+          "public_warning": "The selected files will be accessible to anyone with the link."
         }
       },
       "release_notes": {
@@ -1443,7 +1444,8 @@
           "picker_label_other": "{{count}} fichiers sélectionnés",
           "save_label": "Choisissez une destination pour le fichier",
           "save": "Enregistrer",
-          "cannot_pick": "Vous n'avez pas les droits pour partager ce fichier car vous n'êtes qu'un lecteur."
+          "cannot_pick": "Vous n'avez pas les droits pour partager ce fichier car vous n'êtes qu'un lecteur.",
+          "public_warning": "Les fichiers sélectionnés seront accessibles à toute personne disposant du lien."
         }
       },
       "release_notes": {
@@ -2192,7 +2194,8 @@
           "picker_label_other": "{{count}} bestanden geselecteerd",
           "save_label": "Kies een bestemming voor het bestand",
           "save": "bewaren",
-          "cannot_pick": "Je hebt geen toestemming om dit bestand te delen omdat je alleen lees-rechten hebt."
+          "cannot_pick": "Je hebt geen toestemming om dit bestand te delen omdat je alleen lees-rechten hebt.",
+          "public_warning": "De geselecteerde bestanden worden toegankelijk voor iedereen met de link."
         }
       },
       "release_notes": {

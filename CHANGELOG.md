@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🔒️(frontend) warn in the SDK picker that the chosen files become public
+
 ## [v1.1.1] - 2026-11-23
 
 ### Fixed
