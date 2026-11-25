@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🔒️(wopi) keep WOPI access tokens in their own cache namespace
+
 ## [v1.1.1] - 2026-11-23
 
 ### Fixed

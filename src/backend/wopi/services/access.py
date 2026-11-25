@@ -18,6 +18,9 @@ import structlog
 
 from core.models import Item, User
 
+# Namespace the tokens so no other cache entry can be read as a WOPI access.
+ACCESS_CACHE_KEY_PREFIX = "wopi:access_token:"
+
 
 def hash_access_token(token: str) -> str:
     """Return a short hash of the access token, safe to write in the logs."""
@@ -99,13 +102,17 @@ class AccessUserItemService:
         token = self.generate_token()
         access_user_item = AccessUserItem(item=item, user=user)
         token_eol = timezone.now() + timedelta(seconds=effective_ttl)
-        cache.set(token, access_user_item.to_dict(), timeout=effective_ttl)
+        cache.set(
+            f"{ACCESS_CACHE_KEY_PREFIX}{token}",
+            access_user_item.to_dict(),
+            timeout=effective_ttl,
+        )
         bind_wopi_session(token)
         return token, int(round(token_eol.timestamp())) * 1000
 
     def get_access_user_item(self, token: str) -> AccessUserItem:
         """Get the access user item for the token"""
-        data = cache.get(token)
+        data = cache.get(f"{ACCESS_CACHE_KEY_PREFIX}{token}")
         if data is None:
             raise AccessUserItemNotFoundError("Resource not found")
         bind_wopi_session(token)
