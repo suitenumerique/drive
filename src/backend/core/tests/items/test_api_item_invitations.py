@@ -1,7 +1,7 @@
 """
 Unit tests for the Invitation model
 """
-# pylint: disable=too-many-arguments,too-many-positional-arguments
+# pylint: disable=too-many-lines,too-many-arguments,too-many-positional-arguments
 
 import random
 from datetime import timedelta
@@ -49,8 +49,10 @@ def test_api_item_invitations_list_authenticated_privileged(
         mock_user_teams.return_value = ["lasuite", "unknown"]
         factories.TeamItemAccessFactory(item=item, team="lasuite", role=role)
 
-    invitation = factories.InvitationFactory(item=item, issuer=user)
-    other_invitations = factories.InvitationFactory.create_batch(2, item=item, issuer=other_user)
+    invitation = factories.InvitationFactory(item=item, issuer=user, role="editor")
+    other_invitations = factories.InvitationFactory.create_batch(
+        2, item=item, issuer=other_user, role="editor"
+    )
 
     # invitations from other items should not be listed
     other_item = factories.ItemFactory()
@@ -213,7 +215,7 @@ def test_api_item_invitations_retrieve_item_privileged(role, via, mock_user_team
     provided they are administrators or owners of the item.
     """
     user = factories.UserFactory()
-    invitation = factories.InvitationFactory()
+    invitation = factories.InvitationFactory(role="editor")
 
     if via == USER:
         factories.UserItemAccessFactory(item=invitation.item, user=user, role=role)
@@ -632,7 +634,7 @@ def test_api_item_invitations_update_authenticated_privileged_any_field_except_r
     Authenticated user can update invitations if they are administrator or owner of the item.
     """
     user = factories.UserFactory()
-    invitation = factories.InvitationFactory()
+    invitation = factories.InvitationFactory(role="editor")
 
     if via == USER:
         factories.UserItemAccessFactory(item=invitation.item, user=user, role=role)
@@ -678,7 +680,7 @@ def test_api_item_invitations_update_authenticated_privileged_role(
     but only owners can set the invitation role to the "owner" role.
     """
     user = factories.UserFactory()
-    invitation = factories.InvitationFactory()
+    invitation = factories.InvitationFactory(role="editor")
     old_role = invitation.role
 
     if via == USER:
@@ -778,6 +780,38 @@ def test_api_item_invitations_patch(via, role, mock_user_teams):
     assert invitation.role == "reader"
 
 
+@pytest.mark.parametrize("via", VIA)
+@pytest.mark.parametrize("role", ["administrator", "owner"])
+def test_api_item_invitations_patch_owner_invitation_email(via, role, mock_user_teams):
+    """Only owners should be allowed to change the email of an owner invitation."""
+    user = factories.UserFactory()
+    invitation = factories.InvitationFactory(role="owner")
+    old_email = invitation.email
+
+    if via == USER:
+        factories.UserItemAccessFactory(item=invitation.item, user=user, role=role)
+    elif via == TEAM:
+        mock_user_teams.return_value = ["lasuite", "unknown"]
+        factories.TeamItemAccessFactory(item=invitation.item, team="lasuite", role=role)
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.patch(
+        f"/api/v1.0/items/{invitation.item.id!s}/invitations/{invitation.id!s}/",
+        {"email": "new@example.com"},
+        format="json",
+    )
+
+    invitation.refresh_from_db()
+    if role == "owner":
+        assert response.status_code == 200
+        assert invitation.email == "new@example.com"
+    else:
+        assert response.status_code == 403
+        assert invitation.email == old_email
+
+
 # Delete
 
 
@@ -819,7 +853,7 @@ def test_api_item_invitations_delete_privileged_members(role, via, mock_user_tea
         mock_user_teams.return_value = ["lasuite", "unknown"]
         factories.TeamItemAccessFactory(item=item, team="lasuite", role=role)
 
-    invitation = factories.InvitationFactory(item=item)
+    invitation = factories.InvitationFactory(item=item, role="editor")
 
     client = APIClient()
     client.force_login(user)
@@ -828,6 +862,35 @@ def test_api_item_invitations_delete_privileged_members(role, via, mock_user_tea
         f"/api/v1.0/items/{item.id!s}/invitations/{invitation.id!s}/",
     )
     assert response.status_code == 204
+
+
+@pytest.mark.parametrize("via", VIA)
+@pytest.mark.parametrize("role", ["owner", "administrator"])
+def test_api_item_invitations_delete_owner_invitation(role, via, mock_user_teams):
+    """Only owners should be able to cancel an owner invitation."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory()
+    if via == USER:
+        factories.UserItemAccessFactory(item=item, user=user, role=role)
+    elif via == TEAM:
+        mock_user_teams.return_value = ["lasuite", "unknown"]
+        factories.TeamItemAccessFactory(item=item, team="lasuite", role=role)
+
+    invitation = factories.InvitationFactory(item=item, role="owner")
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.delete(
+        f"/api/v1.0/items/{item.id!s}/invitations/{invitation.id!s}/",
+    )
+
+    if role == "owner":
+        assert response.status_code == 204
+        assert not models.Invitation.objects.filter(id=invitation.id).exists()
+    else:
+        assert response.status_code == 403
+        assert models.Invitation.objects.filter(id=invitation.id).exists()
 
 
 @pytest.mark.parametrize("role", ["reader", "editor"])

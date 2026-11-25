@@ -2676,10 +2676,14 @@ class Invitation(BaseModel):
         """Compute and return abilities for a given user."""
         user_role = self.get_role(user)
         is_owner_or_admin = user_role in PRIVILEGED_ROLES
+        # As for owner accesses, only owners can change an owner invitation.
+        can_change = (
+            user_role == RoleChoices.OWNER if self.role == RoleChoices.OWNER else is_owner_or_admin
+        )
 
         return {
-            "destroy": is_owner_or_admin,
-            "update": is_owner_or_admin,
-            "partial_update": is_owner_or_admin,
+            "destroy": can_change,
+            "update": can_change,
+            "partial_update": can_change,
             "retrieve": is_owner_or_admin,
         }
