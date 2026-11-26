@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- 🤖(agents) add AGENTS.md and AI skills
+
 ## [v1.1.1] - 2026-11-23
 
 ### Fixed

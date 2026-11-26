@@ -80,7 +80,7 @@ We use Kubernetes for our [production instance](https://fichiers.numerique.gouv
 
 For now we only have a documentation to install it on Kubernetes. We will be more than happy to improve this documentation with other methods. Feel free to make a PR !
 
-**Questions?** Open an issue on [GitHub](https://github.com/suitenumerique/drive/issues/new?template=Bug_report.md) or join our [Matrix community](https://matrix.to/#/#drive-official:matrix.org).
+**Questions?** Open an issue on [GitHub](https://github.com/suitenumerique/drive/issues/new/choose) or join our [Matrix community](https://matrix.to/#/#drive-official:matrix.org).
 
 #### Known instances
 
@@ -148,6 +148,20 @@ You can check all available Make rules using:
 ```bash
 $ make help
 ```
+
+#### AI agents
+
+`AGENTS.md` holds the guidelines for AI coding agents, and `.agents/skills/`
+the skills they can load (start the stack, backend, frontend, E2E tests,
+reviews, issues). Codex, Cursor and other agents read that folder directly.
+For Claude Code, run `make skills` once (and after each change to them) to
+generate `.claude/skills/`; it needs Node.js with `npx`. Other agents that
+need their own copy can be targeted with `make skills SKILLS_AGENT=<agent>`.
+
+For instance, the `/drive-start` skill checks what is already built, stale or
+running, then runs only the Make targets needed: `make bootstrap` on a first
+run, the rebuild of the images whose dependencies changed after a pull, or
+just `make run`.
 
 #### Running end-to-end tests
 
@@ -220,10 +234,10 @@ We'd love to hear your thoughts and hear about your experiments, so come and say
 This project is community-driven and PRs are welcome. Do not hesitate to get in touch if you have any question related to our implementation or design decisions. We <3 contributions of any kind, big and small :
 
 - [Contribution guide](https://github.com/suitenumerique/drive/blob/main/CONTRIBUTING.md)
-- [Translations](https://crowdin.com/project/lasuite-drive)
+- [Translations](https://github.com/suitenumerique/drive/blob/main/CONTRIBUTING.md#translations)
 - [Chat with us!](https://matrix.to/#/#drive-official:matrix.org)
 - Open a PR (see our instructions on [developing La Suite Drive locally](https://github.com/suitenumerique/drive/blob/main/docs/installation/README.md))
-- Submit a [feature request](https://github.com/suitenumerique/drive/issues/new?assignees=&labels=enhancement&template=Feature_request.md) or [bug report](https://github.com/suitenumerique/drive/issues/new?assignees=&labels=bug&template=Bug_report.md)
+- Submit a [feature request](https://github.com/suitenumerique/drive/issues/new?template=feature_request.yml) or [bug report](https://github.com/suitenumerique/drive/issues/new?template=bug_report.yml)
 
 #### Gov ❤️ open source
 
