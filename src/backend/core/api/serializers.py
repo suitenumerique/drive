@@ -644,10 +644,15 @@ class ItemSerializer(ListItemSerializer):
                 # Just check for validation, the real filename
                 # will be use later in the rename_file task
                 utils.sanitize_filename(validated_data["title"])
-                # The title is the download name, screen it when its extension changes
-                if utils.get_file_extension(validated_data["title"]) != utils.get_file_extension(
-                    instance.title
-                ) and not utils.is_extension_allowed(validated_data["title"]):
+                # The title is the download name, screen it when its extension changes.
+                # The frontend does not pass the extension on rename, and rename_file
+                # keeps the one of the filename, so a title without one is not screened.
+                new_extension = utils.get_file_extension(validated_data["title"])
+                if (
+                    new_extension
+                    and new_extension != utils.get_file_extension(instance.title)
+                    and not utils.is_extension_allowed(validated_data["title"])
+                ):
                     raise serializers.ValidationError(
                         {"title": _("This file extension is not allowed.")},
                         code="item_update_file_extension_not_allowed",
