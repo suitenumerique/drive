@@ -154,6 +154,7 @@ This document lists all configurable environment variables for the Drive applica
 | `SDK_ENABLED` | Enable the SDK picker pages (`/sdk`) and the SDK relay API | `False` |
 | `SENTRY_DSN` | Sentry DSN for error tracking | `None` |
 | `SENTRY_TRACES_SAMPLE_RATE` | Ratio of requests traced for Sentry performance monitoring (0 to 1) | `0.0` |
+| `SHARE_IMPORT_FILE_MAX_ROWS` | Maximum number of rows of an imported contacts file | `500` |
 | `SPECTACULAR_SETTINGS_ENABLE_DJANGO_DEPLOY_CHECK` | Enable Django deploy check in Spectacular | `False` |
 | `STORAGES_STATICFILES_BACKEND` | Backend for static files storage | `whitenoise.storage.CompressedManifestStaticFilesStorage` |
 | `TRASHBIN_CUTOFF_DAYS` | Number of days before items are automatically removed from trash after their soft deletion | `30` |
