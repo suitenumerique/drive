@@ -8,6 +8,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_l
 
 from core.metrics.business import DriveBusinessCollector
 from core.metrics.collectors import (
+    BuildInfoCollector,
     CeleryQueueCollector,
     HostnameLabelled,
     WorkerProcessesCollector,
@@ -18,6 +19,7 @@ from core.metrics.collectors import (
 def metrics_view(request):
     """Serve the metrics in the Prometheus text format."""
     registry = CollectorRegistry()
+    registry.register(HostnameLabelled(BuildInfoCollector()))
     registry.register(HostnameLabelled(WorkerProcessesCollector()))
     if settings.PROMETHEUS_CELERY_QUEUE_METRICS_ENABLED:
         registry.register(HostnameLabelled(CeleryQueueCollector()))

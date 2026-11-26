@@ -48,6 +48,18 @@ scrape_configs:
 
 ## What is measured
 
+### Build information
+
+`drive_build_info` gives the version, the environment, the indexed search status and the indexer class name of the running backend. The value is always `1`.
+
+A rollout adds a series. Read the newest series. Compare a latency or an I/O change after a rollout with these labels.
+
+### Application counters
+
+The backend creates its counters and gauges with the factories of `core/metrics/events.py`. The factories return no-op objects when `PROMETHEUS_METRICS_ENABLED` is false. Therefore no module outside `core.metrics` imports `prometheus_client`.
+
+Emit a counter where the event occurs. Use a collector for a value that you compute at scrape time. The business metrics use a collector.
+
 ### Requests and SQL (django-prometheus)
 
 - HTTP requests: counts and latency histograms, labelled by **view name**,
