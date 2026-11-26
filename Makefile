@@ -222,6 +222,11 @@ demo: resetdb
 	@$(MANAGE) create_demo
 .PHONY: demo
 
+demo-profiles: ## flush db then create a demo with users shaped like production profiles
+demo-profiles: resetdb
+	@$(MANAGE) create_demo --profiles
+.PHONY: demo-profiles
+
 reconciliation-demo: ## create demo data and a CSV to test user reconciliation via the admin
 reconciliation-demo: resetdb
 	@$(MANAGE) create_reconciliation_demo
