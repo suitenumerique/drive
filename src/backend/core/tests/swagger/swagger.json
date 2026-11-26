@@ -23,6 +23,82 @@
                 }
             }
         },
+        "/api/v1.0/contacts/": {
+            "get": {
+                "operationId": "contacts_list",
+                "description": "Search the contacts to share with, best first.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "item_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Leave out the users who already have an access."
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "What the user typed."
+                    }
+                ],
+                "tags": [
+                    "contacts"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ContactSearchResult"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1.0/contacts/groups/{group_id}/members/": {
+            "get": {
+                "operationId": "contacts_groups_members_list",
+                "description": "List the members of a group, to share with each of them.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "group_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "contacts"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/UserContact"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1.0/entitlements/": {
             "get": {
                 "operationId": "entitlements_retrieve",
@@ -2138,6 +2214,23 @@
                     "title"
                 ]
             },
+            "ContactSearchResult": {
+                "oneOf": [
+                    {
+                        "$ref": "#/components/schemas/UserContact"
+                    },
+                    {
+                        "$ref": "#/components/schemas/GroupContact"
+                    }
+                ],
+                "discriminator": {
+                    "propertyName": "kind",
+                    "mapping": {
+                        "user": "#/components/schemas/UserContact",
+                        "group": "#/components/schemas/GroupContact"
+                    }
+                }
+            },
             "CreateItem": {
                 "type": "object",
                 "description": "Serializer used to create a new item",
@@ -2384,6 +2477,44 @@
                 ],
                 "type": "string",
                 "description": "* `odt` - odt\n* `ods` - ods\n* `odp` - odp"
+            },
+            "GroupContact": {
+                "type": "object",
+                "description": "A group to share with, through its members.",
+                "properties": {
+                    "kind": {
+                        "$ref": "#/components/schemas/GroupContactKindEnum"
+                    },
+                    "id": {
+                        "type": "string",
+                        "description": "The group's id, to list its members."
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string",
+                        "description": "Set for an addressable group (a shared mailbox)."
+                    },
+                    "members_count": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "email",
+                    "id",
+                    "kind",
+                    "members_count",
+                    "name"
+                ]
+            },
+            "GroupContactKindEnum": {
+                "enum": [
+                    "group"
+                ],
+                "type": "string",
+                "description": "* `group` - group"
             },
             "Invitation": {
                 "type": "object",
@@ -3941,6 +4072,43 @@
                     "id",
                     "short_name"
                 ]
+            },
+            "UserContact": {
+                "type": "object",
+                "description": "A user the share modal suggests (for the schema).",
+                "properties": {
+                    "kind": {
+                        "$ref": "#/components/schemas/UserContactKindEnum"
+                    },
+                    "id": {
+                        "type": "string",
+                        "description": "The user's id, or their email when they have no account yet."
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "full_name": {
+                        "type": "string"
+                    },
+                    "short_name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "email",
+                    "full_name",
+                    "id",
+                    "kind",
+                    "short_name"
+                ]
+            },
+            "UserContactKindEnum": {
+                "enum": [
+                    "user"
+                ],
+                "type": "string",
+                "description": "* `user` - user"
             },
             "UserLight": {
                 "type": "object",

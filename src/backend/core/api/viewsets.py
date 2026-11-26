@@ -38,6 +38,8 @@ from drf_spectacular.utils import (
     extend_schema_view,
     inline_serializer,
 )
+from lasuite.contact_search.sharing import report_share
+from lasuite.contact_search.views import ContactSearchViewSet
 from lasuite.drf.models.choices import (
     PRIVILEGED_ROLES,
     LinkReachChoices,
@@ -51,6 +53,7 @@ from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 from rest_framework_api_key.permissions import HasAPIKey
 
 from core import enums, models
+from core.contact_search import LOCAL_MIN_QUERY_LENGTH, filter_users
 from core.entitlements import get_entitlements_backend
 from core.services.accesses import (
     batch_share_process_rows,
@@ -243,26 +246,11 @@ class UserViewSet(
         if item_id := self.request.query_params.get("item_id", ""):
             queryset = queryset.exclude(itemaccess__item_id=item_id)
 
-        if not (query := self.request.query_params.get("q", "")) or len(query) < 5:
+        query = self.request.query_params.get("q", "")
+        if len(query) < LOCAL_MIN_QUERY_LENGTH:
             return queryset.none()
 
-        # For emails, match emails by Levenstein distance to prevent typing errors
-        if "@" in query:
-            return (
-                queryset.annotate(distance=RawSQL("levenshtein(email::text, %s::text)", (query,)))
-                .filter(distance__lte=3)
-                .order_by("distance", "email")[: settings.API_USERS_LIST_LIMIT]
-            )
-
-        # Use trigram similarity for non-email-like queries
-        # For performance reasons we filter first by similarity, which relies on an
-        # index, then only calculate precise similarity scores for sorting purposes
-        return (
-            queryset.filter(email__trigram_word_similar=query)
-            .annotate(similarity=TrigramSimilarity("email", query))
-            .filter(similarity__gt=0.2)
-            .order_by("-similarity", "email")[: settings.API_USERS_LIST_LIMIT]
-        )
+        return filter_users(queryset, query, settings.API_USERS_LIST_LIMIT)
 
     @drf.decorators.action(
         detail=False,
@@ -330,6 +318,63 @@ class UserViewSet(
         contacts = contacts.order_by(*ordering)[: settings.API_USERS_LIST_LIMIT]
 
         return drf.response.Response(self.get_serializer(contacts, many=True).data)
+
+
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[
+            OpenApiParameter("q", str, description="What the user typed."),
+            OpenApiParameter(
+                "item_id", str, description="Leave out the users who already have an access."
+            ),
+        ],
+        responses=serializers.CONTACT_SEARCH_RESULT,
+    ),
+    group_members=extend_schema(responses=serializers.UserContactSerializer(many=True)),
+)
+class ContactViewSet(ContactSearchViewSet):
+    """
+    Contacts to share with, as the share modal suggests them while typing.
+
+    django-lasuite's contact search (settings.LASUITE_CONTACT_SEARCH): Drive's
+    own users by default, or the user's contacts (people and groups) in La
+    Suite Contacts. A user without a Drive account comes back with their
+    email as id, which the share modal turns into an invitation. Drive has no
+    groups of its own: the share modal expands a group into its members
+    (``groups/{id}/members/``) and shares with each of them.
+    """
+
+    throttle_classes = [UserListThrottleBurst, UserListThrottleSustained]
+
+    def get_search_limit(self):
+        """As many results as the users list."""
+        return settings.API_USERS_LIST_LIMIT
+
+    def filter_results(self, results):
+        """Leave out the users who already have an access to ``item_id``."""
+        item_id = self.request.query_params.get("item_id", "")
+        if not item_id:
+            return results
+        already_in = set(
+            models.ItemAccess.objects.filter(item_id=item_id, user__isnull=False).values_list(
+                "user_id", flat=True
+            )
+        )
+        return [
+            result for result in results if result.user is None or result.user.pk not in already_in
+        ]
+
+    def serialize_user(self, result):
+        """A user as the share modal shows it: Drive's names when they have an account."""
+        data = super().serialize_user(result)
+        if result.user is None:
+            return {**data, "short_name": ""}
+        return {
+            **data,
+            "email": result.user.email,
+            "full_name": result.user.full_name or result.name,
+            "short_name": result.user.short_name or "",
+        }
 
 
 class ItemMetadata(drf.metadata.SimpleMetadata):
@@ -1927,6 +1972,7 @@ class ItemViewSet(
                 request.user,
                 request.user.language or settings.LANGUAGE_CODE,
             )
+        report_share(request, [email for email, _role in created_accesses + created_invitations])
 
         posthog_capture(
             "item_batch_share",
@@ -2574,6 +2620,7 @@ class ItemAccessViewSet(
                 self.request.user,
                 self.request.user.language or settings.LANGUAGE_CODE,
             )
+            report_share(self.request, [access.user.email])
 
         posthog_capture(
             "item_access_created",
@@ -2690,6 +2737,7 @@ class InvitationViewset(
             self.request.user,
             self.request.user.language or settings.LANGUAGE_CODE,
         )
+        report_share(self.request, [invitation.email])
 
         posthog_capture(
             "item_invitation_created",
