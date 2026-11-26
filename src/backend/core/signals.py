@@ -5,6 +5,8 @@ Declare and configure the signals for the impress core application
 import time
 from functools import partial
 
+from django.contrib.auth.management import create_permissions
+from django.contrib.auth.models import Group, Permission
 from django.db import transaction
 from django.db.models import signals
 from django.dispatch import receiver
@@ -13,6 +15,28 @@ from django_structlog import signals as structlog_signals
 
 from . import models
 from .tasks.search import trigger_batch_file_indexer
+
+SUPPORT_READ_PERMISSIONS = ["view_user", "view_item", "view_itemaccess", "view_invitation"]
+SUPPORT_GROUPS = {
+    "Support read-only": SUPPORT_READ_PERMISSIONS,
+    "Support operations": [*SUPPORT_READ_PERMISSIONS, "change_user"],
+}
+
+
+@receiver(signals.post_migrate)
+def create_support_groups(sender, using, **kwargs):  # pylint: disable=unused-argument
+    """Create the support groups of the admin and reset their permissions."""
+    if sender.label != "core":
+        return
+    # Core is installed before auth, whose own handler has not created them yet
+    create_permissions(sender, verbosity=0, using=using)
+    for name, codenames in SUPPORT_GROUPS.items():
+        group, _created = Group.objects.using(using).get_or_create(name=name)
+        group.permissions.set(
+            Permission.objects.using(using).filter(
+                content_type__app_label="core", codename__in=codenames
+            )
+        )
 
 
 @receiver(signals.post_save, sender=models.Item)

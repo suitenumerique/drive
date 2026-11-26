@@ -8,6 +8,18 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) add the read-only and operations support groups to the admin
+- ✨(backend) transfer all the contents of a user to another in the admin
+- ✨(backend) list the accesses of a user and the invitations of an item
+- ✨(backend) show the restriction and the computed link of items in the admin
+- ✨(backend) record item moves and deletions in the admin history
+
+### Security
+
+- 🔒️(backend) keep the admin actions and staff accounts to the right users
+
 ## [v1.1.1] - 2026-11-23
 
 ### Fixed

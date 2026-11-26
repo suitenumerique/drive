@@ -122,6 +122,7 @@ backend:
 
         echo "Database is migrated"
         python manage.py createsuperuser --email admin@example.com --password admin
+        python manage.py create_support_demo --force
     restartPolicy: Never
 
   # Extra volume mounts to manage our local custom CA and avoid to set ssl_verify: false

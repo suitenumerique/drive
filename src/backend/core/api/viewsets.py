@@ -10,6 +10,7 @@ from io import BytesIO
 from urllib.parse import quote, unquote, urlparse
 
 from django.conf import settings
+from django.contrib.admin.models import CHANGE, DELETION, LogEntry
 from django.contrib.postgres.search import TrigramSimilarity
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -759,6 +760,16 @@ class ItemViewSet(
             item=item,
         )
 
+    @staticmethod
+    def _log_location(parent):
+        """Return the parent folder of an item as written in its admin history."""
+        return f"{parent.title} ({parent.pk})" if parent else "the root"
+
+    def _log_item_change(self, item, message, action_flag=CHANGE):
+        """Record a change of the item in its admin history."""
+        if self.request.user.is_authenticated:
+            LogEntry.objects.log_actions(self.request.user.pk, [item], action_flag, message)
+
     def perform_destroy(self, instance):
         """Override to implement a soft delete instead of dumping the record in database."""
         if instance.type == models.ItemTypeChoices.RESTRICTION:
@@ -767,6 +778,7 @@ class ItemViewSet(
             if instance.target.get_role(self.request.user) != models.RoleChoices.OWNER:
                 instance.detach()
                 self._capture_restriction_event("item_unrestricted", instance.target)
+                self._log_item_change(instance.target, "Restriction lifted.")
                 return
             instance = instance.target
         # Computed before the deletion trashes or lifts the restrictions
@@ -776,6 +788,7 @@ class ItemViewSet(
             and models.Item.objects.live_restrictions_under(instance.path, instance.pk).exists()
         )
         instance.soft_delete(self.request.user)
+        self._log_item_change(instance, "Moved to the trash.")
         posthog_capture(
             "item_deleted",
             self.request.user,
@@ -800,6 +813,7 @@ class ItemViewSet(
         """
         instance = self.get_object()
         instance.hard_delete()
+        self._log_item_change(instance, "Deleted from the trash.", DELETION)
         process_item_purge.delay(instance.id)
         posthog_capture("item_hard_deleted", request.user, {}, item=instance)
         return drf.response.Response(status=status.HTTP_204_NO_CONTENT)
@@ -1227,6 +1241,7 @@ class ItemViewSet(
             item.move(None)
             posthog_capture("item_moved", user, {}, item=item.target)
             self._capture_restriction_event("item_unrestricted", item.target)
+            self._log_item_change(item.target, "Restriction lifted.")
             return drf.response.Response(
                 {"message": "item moved successfully."}, status=status.HTTP_200_OK
             )
@@ -1243,7 +1258,13 @@ class ItemViewSet(
                     code=can_upload.get("reason"),
                 )
 
+        previous_parent = item.parent()
         item.move(target_item)
+        self._log_item_change(
+            item,
+            f"Moved from {self._log_location(previous_parent)} "
+            f"to {self._log_location(target_item)}.",
+        )
 
         # If the item is moved to the root and the user does not have an access on the item,
         # create an owner access for the user. Otherwise, the item will be invisible for the user.
@@ -1292,6 +1313,7 @@ class ItemViewSet(
         """
         item = self.get_object()
         item.restore()
+        self._log_item_change(item, "Restored from the trash.")
 
         return drf_response.Response(
             {"detail": "item has been successfully restored."},
@@ -2031,9 +2053,11 @@ class ItemViewSet(
         if request.method == "POST":
             item = item.restrict(request.user)
             self._capture_restriction_event("item_restricted", item)
+            self._log_item_change(item, "Restricted.")
         else:
             item = item.unrestrict()
             self._capture_restriction_event("item_unrestricted", item)
+            self._log_item_change(item, "Restriction lifted.")
 
         serializer = self.get_serializer(item)
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)

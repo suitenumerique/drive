@@ -2261,6 +2261,11 @@ class Feature(Production):
     nota bene: it should inherit from the Production environment.
     """
 
+    def __init__(self):
+        # Commands creating the test data of the environment
+        # pylint: disable=invalid-name
+        self.INSTALLED_APPS += ["demo"]
+
 
 class Staging(Production):
     """

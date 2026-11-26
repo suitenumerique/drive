@@ -1,4 +1,5 @@
 """Admin classes and registrations for core app."""
+# pylint: disable=too-many-lines
 
 import csv
 import io
@@ -24,7 +25,7 @@ from django.shortcuts import redirect
 from django.template.loader import render_to_string
 from django.template.response import TemplateResponse
 from django.templatetags.static import static
-from django.urls import path
+from django.urls import path, reverse
 from django.utils.html import format_html
 from django.utils.text import format_lazy
 from django.utils.translation import gettext_lazy as _
@@ -159,6 +160,35 @@ class MergeUsersForm(forms.Form):
     )
 
 
+class TransferContentsForm(MergeUsersForm):
+    """Form choosing the user the contents of the selected users are transferred to."""
+
+    keep_source_accesses = forms.BooleanField(
+        label=_("keep the accesses of the selected users"), required=False
+    )
+
+    def __init__(self, *args, **kwargs):
+        """Label the chosen user as the recipient of the transfer."""
+        super().__init__(*args, **kwargs)
+        self.fields["user"].label = _("transfer to")
+
+
+def _transfer_access(access, target, target_access, keep_source_access):
+    """Give the role of a source access to the target, moving or copying it."""
+    if target_access:
+        role = models.RoleChoices.max(access.role, target_access.role)
+        if role != target_access.role:
+            target_access.role = role
+            target_access.save()
+        if not keep_source_access:
+            access.delete()
+    elif keep_source_access:
+        models.ItemAccess.objects.create(item=access.item, user=target, role=access.role)
+    else:
+        access.user = target
+        access.save()
+
+
 @admin.register(models.User)
 class UserAdmin(auth_admin.UserAdmin):
     """Admin class for the User model"""
@@ -200,7 +230,7 @@ class UserAdmin(auth_admin.UserAdmin):
                 )
             },
         ),
-        (_("Items"), {"fields": ("root_items",)}),
+        (_("Items"), {"fields": ("files_count", "all_accesses", "root_items")}),
         (_("Important dates"), {"fields": ("created_at", "updated_at", "last_login")}),
         (
             _("Permissions"),
@@ -242,7 +272,7 @@ class UserAdmin(auth_admin.UserAdmin):
         "updated_at",
     )
     list_filter = ("is_staff", "is_superuser", "is_device", "is_active", DuplicateEmailFilter)
-    actions = ("merge_users", "deactivate_duplicates")
+    actions = ("merge_users", "transfer_contents", "deactivate_duplicates")
     ordering = (
         "is_active",
         "-is_superuser",
@@ -262,6 +292,8 @@ class UserAdmin(auth_admin.UserAdmin):
         "last_login",
         "quota_display",
         "top_files",
+        "files_count",
+        "all_accesses",
         "root_items",
     )
     search_fields = ("id", "sub", "admin_email", "email", "full_name")
@@ -293,7 +325,39 @@ class UserAdmin(auth_admin.UserAdmin):
             return ("email", "created_at")
         return super().get_ordering(request)
 
-    @admin.action(description=_("Merge into another user"))
+    @staticmethod
+    def _is_protected(request, user):
+        """Return whether the user is a staff user out of reach of a user who is not superuser."""
+        return (user.is_staff or user.is_superuser) and not request.user.is_superuser
+
+    def _refuse_protected(self, request, users):
+        """Tell and return whether some users are staff users out of reach of the requester."""
+        if any(self._is_protected(request, user) for user in users):
+            self.message_user(request, _("Only superusers can act on staff users."), messages.ERROR)
+            return True
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        """Leave the staff users to the superusers."""
+        if obj is not None and self._is_protected(request, obj):
+            return False
+        return super().has_change_permission(request, obj)
+
+    def get_readonly_fields(self, request, obj=None):
+        """Keep the login and the permissions of the accounts to the superusers."""
+        readonly_fields = super().get_readonly_fields(request, obj)
+        if request.user.is_superuser:
+            return readonly_fields
+        return (
+            *readonly_fields,
+            "admin_email",
+            "is_staff",
+            "is_superuser",
+            "groups",
+            "user_permissions",
+        )
+
+    @admin.action(description=_("Merge into another user"), permissions=["change"])
     def merge_users(self, request, queryset):
         """Merge the selected users into the chosen user, then deactivate them."""
         form = MergeUsersForm(request.POST if "apply" in request.POST else None)
@@ -312,6 +376,8 @@ class UserAdmin(auth_admin.UserAdmin):
 
         target = form.cleaned_data["user"]
         merged = queryset.exclude(pk=target.pk)
+        if self._refuse_protected(request, [target, *merged]):
+            return None
         if not target.email or any(not user.email for user in merged):
             self.message_user(request, _("Users without email cannot be merged."), messages.ERROR)
             return None
@@ -330,9 +396,68 @@ class UserAdmin(auth_admin.UserAdmin):
         self.message_user(request, f"{len(merged)} users merged into {target}.")
         return None
 
-    @admin.action(description=_("Deactivate the least recently used duplicates"))
+    @staticmethod
+    def _transfer_contents(source, target, keep_source_accesses):
+        """Transfer the items created by the source and its accesses to the target."""
+        items = models.Item.objects.filter(creator=source).update(creator=target)
+        accesses = list(models.ItemAccess.objects.filter(user=source).select_related("item"))
+        target_accesses = {
+            access.item_id: access
+            for access in models.ItemAccess.objects.filter(
+                user=target, item_id__in=[access.item_id for access in accesses]
+            )
+        }
+        for access in accesses:
+            _transfer_access(
+                access, target, target_accesses.get(access.item_id), keep_source_accesses
+            )
+        return items, len(accesses)
+
+    @admin.action(description=_("Transfer all contents to another user"), permissions=["change"])
+    def transfer_contents(self, request, queryset):
+        """Transfer the created items and the accesses of the selected users to the chosen user."""
+        form = TransferContentsForm(request.POST if "apply" in request.POST else None)
+        if not form.is_valid():
+            return TemplateResponse(
+                request,
+                "core/admin/transfer_contents.html",
+                {
+                    **self.admin_site.each_context(request),
+                    "title": _("Transfer contents"),
+                    "form": form,
+                    "users": queryset,
+                    "action_checkbox_name": helpers.ACTION_CHECKBOX_NAME,
+                },
+            )
+
+        target = form.cleaned_data["user"]
+        sources = list(queryset.exclude(pk=target.pk))
+        if self._refuse_protected(request, [target, *sources]):
+            return None
+        items = accesses = 0
+        with transaction.atomic():
+            # One source at a time, so each sees the accesses the previous gave the target
+            for source in sources:
+                source_items, source_accesses = self._transfer_contents(
+                    source, target, form.cleaned_data["keep_source_accesses"]
+                )
+                items += source_items
+                accesses += source_accesses
+            # The update bypasses Item.save, which invalidates the storage used cache
+            user_ids = [target.pk, *(source.pk for source in sources)]
+            transaction.on_commit(lambda: invalidate_storage_used_cache(user_ids))
+        self.message_user(
+            request, f"{items} items and {accesses} accesses transferred to {target}."
+        )
+        return None
+
+    @admin.action(
+        description=_("Deactivate the least recently used duplicates"), permissions=["change"]
+    )
     def deactivate_duplicates(self, request, queryset):
         """Keep the most recently used user of each shared email, deactivate the others."""
+        if self._refuse_protected(request, queryset):
+            return
         kept = {}
         deactivated = []
         for user in queryset.order_by(Coalesce("last_login", "created_at").desc()):
@@ -501,6 +626,19 @@ class UserAdmin(auth_admin.UserAdmin):
         )
         return render_to_string("core/admin/user_root_items.html", {"accesses": accesses})
 
+    @admin.display(description=_("files created"))
+    def files_count(self, obj):
+        """Return the number of files created by the user, trash included."""
+        return models.Item.objects.filter(
+            creator=obj, type=models.ItemTypeChoices.FILE, hard_deleted_at__isnull=True
+        ).count()
+
+    @admin.display(description=_("accesses"))
+    def all_accesses(self, obj):
+        """Return a link to the direct accesses of the user on any item."""
+        url = f"{reverse('admin:core_itemaccess_changelist')}?user={obj.pk}"
+        return format_html('<a href="{}">{}</a>', url, _("All the accesses of the user"))
+
 
 @admin.register(models.UserReconciliationCsvImport)
 class UserReconciliationCsvImportAdmin(admin.ModelAdmin):
@@ -519,7 +657,7 @@ class UserReconciliationCsvImportAdmin(admin.ModelAdmin):
         return redirect("..")
 
 
-@admin.action(description=_("Process selected user reconciliations"))
+@admin.action(description=_("Process selected user reconciliations"), permissions=["change"])
 def process_reconciliation(_modeladmin, _request, queryset):
     """
     Admin action to process selected user reconciliations.
@@ -547,6 +685,60 @@ class ItemAccessInline(admin.TabularInline):
     autocomplete_fields = ["user"]
     model = models.ItemAccess
     extra = 0
+
+
+class InvitationInline(admin.TabularInline):
+    """Inline admin class listing the pending invitations of an item."""
+
+    model = models.Invitation
+    fields = ("email", "role", "issuer", "created_at", "is_expired")
+    readonly_fields = fields
+    extra = 0
+
+    def has_add_permission(self, request, obj=None):
+        """Leave the invitations to the application."""
+        return False
+
+
+@admin.register(models.ItemAccess)
+class ItemAccessAdmin(admin.ModelAdmin):
+    """Admin class listing the item accesses, read only: they are edited on their item."""
+
+    list_display = ("item_link", "item_type", "item_link_reach", "user", "team", "role")
+    # The item column links to the item, an access has nothing more to show
+    list_display_links = None
+    list_filter = ("role",)
+    list_select_related = ("item", "user")
+    search_fields = ("user__email", "team", "item__title")
+    ordering = ("item__title",)
+
+    def has_add_permission(self, request):
+        """Forbid creating an access out of its item."""
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        """Forbid changing an access out of its item."""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """Forbid deleting an access out of its item."""
+        return False
+
+    @admin.display(description=_("item"), ordering="item__title")
+    def item_link(self, obj):
+        """Return a link to the item of the access."""
+        url = reverse("admin:core_item_change", args=[obj.item_id])
+        return format_html('<a href="{}">{}</a>', url, obj.item.title)
+
+    @admin.display(description=_("type"))
+    def item_type(self, obj):
+        """Return the type of the item."""
+        return obj.item.get_type_display()
+
+    @admin.display(description=_("link reach"))
+    def item_link_reach(self, obj):
+        """Return the link reach set on the item itself."""
+        return obj.item.link_reach
 
 
 class TransferItemsForm(forms.Form):
@@ -614,8 +806,10 @@ class ItemAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "creator",
+                    "is_restricted",
                     "link_reach",
                     "link_role",
+                    "computed_link",
                     "link_expires_at",
                     "has_link_password",
                 )
@@ -637,7 +831,8 @@ class ItemAdmin(admin.ModelAdmin):
             },
         ),
     )
-    inlines = (ItemAccessInline,)
+    inlines = (ItemAccessInline, InvitationInline)
+    object_history_template = "core/admin/item_history.html"
     list_display = (
         "id",
         "title",
@@ -674,6 +869,8 @@ class ItemAdmin(admin.ModelAdmin):
         "hard_deleted_at",
         "link_expires_at",
         "has_link_password",
+        "is_restricted",
+        "computed_link",
     )
     search_fields = ("id", "title", "creator__email")
     list_filter = ("upload_state", "link_reach", "link_role", "quota_excluded")
@@ -706,6 +903,19 @@ class ItemAdmin(admin.ModelAdmin):
         """Return whether the item link is protected by a password."""
         return bool(obj.link_password)
 
+    @admin.display(boolean=True, description=_("restricted"))
+    def is_restricted(self, obj):
+        """Return whether a restriction targets the folder."""
+        return obj.is_restricted
+
+    @admin.display(description=_("computed link"))
+    def computed_link(self, obj):
+        """Return the link reach and role combining the item and its ancestors."""
+        if obj.computed_link_role is None:
+            return obj.computed_link_reach
+        return f"{obj.computed_link_reach} / {obj.computed_link_role}"
+
+    @admin.action(permissions=["change"])
     def trigger_file_analysis(self, request, queryset):
         """Reanalyse the file of the items."""
 
@@ -726,12 +936,12 @@ class ItemAdmin(admin.ModelAdmin):
             f"{updated} items marked as {upload_state}, {deleted} detections deleted.",
         )
 
-    @admin.action(description=_("Mark items as ready"))
+    @admin.action(description=_("Mark items as ready"), permissions=["change"])
     def mark_items_ready(self, request, queryset):
         """Force selected file items to the ready state."""
         self._force_upload_state(request, queryset, models.ItemUploadStateChoices.READY)
 
-    @admin.action(description=_("Mark items as too large to analyze"))
+    @admin.action(description=_("Mark items as too large to analyze"), permissions=["change"])
     def mark_items_file_too_large(self, request, queryset):
         """Force selected file items to the too large to analyze state."""
         self._force_upload_state(
@@ -743,33 +953,17 @@ class ItemAdmin(admin.ModelAdmin):
         updated = sum(item.set_quota_excluded(value) for item in queryset)
         self.message_user(request, f"{updated} items updated.")
 
-    @admin.action(description=_("Exclude from storage quota"))
+    @admin.action(description=_("Exclude from storage quota"), permissions=["change"])
     def exclude_from_quota(self, request, queryset):
         """Exclude the selected items and their descendants from the storage quota."""
         self._set_quota_excluded(request, queryset, True)
 
-    @admin.action(description=_("Include in storage quota"))
+    @admin.action(description=_("Include in storage quota"), permissions=["change"])
     def include_in_quota(self, request, queryset):
         """Count the selected items and their descendants in the storage quota."""
         self._set_quota_excluded(request, queryset, False)
 
-    @staticmethod
-    def _transfer_access(access, target, target_access, keep_source_access):
-        """Give the role of a source access to the target, moving or copying it."""
-        if target_access:
-            role = models.RoleChoices.max(access.role, target_access.role)
-            if role != target_access.role:
-                target_access.role = role
-                target_access.save()
-            if not keep_source_access:
-                access.delete()
-        elif keep_source_access:
-            models.ItemAccess.objects.create(item=access.item, user=target, role=access.role)
-        else:
-            access.user = target
-            access.save()
-
-    @admin.action(description=_("Transfer to another user"))
+    @admin.action(description=_("Transfer to another user"), permissions=["change"])
     def transfer_items(self, request, queryset):
         """Transfer the selected items and their descendants from a user to another."""
         form = TransferItemsForm(request.POST if "apply" in request.POST else None)
@@ -811,14 +1005,14 @@ class ItemAdmin(admin.ModelAdmin):
             items = subtree.filter(creator=source).update(creator=target)
             transaction.on_commit(lambda: invalidate_storage_used_cache([source.pk, target.pk]))
             for access in accesses:
-                self._transfer_access(
+                _transfer_access(
                     access,
                     target,
                     target_accesses.get(access.item_id),
                     form.cleaned_data["keep_source_accesses"],
                 )
             for access in inherited:
-                self._transfer_access(access, target, target_accesses.get(access.item_id), True)
+                _transfer_access(access, target, target_accesses.get(access.item_id), True)
         self.message_user(
             request,
             f"{items} items and {len(accesses) + len(inherited)} accesses transferred "
@@ -943,12 +1137,15 @@ class MalwareDetectionAdmin(BaseMalwareDetectionAdmin):
             f"{deleted} detections deleted, {updated} items marked as {upload_state}.",
         )
 
-    @admin.action(description=_("Abandon analysis and mark item as ready"))
+    @admin.action(description=_("Abandon analysis and mark item as ready"), permissions=["change"])
     def abandon_analysis_mark_item_ready(self, request, queryset):
         """Delete selected detections and mark their items as ready."""
         self._abandon_analyses(request, queryset, models.ItemUploadStateChoices.READY)
 
-    @admin.action(description=_("Abandon analysis and mark item as too large to analyze"))
+    @admin.action(
+        description=_("Abandon analysis and mark item as too large to analyze"),
+        permissions=["change"],
+    )
     def abandon_analysis_mark_item_file_too_large(self, request, queryset):
         """Delete selected detections and mark their items as too large to analyze."""
         self._abandon_analyses(

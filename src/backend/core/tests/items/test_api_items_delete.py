@@ -4,6 +4,8 @@ Tests for items API endpoint in drive's core app: delete
 
 from unittest import mock
 
+from django.contrib.admin.models import CHANGE, LogEntry
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -322,3 +324,18 @@ def test_api_items_delete_posthog_disabled_no_restriction_lookup(settings):
 
     assert response.status_code == 204
     lookup.assert_not_called()
+
+
+def test_api_items_delete_logged():
+    """Deleting an item should be recorded in its admin history."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(users=[(user, "owner")])
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.delete(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 204
+    log = LogEntry.objects.get()
+    assert (log.user, log.object_id, log.action_flag) == (user, str(item.id), CHANGE)
+    assert log.change_message == "Moved to the trash."

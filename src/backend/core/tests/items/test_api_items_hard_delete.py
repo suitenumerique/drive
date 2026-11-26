@@ -2,6 +2,8 @@
 
 from unittest import mock
 
+from django.contrib.admin.models import DELETION, LogEntry
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -55,6 +57,9 @@ def test_api_items_hard_delete_authenticated_owner():
     assert response.status_code == 204
 
     assert not models.Item.objects.filter(id=item.id).exists()
+    log = LogEntry.objects.get()
+    assert (log.user, log.object_id, log.action_flag) == (user, str(item.id), DELETION)
+    assert log.change_message == "Deleted from the trash."
 
 
 def test_api_items_hard_delete_authenticated_owner_not_soft_deleted_should_fails():

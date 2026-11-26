@@ -18,10 +18,10 @@ def test_commands_create_demo():
     """The create_demo management command should create objects as expected."""
     call_command("create_demo")
 
-    assert models.User.objects.count() == 5
+    assert models.User.objects.count() == 7
     assert set(models.User.objects.values_list("email", flat=True)) == {
-        user["email"] for user in defaults.USERS
-    } | {"drive@drive.world"}
+        user["email"] for user in [*defaults.USERS, *defaults.DEV_USERS]
+    }
     assert not models.User.objects.filter(full_name__isnull=True).exists()
     assert not models.User.objects.filter(full_name="").exists()
     assert not models.User.objects.filter(short_name__isnull=True).exists()

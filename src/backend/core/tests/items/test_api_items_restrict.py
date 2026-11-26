@@ -2,6 +2,8 @@
 
 from unittest import mock
 
+from django.contrib.admin.models import LogEntry
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -32,6 +34,8 @@ def test_api_items_restrict_owner_can_activate():
     assert str(folder.path) == str(folder.id)
     assert folder.restriction.type == models.ItemTypeChoices.RESTRICTION
     assert models.ItemAccess.objects.filter(item=folder, user=user, role="owner").count() == 1
+    log = LogEntry.objects.get()
+    assert (log.user, log.object_id, log.change_message) == (user, str(folder.id), "Restricted.")
 
 
 def test_api_items_restrict_non_owner_cannot_activate():
@@ -90,6 +94,8 @@ def test_api_items_restrict_owner_can_deactivate():
     assert folder.is_restricted is False
     assert str(folder.path) == f"{parent.id!s}.{folder.id!s}"
     assert not models.Item.objects.filter(target=folder).exists()
+    log = LogEntry.objects.get()
+    assert (log.object_id, log.change_message) == (str(folder.id), "Restriction lifted.")
 
 
 def test_api_items_restrict_activate_posthog_event(posthog_capture_mock):

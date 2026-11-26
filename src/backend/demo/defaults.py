@@ -33,4 +33,18 @@ DEV_USERS = [
         "short_name": "Drive",
         "language": "en-us",
     },
+    {
+        "username": "support1",
+        "email": "support1@drive.world",
+        "full_name": "Support Read",
+        "short_name": "Support",
+        "language": "en-us",
+    },
+    {
+        "username": "support2",
+        "email": "support2@drive.world",
+        "full_name": "Support Operations",
+        "short_name": "Support",
+        "language": "en-us",
+    },
 ]

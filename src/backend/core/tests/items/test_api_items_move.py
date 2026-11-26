@@ -6,6 +6,7 @@ import random
 from unittest import mock
 from uuid import uuid4
 
+from django.contrib.admin.models import CHANGE, LogEntry
 from django.test import override_settings
 
 import pytest
@@ -973,3 +974,25 @@ def test_api_items_move_missing_permission_posthog_event(posthog_capture_mock):
     )
     properties = posthog_capture_mock.call_args.kwargs["properties"]
     assert properties.items() >= {"item_id": item.id}.items()
+
+
+def test_api_items_move_logged():
+    """Moving an item should record its previous and new parents in its admin history."""
+    user = factories.UserFactory()
+    source, target = factories.ItemFactory.create_batch(
+        2, type=models.ItemTypeChoices.FOLDER, users=[(user, models.RoleChoices.OWNER)]
+    )
+    item = factories.ItemFactory(parent=source, type=models.ItemTypeChoices.FILE)
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{item.id!s}/move/", data={"target_item_id": str(target.id)}
+    )
+
+    assert response.status_code == 200
+    log = LogEntry.objects.get()
+    assert (log.user, log.object_id, log.action_flag) == (user, str(item.id), CHANGE)
+    assert log.change_message == (
+        f"Moved from {source.title} ({source.id}) to {target.title} ({target.id})."
+    )
