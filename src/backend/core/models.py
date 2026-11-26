@@ -1640,9 +1640,12 @@ class Item(TreeModel, BaseModel):
         """
         Invalidate the cache for number of accesses, including on affected descendants.
         """
-        for item in self._meta.model.objects.filter(path__descendants=self.path).only("id"):
-            cache_key = item.get_nb_accesses_cache_key()
-            cache.delete(cache_key)
+        cache.delete_many(
+            [
+                item.get_nb_accesses_cache_key()
+                for item in self._meta.model.objects.filter(path__descendants=self.path).only("id")
+            ]
+        )
 
     def get_role(self, user):
         """Return the role a user has on an item."""

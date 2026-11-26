@@ -6,6 +6,7 @@ from django.db import transaction
 from core import models
 
 
+@transaction.atomic
 def batch_share_process_rows(item, issuer, rows):
     """
     Create the accesses and invitations for the given {email: role} mapping.
@@ -15,6 +16,10 @@ def batch_share_process_rows(item, issuer, rows):
     an invitation unless one already exists. Return the created shares and the
     skipped emails.
     """
+    # A concurrent batch share of the same item waits here, then sees the shares
+    # created by this one. Inserts referencing the item are not blocked.
+    models.Item.objects.select_for_update(no_key=True).get(pk=item.pk)
+
     # Emails are normalized by the serializer, like the stored ones.
     # Active users come last, so they win over inactive ones sharing their email.
     users_by_email = {
@@ -46,25 +51,42 @@ def batch_share_process_rows(item, issuer, rows):
     )
 
     skipped = []
+    accesses = []
     created_accesses = []
     created_invitations = []
-    with transaction.atomic():
-        for email, role in rows.items():
-            if user := users_by_email.get(email):
-                max_ancestors_role = max_role_by_user_id.get(user.id)
-                if user.id in users_with_explicit_access or models.RoleChoices.get_priority(
-                    max_ancestors_role
-                ) >= models.RoleChoices.get_priority(role):
-                    skipped.append({"email": email, "reason": "already_shared"})
-                    continue
-                access = models.ItemAccess.objects.create(item=item, user=user, role=role)
-                synchronize_descendants_accesses(item, access)
-                created_accesses.append((email, role))
-            elif email in already_invited:
-                skipped.append({"email": email, "reason": "already_invited"})
-            else:
-                models.Invitation.objects.create(item=item, email=email, role=role, issuer=issuer)
-                created_invitations.append((email, role))
+    for email, role in rows.items():
+        if user := users_by_email.get(email):
+            max_ancestors_role = max_role_by_user_id.get(user.id)
+            if user.id in users_with_explicit_access or models.RoleChoices.get_priority(
+                max_ancestors_role
+            ) >= models.RoleChoices.get_priority(role):
+                skipped.append({"email": email, "reason": "already_shared"})
+                continue
+            accesses.append(models.ItemAccess(item=item, user=user, role=role))
+            created_accesses.append((email, role))
+        elif email in already_invited:
+            skipped.append({"email": email, "reason": "already_invited"})
+        else:
+            models.Invitation.objects.create(item=item, email=email, role=role, issuer=issuer)
+            created_invitations.append((email, role))
+
+    # Saving the accesses one by one would walk the whole subtree for each of
+    # them: create them at once, then clean the descendants and the cache once.
+    models.ItemAccess.objects.bulk_create(accesses)
+    descendants = item.descendants().filter(ancestors_deleted_at__isnull=True)
+    for role in {access.role for access in accesses}:
+        models.ItemAccess.objects.filter(
+            user__in=[access.user_id for access in accesses if access.role == role],
+            item__in=descendants,
+            role__in=[
+                lower_role
+                for lower_role in models.RoleChoices.values
+                if models.RoleChoices.get_priority(lower_role)
+                <= models.RoleChoices.get_priority(role)
+            ],
+        ).delete()
+    if accesses:
+        item.invalidate_nb_accesses_cache()
 
     return created_accesses, created_invitations, skipped
 
