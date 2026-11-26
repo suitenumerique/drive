@@ -1826,12 +1826,29 @@ class ItemViewSet(
         """
         Compute parents for the items by analyzing their paths and fetching missing parents.
         """
+        # Ancestors above the highest one the user can read must stay hidden
+        readable_ids = {
+            str(item_id)
+            for item_id in models.Item.objects.filter(
+                id__in={item_id for item in items for item_id in item.path}
+            )
+            .readable_per_se(self.request.user)
+            .values_list("id", flat=True)
+        }
+        visible_paths = {}
+        for item in items:
+            path = list(item.path)
+            start = next(
+                (index for index, item_id in enumerate(path) if item_id in readable_ids), len(path)
+            )
+            visible_paths[item.id] = path[start:]
+
         # Build parents dictionary and collect missing parent IDs
         parents = {str(item.id): item for item in items}
         missing_parent_ids = set()
 
         for item in items:
-            for item_id in item.path:
+            for item_id in visible_paths[item.id]:
                 if item_id not in parents and item_id not in missing_parent_ids:
                     missing_parent_ids.add(item_id)
 
@@ -1846,7 +1863,9 @@ class ItemViewSet(
 
         # Set parents for each item
         for item in items:
-            item.parents = [parents[item_id] for item_id in item.path if item_id != str(item.id)]
+            item.parents = [
+                parents[item_id] for item_id in visible_paths[item.id] if item_id != str(item.id)
+            ]
 
         return items
 

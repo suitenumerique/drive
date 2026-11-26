@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🔒️(backend) list only the readable parents of the search results
+
 ## [v1.1.1] - 2026-11-23
 
 ### Fixed
