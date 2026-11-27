@@ -1107,6 +1107,17 @@ class Base(Configuration):
             ),
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                # Fail fast instead of blocking the request on a stuck Redis
+                "SOCKET_CONNECT_TIMEOUT": values.FloatValue(
+                    2,  # timeout in seconds
+                    environ_name="CACHES_SOCKET_CONNECT_TIMEOUT",
+                    environ_prefix=None,
+                ),
+                "SOCKET_TIMEOUT": values.FloatValue(
+                    2,  # timeout in seconds
+                    environ_name="CACHES_SOCKET_TIMEOUT",
+                    environ_prefix=None,
+                ),
             },
             "KEY_PREFIX": values.Value(
                 "drive",
@@ -1128,6 +1139,16 @@ class Base(Configuration):
             ),
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "SOCKET_CONNECT_TIMEOUT": values.FloatValue(
+                    2,  # timeout in seconds
+                    environ_name="CACHES_SOCKET_CONNECT_TIMEOUT",
+                    environ_prefix=None,
+                ),
+                "SOCKET_TIMEOUT": values.FloatValue(
+                    2,  # timeout in seconds
+                    environ_name="CACHES_SOCKET_TIMEOUT",
+                    environ_prefix=None,
+                ),
             },
         },
     }

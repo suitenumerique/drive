@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- 🔧(backend) time out the connections to the redis cache
+
 ## [v1.1.1] - 2026-11-23
 
 ### Fixed
