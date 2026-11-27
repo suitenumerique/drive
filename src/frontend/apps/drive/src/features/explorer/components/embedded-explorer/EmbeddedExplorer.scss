@@ -242,6 +242,116 @@ $xl: map.get($themes, "default", "globals", "breakpoints", "xl");
     }
   }
 
+  // The datagrid aligns its children to the end, which only a wide table fills.
+  &__scroll,
+  &__cards {
+    width: 100%;
+  }
+
+  // The datagrid is a size container, so the columns follow the room the grid
+  // gets, side panels included, rather than the viewport.
+  &__cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+    padding: 0 0 16px;
+    list-style: none;
+
+    &:focus-within {
+      outline: none;
+    }
+
+    @container (min-width: 520px) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    @container (min-width: 760px) {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    @container (min-width: 1200px) {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+  }
+
+  &__card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 0 8px 8px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background-color: var(--c--contextuals--background--surface--tertiary);
+    cursor: default;
+    user-select: none;
+
+    &:focus-visible {
+      outline: none;
+      box-shadow:
+        0 0 0 1px #fff,
+        0 0 0 4px var(--c--contextuals--border--semantic--brand--primary);
+    }
+
+    &:hover {
+      background-color: var(
+        --c--components--datagrid--body--background-color-hover
+      );
+    }
+
+    &.selected {
+      border-color: var(--c--contextuals--border--semantic--brand--tertiary);
+      background-color: var(
+        --c--contextuals--background--semantic--brand--tertiary
+      );
+    }
+
+    &.over {
+      border-color: var(--c--contextuals--border--semantic--brand--primary);
+      background-color: var(
+        --c--contextuals--background--semantic--brand--tertiary
+      );
+    }
+
+    &__header {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      > :first-child {
+        flex: 1;
+        min-width: 0;
+      }
+    }
+
+    &__preview {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 140px;
+      border-radius: 4px;
+      background-color: var(--c--contextuals--background--surface--secondary);
+      overflow: hidden;
+
+      &--thumbnail img {
+        display: block;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+    }
+
+    &__footer {
+      padding-top: 8px;
+      font-size: 12px;
+      color: var(--c--contextuals--content--semantic--neutral--secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
   &.c__datagrid--empty {
     min-height: 200px;
     padding-bottom: 40px;

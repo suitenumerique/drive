@@ -41,6 +41,7 @@ export const ItemThumbnail = ({ item, className }: ItemThumbnailProps) => {
         src={src}
         // Decorative: the item title is always displayed next to it.
         alt=""
+        loading="lazy"
         onError={() => setFailedSrc(src)}
       />
     </div>

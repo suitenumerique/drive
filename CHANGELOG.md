@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(thumbnails) show document thumbnails rendered by the office editors
+- ✨(frontend) add a grid view to the explorer
 
 ## [v1.1.1] - 2026-11-23
 

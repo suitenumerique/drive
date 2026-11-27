@@ -452,6 +452,11 @@
           "delete": "Delete",
           "reset_selection": "Reset selection"
         },
+        "viewMode": {
+          "label": "View mode",
+          "list": "List view",
+          "grid": "Grid view"
+        },
         "folders": {
           "edit": {
             "title": "Edit folder",
@@ -1201,6 +1206,11 @@
           "delete": "Supprimer",
           "reset_selection": "Réinitialiser la sélection"
         },
+        "viewMode": {
+          "label": "Mode d'affichage",
+          "list": "Vue en liste",
+          "grid": "Vue en grille"
+        },
         "folders": {
           "edit": {
             "title": "Modifier le dossier",
@@ -1949,6 +1959,11 @@
           "move": "Verplaats",
           "delete": "Verwijder",
           "reset_selection": "Herstel selectie"
+        },
+        "viewMode": {
+          "label": "Weergave",
+          "list": "Lijstweergave",
+          "grid": "Rasterweergave"
         },
         "folders": {
           "edit": {
