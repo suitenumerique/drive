@@ -426,7 +426,7 @@ backend:
               [
                 "/bin/sh",
                 "-c",
-                "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME",
+                "find /tmp/celery_worker_heartbeat -mmin -2 | grep -q .",
               ]
           initialDelaySeconds: 30
           periodSeconds: 60
@@ -438,7 +438,7 @@ backend:
               [
                 "/bin/sh",
                 "-c",
-                "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME",
+                "find /tmp/celery_worker_heartbeat -mmin -2 | grep -q .",
               ]
           initialDelaySeconds: 20
           periodSeconds: 30

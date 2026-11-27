@@ -1107,6 +1107,17 @@ class Base(Configuration):
             ),
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                # Fail fast instead of blocking the request on a stuck Redis
+                "SOCKET_CONNECT_TIMEOUT": values.FloatValue(
+                    2,  # timeout in seconds
+                    environ_name="CACHES_SOCKET_CONNECT_TIMEOUT",
+                    environ_prefix=None,
+                ),
+                "SOCKET_TIMEOUT": values.FloatValue(
+                    2,  # timeout in seconds
+                    environ_name="CACHES_SOCKET_TIMEOUT",
+                    environ_prefix=None,
+                ),
             },
             "KEY_PREFIX": values.Value(
                 "drive",
@@ -1128,6 +1139,16 @@ class Base(Configuration):
             ),
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "SOCKET_CONNECT_TIMEOUT": values.FloatValue(
+                    2,  # timeout in seconds
+                    environ_name="CACHES_SOCKET_CONNECT_TIMEOUT",
+                    environ_prefix=None,
+                ),
+                "SOCKET_TIMEOUT": values.FloatValue(
+                    2,  # timeout in seconds
+                    environ_name="CACHES_SOCKET_TIMEOUT",
+                    environ_prefix=None,
+                ),
             },
         },
     }
@@ -1361,7 +1382,7 @@ class Base(Configuration):
     CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 
     # Session
-    SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+    SESSION_ENGINE = "core.authentication.sessions"
     SESSION_CACHE_ALIAS = "session"
     SESSION_COOKIE_AGE = 60 * 60 * 12
 

@@ -23,6 +23,8 @@ This document lists all configurable environment variables for the Drive applica
 | `AWS_S3_UPLOAD_POLICY_EXPIRATION` | AWS S3 upload policy expiration time in seconds | `86400` (24h) |
 | `AWS_STORAGE_BUCKET_NAME` | AWS S3 bucket name for file storage | `drive-media-storage` |
 | `CACHES_DEFAULT_TIMEOUT` | Default cache timeout in seconds | `30` |
+| `CACHES_SOCKET_CONNECT_TIMEOUT` | Timeout in seconds to connect to the Redis cache | `2` |
+| `CACHES_SOCKET_TIMEOUT` | Timeout in seconds of a Redis cache read or write | `2` |
 | `CORS_ALLOW_ALL_ORIGINS` | Allow all origins for CORS | `False` |
 | `CORS_ALLOWED_ORIGINS` | List of allowed origins for CORS | `[]` |
 | `CORS_ALLOWED_ORIGIN_REGEXES` | List of allowed origin regexes for CORS | `[]` |
