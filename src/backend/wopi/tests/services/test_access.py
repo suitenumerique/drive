@@ -10,7 +10,9 @@ import pytest
 
 from core.factories import ItemFactory, UserFactory, UserItemAccessFactory
 from core.models import LinkReachChoices
+from core.services.sdk_relay import SDKRelayManager
 from wopi.services.access import (
+    ACCESS_CACHE_KEY_PREFIX,
     AccessUserItem,
     AccessUserItemInvalidDataError,
     AccessUserItemNotAllowed,
@@ -165,7 +167,7 @@ def test_access_user_item_service_insert_user_and_item(settings):
     assert access_token is not None
     assert access_token_ttl == 1741608060000
 
-    assert cache.get(access_token) is not None
+    assert cache.get(f"{ACCESS_CACHE_KEY_PREFIX}{access_token}") is not None
 
 
 def test_access_user_item_service_insert_user_and_item_with_anonymous_user(settings):
@@ -184,7 +186,7 @@ def test_access_user_item_service_insert_user_and_item_with_anonymous_user(setti
     assert access_token is not None
     assert access_token_ttl == 1741608060000
 
-    assert cache.get(access_token) is not None
+    assert cache.get(f"{ACCESS_CACHE_KEY_PREFIX}{access_token}") is not None
 
 
 @pytest.mark.parametrize(
@@ -245,3 +247,16 @@ def test_access_user_item_service_retrieve_data_with_invalid_token():
 
     with pytest.raises(AccessUserItemNotFoundError):
         access_user_item_service.get_access_user_item("invalid-token")
+
+
+def test_access_user_item_service_retrieve_data_from_sdk_relay_event():
+    """
+    An SDK relay event shaped like an access should not be usable as an access token.
+    """
+    access = UserItemAccessFactory()
+    SDKRelayManager().register_event(
+        "a" * 32, {"item": str(access.item.id), "user": str(access.user.id)}
+    )
+
+    with pytest.raises(AccessUserItemNotFoundError):
+        AccessUserItemService().get_access_user_item(f"sdk_relay:{'a' * 32}")
