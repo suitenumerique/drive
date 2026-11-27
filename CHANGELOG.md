@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- 🔊(backend) log the gunicorn messages as JSON with the request id
+
 ## [v1.1.1] - 2026-11-23
 
 ### Fixed

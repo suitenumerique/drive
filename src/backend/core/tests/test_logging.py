@@ -16,6 +16,7 @@ from celery.signals import before_task_publish, task_prerun
 from rest_framework.test import APIClient
 
 from core import factories
+from core.logs import gunicorn_request_id
 from core.models import ItemTypeChoices, ItemUploadStateChoices, RoleChoices
 from core.tasks.item import process_item_purge
 from wopi.tasks.configure_wopi import WOPI_CONFIGURATION_CACHE_KEY
@@ -325,4 +326,38 @@ def test_logging_celery_task(console_logs):
             "request_id": "migrator-42",
             "task_id": "task-1",
         },
+    ]
+
+
+def test_logging_gunicorn_request_id(console_logs):
+    """Gunicorn logs should carry the request id of the request the worker handles."""
+    token = gunicorn_request_id.set("migrator-42")
+    try:
+        logging.getLogger("gunicorn.error").error("Error handling request GET /api/v1.0/items/")
+    finally:
+        gunicorn_request_id.reset(token)
+
+    assert console_logs == [
+        {
+            "event": "Error handling request GET /api/v1.0/items/",
+            "level": "error",
+            "logger": "gunicorn.error",
+            "request_id": "migrator-42",
+        }
+    ]
+
+
+def test_logging_gunicorn_access_token(console_logs):
+    """Gunicorn access logs should be written without the access token of the query string."""
+    logging.getLogger("gunicorn.access").info(
+        '127.0.0.1 - - "GET /api/v1.0/unknown/?access_token=secret-token&page=2 HTTP/1.1" 404'
+    )
+
+    assert console_logs == [
+        {
+            "event": '127.0.0.1 - - "GET /api/v1.0/unknown/?access_token=[redacted]&page=2 '
+            'HTTP/1.1" 404',
+            "level": "info",
+            "logger": "gunicorn.access",
+        }
     ]
