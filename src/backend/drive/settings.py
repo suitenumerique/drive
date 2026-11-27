@@ -1382,7 +1382,7 @@ class Base(Configuration):
     CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 
     # Session
-    SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+    SESSION_ENGINE = "core.authentication.sessions"
     SESSION_CACHE_ALIAS = "session"
     SESSION_COOKIE_AGE = 60 * 60 * 12
 
