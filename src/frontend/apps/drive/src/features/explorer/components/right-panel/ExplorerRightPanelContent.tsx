@@ -1,5 +1,6 @@
 import { Item, ItemUploadState } from "@/features/drivers/types";
 import { ItemIcon } from "../icons/ItemIcon";
+import { ItemThumbnail } from "../icons/ItemThumbnail";
 import { Button, IconSize } from "@gouvfr-lasuite/ui-components";
 import { Shared, XMark } from "@gouvfr-lasuite/ui-components/icons";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
@@ -119,9 +120,11 @@ const RightPanelSelectionContent = ({
               {firstSelectedItem.title}
             </div>
           </div>
-          <div className="explorer__right-panel__item-type">
-            <ItemIcon item={firstSelectedItem} size={IconSize.X_LARGE} />
-          </div>
+          <ItemThumbnail
+            key={firstSelectedItem.id}
+            item={firstSelectedItem}
+            className="explorer__right-panel__item-type"
+          />
           {showWarning && (
             <div className="explorer__right-panel__suspicious-warning">
               <div className="explorer__right-panel__suspicious-warning__text">

@@ -9,6 +9,7 @@ import jwt
 import requests
 
 from wopi.conversion.exceptions import ConversionProviderError
+from wopi.conversion.source_url import build_system_source_url
 
 
 class OnlyOfficeConversionBackend:
@@ -77,8 +78,8 @@ class OnlyOfficeConversionBackend:
         )
         return ContentFile(response.content, name=f"converted.{target_extension}")
 
-    def convert(self, item, source_url, target_extension):
-        """Convert the item via OnlyOffice and return the converted bytes."""
+    def _run(self, item, source_url, target_extension, **options):
+        """Sign and send a /converter request, then download its result."""
         key = f"{item.id}-{uuid4()}"
         payload = {
             "async": False,
@@ -87,6 +88,7 @@ class OnlyOfficeConversionBackend:
             "key": key,
             "title": item.filename,
             "url": source_url,
+            **options,
         }
         headers = {"Accept": "application/json"}
         if self.jwt_secret:
@@ -95,3 +97,16 @@ class OnlyOfficeConversionBackend:
 
         data = self._post_convert(payload, headers, key)
         return self._download(data["fileUrl"], target_extension)
+
+    def convert(self, item, source_url, target_extension):
+        """Convert the item via OnlyOffice and return the converted bytes."""
+        return self._run(item, source_url, target_extension)
+
+    def thumbnail(self, item, size):
+        """Render the first page of the item as a PNG fitting in size x size."""
+        return self._run(
+            item,
+            build_system_source_url(item),
+            "png",
+            thumbnail={"aspect": 1, "first": True, "width": size, "height": size},
+        )

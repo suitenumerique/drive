@@ -18,6 +18,14 @@ import { useTranslation } from "react-i18next";
 const POLL_INTERVAL = 3000;
 const POLL_TIMEOUT = 10 * 60 * 1000;
 
+// Older items are left alone so that a failed render is not polled forever.
+const THUMBNAIL_POLL_WINDOW = 2 * 60 * 1000;
+
+const isPolled = (item: Item) =>
+  POLLED_UPLOAD_STATES.includes(item.upload_state) ||
+  (!!item.thumbnail_pending &&
+    Date.now() - new Date(item.created_at).getTime() < THUMBNAIL_POLL_WINDOW);
+
 export const useTransientItemsPoller = (items: Item[]) => {
   const refreshItemCache = useRefreshItemCache();
   const removeItems = useRemoveItemsFromPaginatedList();
@@ -27,8 +35,7 @@ export const useTransientItemsPoller = (items: Item[]) => {
   const failedToastShownRef = useRef<Set<string>>(new Set());
 
   const transientItems = useMemo(
-    () =>
-      items.filter((i) => POLLED_UPLOAD_STATES.includes(i.upload_state)),
+    () => items.filter(isPolled),
     [items],
   );
 
@@ -84,7 +91,7 @@ export const useTransientItemsPoller = (items: Item[]) => {
         if (data === null) {
           return false;
         }
-        if (data && !POLLED_UPLOAD_STATES.includes(data.upload_state)) {
+        if (data && !isPolled(data)) {
           return false;
         }
         const startTime = startTimesRef.current.get(item.id) ?? Date.now();

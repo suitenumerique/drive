@@ -99,6 +99,8 @@ def test_api_items_search_authenticated_without_filters():
             "url": None,
             "url_permalink": None,
             "url_preview": None,
+            "url_thumbnail": None,
+            "thumbnail_pending": False,
             "user_role": top_parent_access.role,
         },
         {
@@ -177,6 +179,8 @@ def test_api_items_search_authenticated_without_filters():
                     "url": None,
                     "url_permalink": None,
                     "url_preview": None,
+                    "url_thumbnail": None,
+                    "thumbnail_pending": False,
                     "user_role": top_parent_access.role,
                 }
             ],
@@ -189,6 +193,8 @@ def test_api_items_search_authenticated_without_filters():
             "url": None,
             "url_permalink": None,
             "url_preview": None,
+            "url_thumbnail": None,
+            "thumbnail_pending": False,
             "user_role": top_parent_access.role,
         },
         {
@@ -267,6 +273,8 @@ def test_api_items_search_authenticated_without_filters():
                     "url": None,
                     "url_permalink": None,
                     "url_preview": None,
+                    "url_thumbnail": None,
+                    "thumbnail_pending": False,
                     "user_role": top_parent_access.role,
                 },
                 {
@@ -311,6 +319,8 @@ def test_api_items_search_authenticated_without_filters():
                     "url": None,
                     "url_permalink": None,
                     "url_preview": None,
+                    "url_thumbnail": None,
+                    "thumbnail_pending": False,
                     "user_role": top_parent_access.role,
                 },
             ],
@@ -323,6 +333,8 @@ def test_api_items_search_authenticated_without_filters():
             "url": f"http://localhost:8083/media/item/{children.id!s}/{children.filename}",
             "url_permalink": f"http://testserver/api/v1.0/items/{children.id!s}/download/",
             "url_preview": None,
+            "url_thumbnail": None,
+            "thumbnail_pending": False,
             "user_role": top_parent_access.role,
         },
     ]

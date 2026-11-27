@@ -63,6 +63,7 @@ from core.services.search_indexers import (
     get_visited_items_ids_of,
 )
 from core.services.uploads import reserve_upload
+from core.signals import item_file_ready
 from core.storage.cache import invalidate_storage_used_cache
 from core.tasks.item import duplicate_file, process_item_purge, rename_file
 from core.utils.analytics import posthog_capture
@@ -686,6 +687,7 @@ class ItemViewSet(
         item.mimetype = utils.detect_mimetype(template_content, item.filename)
         item.size = len(template_content)
         item.save(update_fields=["upload_state", "mimetype", "size", "updated_at"])
+        item_file_ready.send(sender=models.Item, item=item)
 
         posthog_capture(
             "item_created_from_template",
@@ -2205,7 +2207,11 @@ class ItemViewSet(
             logger.debug("Item '%s' is not ready", item.id)
             raise drf.exceptions.PermissionDenied()
 
-        if url_params.get("preview") and not utils.is_previewable_item(item):
+        if (
+            url_params.get("preview")
+            and url_params.get("key") != item.thumbnail_key
+            and not utils.is_previewable_item(item)
+        ):
             logger.debug("Item '%s' is not previewable", item.id)
             raise drf.exceptions.PermissionDenied()
 

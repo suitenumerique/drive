@@ -61,6 +61,25 @@ def build_rsa_public_key(modulus, exponent):
     )
 
 
+def _renderable_formats(net_zone):
+    """Collect every format the client opens, whatever the action and the exclusions.
+
+    These are the formats the client can render a thumbnail of.
+    """
+    renderable = {"extensions": set(), "mimetypes": set()}
+    for app in net_zone.findall(".//app"):
+        app_name = app.get("name")
+        if app_name is None:
+            continue
+
+        for action in app.findall("action"):
+            if action.get("ext"):
+                renderable["extensions"].add(action.get("ext").lower())
+            else:
+                renderable["mimetypes"].add(app_name)
+    return renderable
+
+
 def _configure_wopi_client_from_discovery(client, discovery_url):
     """Configure wopi client from discovery url."""
 
@@ -103,6 +122,7 @@ def _configure_wopi_client_from_discovery(client, discovery_url):
 
     wopi_configuration[client] = {
         "proof_keys": proof_keys,
+        "renderable": _renderable_formats(net_zone),
     }
 
     # Iterate through all app elements

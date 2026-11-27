@@ -7,12 +7,16 @@ from functools import partial
 
 from django.db import transaction
 from django.db.models import signals
-from django.dispatch import receiver
+from django.dispatch import Signal, receiver
 
 from django_structlog import signals as structlog_signals
 
 from . import models
 from .tasks.search import trigger_batch_file_indexer
+
+# Sent with an `item` argument when the content of a file item is ready to be served,
+# after its malware analysis or a conversion. Sent again each time the content changes.
+item_file_ready = Signal()
 
 
 @receiver(signals.post_save, sender=models.Item)

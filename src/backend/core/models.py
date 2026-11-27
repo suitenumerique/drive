@@ -1379,6 +1379,11 @@ class Item(TreeModel, BaseModel):
             "or the client_id of the resource server that created it."
         ),
     )
+    thumbnail_updated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_("When the current thumbnail was rendered, null when there is none."),
+    )
 
     label_size = 7
 
@@ -1552,6 +1557,22 @@ class Item(TreeModel, BaseModel):
             raise RuntimeError("The item must have a filename to generate a file key.")
 
         return f"{self.key_base}/{self.filename}"
+
+    @property
+    def thumbnail_folder(self):
+        """Folder of the item thumbnails, which holds no other files."""
+        return f"{self.key_base}/thumbnail"
+
+    @property
+    def thumbnail_key(self):
+        """Key of the current thumbnail, or None when there is none.
+
+        The key is versioned by the render time so that browsers never serve a stale
+        thumbnail from their cache, and lives in a folder no filename can clash with.
+        """
+        if self.thumbnail_updated_at is None:
+            return None
+        return f"{self.thumbnail_folder}/{int(self.thumbnail_updated_at.timestamp() * 1000)}.png"
 
     @property
     def depth(self):

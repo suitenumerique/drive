@@ -4,7 +4,7 @@ from django.conf import settings
 from django.urls import include, path
 
 from wopi.routers import WopiRouter
-from wopi.viewsets import WopiViewSet
+from wopi.viewsets import SystemSourceView, WopiViewSet
 
 router = WopiRouter()
 router.register("files", WopiViewSet, basename="files")
@@ -15,6 +15,11 @@ urlpatterns = [
         include(
             [
                 *router.urls,
+                path(
+                    "sources/<uuid:pk>/",
+                    SystemSourceView.as_view(),
+                    name="wopi-system-source",
+                ),
             ]
         ),
     ),

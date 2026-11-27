@@ -2628,6 +2628,17 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "url_thumbnail": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Return the URL of the rendered thumbnail, if the item has one.",
+                        "readOnly": true
+                    },
+                    "thumbnail_pending": {
+                        "type": "boolean",
+                        "description": "Return whether a thumbnail is still to be rendered for the item.",
+                        "readOnly": true
+                    },
                     "filename": {
                         "type": "string",
                         "readOnly": true,
@@ -2707,6 +2718,7 @@
                     "size",
                     "source",
                     "target",
+                    "thumbnail_pending",
                     "title",
                     "type",
                     "updated_at",
@@ -2714,6 +2726,7 @@
                     "url",
                     "url_permalink",
                     "url_preview",
+                    "url_thumbnail",
                     "user_role"
                 ]
             },
@@ -3051,6 +3064,17 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "url_thumbnail": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Return the URL of the rendered thumbnail, if the item has one.",
+                        "readOnly": true
+                    },
+                    "thumbnail_pending": {
+                        "type": "boolean",
+                        "description": "Return whether a thumbnail is still to be rendered for the item.",
+                        "readOnly": true
+                    },
                     "filename": {
                         "type": "string",
                         "nullable": true,
@@ -3131,6 +3155,7 @@
                     "size",
                     "source",
                     "target",
+                    "thumbnail_pending",
                     "title",
                     "type",
                     "updated_at",
@@ -3138,6 +3163,7 @@
                     "url",
                     "url_permalink",
                     "url_preview",
+                    "url_thumbnail",
                     "user_role"
                 ]
             },
@@ -3285,6 +3311,17 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "url_thumbnail": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Return the URL of the rendered thumbnail, if the item has one.",
+                        "readOnly": true
+                    },
+                    "thumbnail_pending": {
+                        "type": "boolean",
+                        "description": "Return whether a thumbnail is still to be rendered for the item.",
+                        "readOnly": true
+                    },
                     "filename": {
                         "type": "string",
                         "nullable": true,
@@ -3360,6 +3397,7 @@
                     "size",
                     "source",
                     "target",
+                    "thumbnail_pending",
                     "title",
                     "type",
                     "updated_at",
@@ -3367,6 +3405,7 @@
                     "url",
                     "url_permalink",
                     "url_preview",
+                    "url_thumbnail",
                     "user_role"
                 ]
             },
@@ -3762,6 +3801,17 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "url_thumbnail": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Return the URL of the rendered thumbnail, if the item has one.",
+                        "readOnly": true
+                    },
+                    "thumbnail_pending": {
+                        "type": "boolean",
+                        "description": "Return whether a thumbnail is still to be rendered for the item.",
+                        "readOnly": true
+                    },
                     "filename": {
                         "type": "string",
                         "nullable": true,
@@ -3850,6 +3900,7 @@
                     "size",
                     "source",
                     "target",
+                    "thumbnail_pending",
                     "title",
                     "type",
                     "updated_at",
@@ -3857,6 +3908,7 @@
                     "url",
                     "url_permalink",
                     "url_preview",
+                    "url_thumbnail",
                     "user_role"
                 ]
             },

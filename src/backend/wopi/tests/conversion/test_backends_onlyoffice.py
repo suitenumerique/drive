@@ -190,3 +190,26 @@ def test_convert_maps_provider_failures_to_provider_error(
 
     with pytest.raises(exceptions.ConversionProviderError, match=expected_message):
         backend.convert(_item(), SOURCE_URL, "docx")
+
+
+@responses.activate
+def test_thumbnail_requests_first_page_png(settings):
+    """Ask /converter for a first-page PNG fitting in the requested size."""
+    settings.WOPI_ONLYOFFICE_CONVERT_JWT_SECRET = None
+    responses.add(responses.POST, CONVERT_URL, body=_ok_body(), status=200)
+    responses.add(responses.GET, FILE_URL, body=b"png-bytes", status=200)
+
+    backend = OnlyOfficeConversionBackend(convert_service_url=CONVERT_URL)
+    item = _item("report.docx")
+    with mock.patch(
+        "wopi.conversion.backends.onlyoffice.build_system_source_url", return_value=SOURCE_URL
+    ) as build_system_source_url:
+        thumbnail = backend.thumbnail(item, 256)
+
+    build_system_source_url.assert_called_once_with(item)
+    assert thumbnail.read() == b"png-bytes"
+    payload = json.loads(responses.calls[0].request.body)
+    assert payload["filetype"] == "docx"
+    assert payload["outputtype"] == "png"
+    assert payload["url"] == SOURCE_URL
+    assert payload["thumbnail"] == {"aspect": 1, "first": True, "width": 256, "height": 256}

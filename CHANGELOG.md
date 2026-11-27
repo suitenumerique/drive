@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(thumbnails) show document thumbnails rendered by the office editors
+
 ## [v1.1.1] - 2026-11-23
 
 ### Fixed
