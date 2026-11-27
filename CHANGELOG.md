@@ -11,6 +11,7 @@ and this project adheres to
 ### Changed
 
 - 🔧(backend) time out the connections to the redis cache
+- 🔧(helm) probe the celery workers with a heartbeat file
 
 ## [v1.1.1] - 2026-11-23
 

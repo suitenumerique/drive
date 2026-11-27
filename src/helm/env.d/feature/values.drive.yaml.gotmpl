@@ -139,12 +139,12 @@ backend:
       probes:
         liveness:
           exec:
-            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+            command: ["/bin/sh", "-c", "find /tmp/celery_worker_heartbeat -mmin -2 | grep -q ."]
           initialDelaySeconds: 60
           timeoutSeconds: 5
         readiness:
           exec:
-            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+            command: ["/bin/sh", "-c", "find /tmp/celery_worker_heartbeat -mmin -2 | grep -q ."]
           initialDelaySeconds: 15
           timeoutSeconds: 5
     - name: mirror
@@ -155,12 +155,12 @@ backend:
       probes:
         liveness:
           exec:
-            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+            command: ["/bin/sh", "-c", "find /tmp/celery_worker_heartbeat -mmin -2 | grep -q ."]
           initialDelaySeconds: 60
           timeoutSeconds: 5
         readiness:
           exec:
-            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+            command: ["/bin/sh", "-c", "find /tmp/celery_worker_heartbeat -mmin -2 | grep -q ."]
           initialDelaySeconds: 15
           timeoutSeconds: 5
     - name: malware-detection
@@ -171,12 +171,12 @@ backend:
       probes:
         liveness:
           exec:
-            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+            command: ["/bin/sh", "-c", "find /tmp/celery_worker_heartbeat -mmin -2 | grep -q ."]
           initialDelaySeconds: 60
           timeoutSeconds: 5
         readiness:
           exec:
-            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+            command: ["/bin/sh", "-c", "find /tmp/celery_worker_heartbeat -mmin -2 | grep -q ."]
           initialDelaySeconds: 15
           timeoutSeconds: 5
 
