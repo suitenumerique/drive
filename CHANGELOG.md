@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛(frontend) do not prepend dot to file extension #679
+
 ## [v1.1.1] - 2026-11-23
 
 ### Fixed
