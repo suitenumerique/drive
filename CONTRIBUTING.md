@@ -2,7 +2,7 @@
 
 Thank you for taking the time to contribute! Please follow these guidelines to ensure a smooth and productive workflow. 🚀🚀🚀
 
-We appreciate and value all kind of contributions (code, bug reports, design, feature requests, translations or documentation) : the more diverse the Drive contributors community is, the better, because that's how [we make commons](http://wemakecommons.org/).
+We appreciate and value all kinds of contributions (code, bug reports, design, feature requests, translations or documentation) : the more diverse the Drive contributors community is, the better, because that's how [we make commons](http://wemakecommons.org/).
 
 ## Meet the maintainers team
 
@@ -18,7 +18,21 @@ Feel free to @ us in the issues and in our [Matrix community channel](https://ma
 | Designer          | @robinlecomte | @robinlecomte:matrix.org |
 | Product manager   | @lterm        | @lt:matrix.org            |
 
-## Non technichal contributions
+## Your first contribution
+
+New to Drive? Here is where to start:
+
+* Look for issues labelled [`good first issue`](https://github.com/suitenumerique/drive/labels/good%20first%20issue): they are small, well scoped and don't require a deep knowledge of the codebase.
+* Not a developer? Translations, design and good bug reports are just as valuable (see [Non-technical contributions](#non-technical-contributions)).
+* If you have never contributed to an open source project before, [First Contributions](https://github.com/firstcontributions/first-contributions) walks you through the basics.
+
+## Roadmap
+
+Drive's priorities and upcoming features are listed on our [public roadmap](https://docs.numerique.gouv.fr/docs/eacaabdb-d92b-465d-bedf-75d28b397221/). Have a look at it before working on a significant feature, and talk to the product manager to check it fits.
+
+If a planned change could affect how you use or deploy Drive, let us know early in an issue or on our [Matrix community channel](https://matrix.to/#/#drive-official:matrix.org).
+
+## Non-technical contributions
 ### Translations
 Translation help is very much appreciated.
 We use [Crowdin](https://crowdin.com/project/lasuite-drive) for localizing the interface.
@@ -41,41 +55,38 @@ We use issues for bug reports and feature requests. Both have a template, issues
 * Be concise
 * Screenshot (image and videos) are appreciated
 * Provide details when relevant (ex: steps to reproduce your issue, OS / Browser and their versions)
+* For bugs, describe what you expected to happen and what actually happened
 * Do a quick search in the issues and pull requests to avoid duplicates
+
+**Security issues**
+
+Please don't report security vulnerabilities in public issues: follow our [security policy](SECURITY.md) instead.
 
 **All things related to the document editing tool**
 
 We use [OnlyOffice](https://www.onlyoffice.com/) and [Collabora](https://www.collaboraonline.com/) for online document editing via WOPI protocol. If you find an issue with the editor and are able to reproduce it, it's best to reach out directly to the [OnlyOffice Community](https://community.onlyoffice.com/c/documents/32) or [Collabora online Github](https://github.com/collaboraonline/online).
 
 
-## Technichal contributions
+## Technical contributions
 
 ### Before you get started
 
 * To get started with the project, please refer to the [README.md](https://github.com/suitenumerique/drive/blob/main/README.md) for detailed instructions on how to run Drive locally.
 * Check out the LaSuite [dev handbook](https://suitenumerique.gitbook.io/handbook) to learn about our best practices
 * Join our [Matrix community channel](https://app.element.io/#/room/#drive-official:matrix.org)
+* Read our [Code of Conduct](CODE_OF_CONDUCT.md): it applies in all our community spaces
 
 ### Requirements
 
 Contributors are required to sign off their commits with `git commit --signoff`: this confirms that they have read and accepted the [Developer's Certificate of Origin 1.1](https://developercertificate.org/). For security reasons please [sign your commits with your SSH or GPG key](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification) with `git commit -S`.
 
-### Creating an Issue
-
-When creating an issue, please provide the following details:
-
-1.  **Title**: A concise and descriptive title for the issue.
-2.  **Description**: A detailed explanation of the issue, including relevant context or screenshots if applicable.
-3.  **Steps to Reproduce**: If the issue is a bug, include the steps needed to reproduce the problem.
-4.  **Expected vs. Actual Behavior**: Describe what you expected to happen and what actually happened.
-5.  **Labels**: Add appropriate labels to categorize the issue (e.g., bug, feature request, documentation).
-
 ### Pull Requests
 
 Make sure you follow the following best practices:
 
+* before you start working on an issue, say so in a comment on it and wait for a maintainer to assign it to you: this avoids two people working on the same thing. If an issue is already assigned, ask on the issue before picking it up
 * ping the product manager before taking on a significant feature
-* be aware that it will be significantly harder to contribute to the back-end
+* be aware that back-end contributions are harder to get merged: discuss them with the maintainers before you start
 * maintain consistency in code style and patterns
 * make sure you add a brief purpose, screenshots, or a short video to help reviewers understand the context and intent of the changes
 
@@ -92,6 +103,7 @@ Before asking for a human review make sure that:
 - check the linting: `make lint && make frontend-lint`
 - check the tests: `make test`
 - add a changelog entry
+- add an upgrade note if people who run Drive need to act (see below)
 
 Once all the required tests have passed, you can request a review from the project maintainers.
 
@@ -126,9 +138,28 @@ Please add a line to the changelog describing your development. The changelog en
 ```
 ## [Unreleased]
 
-## Added
+### Added
 
 - ✨(frontend) add AI to the project #321
+```
+
+### Upgrade Notes
+
+If your change requires action from people who run their own Drive instance, add an entry to [UPGRADE.md](UPGRADE.md) under `[Unreleased]`, starting with ⚠️. This includes:
+
+* a renamed or removed environment variable, or a new one that must be set
+* a changed default value or accepted values for a setting
+* a change to the nginx or other deployment configuration they must reproduce
+* a migration or data step that needs a manual action
+
+When an environment variable is involved, also update [docs/env.md](docs/env.md).
+
+#### Example Upgrade Note
+```
+## [Unreleased]
+
+- ⚠️ `FILE_MIMETYPE_ALLOWED` was read from `DJANGO_FILE_MIMETYPE_ALLOWED`:
+  rename the variable if you override it.
 ```
 
 ### Code Style
@@ -153,7 +184,7 @@ Please remember: LaSuite is maintained by humans for humans.
 
 Using AI to help write, review, or improve your contribution is fine.
 
-Please disclose AI usage in your PRs, we'll do it too and it'll save use us all some awkward conversations.
+Please disclose AI usage in your PRs, we'll do it too and it'll save us all some awkward conversations.
 
 The rules are simple: **you must understand and be able to explain the code that you submit.**
 
@@ -186,6 +217,6 @@ The difference is not the tool. It is the human investment behind it.
 
 ## Asking for Help
 
-If you need any help while contributing, feel free to open a discussion or ask for guidance in the issue tracker. We are more than happy to assist!
+If you need any help while contributing, feel free to ask on our [Matrix community channel](https://matrix.to/#/#drive-official:matrix.org) or in the issue tracker. We are more than happy to assist!
 
 Thank you for your contributions! 👍
