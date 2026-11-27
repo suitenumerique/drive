@@ -2,6 +2,8 @@
 import os
 import tempfile
 
+from core.logs import JSON_FORMATTER, gunicorn_request_id
+
 bind = ["0.0.0.0:8000"]
 name = "drive"
 python_path = "/app"
@@ -14,13 +16,41 @@ workers = 3
 # Logging
 # Using '-' for the access log file makes gunicorn log accesses to stdout
 accesslog = "-"
-# Gunicorn's default format plus the request id, to match the application logs
-access_log_format = (
-    '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %({x-request-id}i)s'
-)
+access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
 # Using '-' for the error log file makes gunicorn log errors to stderr
 errorlog = "-"
 loglevel = "info"
+
+# Write gunicorn's logs as JSON, like the application logs. The handler names
+# override gunicorn's default ones, which its root logger refers to.
+logconfig_dict = {
+    "formatters": {"json": JSON_FORMATTER},
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+            "stream": "ext://sys.stdout",
+        },
+        "error_console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+            "stream": "ext://sys.stderr",
+        },
+    },
+    "loggers": {
+        "gunicorn.error": {"handlers": ["error_console"], "propagate": False},
+        "gunicorn.access": {"handlers": ["console"], "propagate": False},
+    },
+}
+
+
+def pre_request(worker, req):
+    """Keep the request id for the logs gunicorn writes about the request."""
+    worker.log.debug("%s %s", req.method, req.path)
+    # Nothing resets it after the request: no hook runs after the error logs
+    gunicorn_request_id.set(
+        next((value for name, value in req.headers if name == "X-REQUEST-ID"), None)
+    )
 
 
 # Prometheus metrics (PROMETHEUS_METRICS_ENABLED)
