@@ -107,6 +107,8 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
             "url": f"http://localhost:8083/media/item/{item_b.id!s}/{item_b.filename}",
             "url_permalink": f"http://testserver/api/v1.0/items/{item_b.id!s}/download/",
             "url_preview": None,
+            "url_thumbnail": None,
+            "thumbnail_pending": False,
             "user_role": folder_access.role,
             "parents": [
                 {
@@ -150,6 +152,8 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
                     "url": None,
                     "url_permalink": None,
                     "url_preview": None,
+                    "url_thumbnail": None,
+                    "thumbnail_pending": False,
                     "user_role": folder_access.role,
                 },
             ],
@@ -196,6 +200,8 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
             "url": f"http://localhost:8083/media/item/{item_c.id!s}/{item_c.filename}",
             "url_permalink": f"http://testserver/api/v1.0/items/{item_c.id!s}/download/",
             "url_preview": None,
+            "url_thumbnail": None,
+            "thumbnail_pending": False,
             "user_role": folder_access.role,
             "parents": [
                 {
@@ -239,6 +245,8 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
                     "url": None,
                     "url_permalink": None,
                     "url_preview": None,
+                    "url_thumbnail": None,
+                    "thumbnail_pending": False,
                     "user_role": folder_access.role,
                 },
             ],

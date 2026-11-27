@@ -97,6 +97,8 @@ export type Item = {
   path: string;
   url?: string;
   url_preview?: string;
+  url_thumbnail?: string;
+  thumbnail_pending?: boolean;
   size?: number;
   mimetype?: string;
   user_roles?: Role[];

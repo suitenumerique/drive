@@ -14,6 +14,7 @@ import { useGridColumns } from "../../hooks/useGridColumns";
 import { computeFilters } from "../../utils/ordering";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 import { ViewConfig } from "../../types/viewConfig";
+import { useViewMode, ViewMode } from "../../hooks/useViewMode";
 
 export interface AppExplorerProps {
   // View configuration
@@ -54,6 +55,8 @@ export type AppExplorerContextType = AppExplorerProps & {
   filters: ItemFilters;
   onFiltersChange: (filters: ItemFilters) => void;
   viewConfig: ViewConfig;
+  viewMode: ViewMode;
+  onViewModeChange: (viewMode: ViewMode) => void;
 };
 
 export const AppExplorerContext = createContext<
@@ -84,6 +87,7 @@ export const AppExplorer = (props: AppExplorerProps) => {
     prefs,
     viewConfig,
   } = useGridColumns(props.viewConfigKey, props.navigationId);
+  const { viewMode, setViewMode } = useViewMode();
 
   const computedFilters = useMemo(
     () => computeFilters(viewConfig, baseFilters, sortState),
@@ -109,6 +113,8 @@ export const AppExplorer = (props: AppExplorerProps) => {
       filters: baseFilters,
       onFiltersChange: setBaseFilters,
       viewConfig,
+      viewMode,
+      onViewModeChange: setViewMode,
     }),
     [
       props,
@@ -119,6 +125,8 @@ export const AppExplorer = (props: AppExplorerProps) => {
       column1Config,
       column2Config,
       baseFilters,
+      viewMode,
+      setViewMode,
     ],
   );
 

@@ -16,14 +16,8 @@ import { useIsItemSelected } from "@/features/explorer/stores/selectionStore";
 export type EmbeddedExplorerGridRowProps = {
   row: Row<Item>;
   isOvered: boolean;
-  onClickRow: (
-    e: React.MouseEvent<HTMLTableRowElement>,
-    row: Row<Item>,
-  ) => void;
-  onContextMenuRow: (
-    e: React.MouseEvent<HTMLTableRowElement>,
-    row: Row<Item>,
-  ) => void;
+  onClickRow: (e: React.MouseEvent<HTMLElement>, row: Row<Item>) => void;
+  onContextMenuRow: (e: React.MouseEvent<HTMLElement>, row: Row<Item>) => void;
   onOver: (rowId: string, isOver: boolean, draggedItem: Item) => void;
 };
 

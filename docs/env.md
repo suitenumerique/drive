@@ -174,6 +174,10 @@ This document lists all configurable environment variables for the Drive applica
 | `WOPI_ONLYOFFICE_CONVERT_HTTP_READ_TIMEOUT` | Read timeout in seconds for the /converter request | `60` |
 | `WOPI_ONLYOFFICE_CONVERT_DOWNLOAD_CONNECT_TIMEOUT` | Connect timeout in seconds for downloading the converted file | `5` |
 | `WOPI_ONLYOFFICE_CONVERT_DOWNLOAD_READ_TIMEOUT` | Read timeout in seconds for downloading the converted file | `30` |
+| `WOPI_{CLIENT_NAME}_OPTIONS` | Dict of options for a WOPI client. `ThumbnailServiceUrl` opts in to document thumbnails, rendered by the first configured client defining it: `http://collabora:9980/cool/convert-to` for Collabora, `http://onlyoffice/converter` for OnlyOffice (which fetches the file back from `WOPI_SRC_BASE_URL`). Run `python manage.py generate_thumbnails` to render thumbnails of existing files | `{}` |
+| `WOPI_THUMBNAIL_DEBOUNCE` | Seconds to wait before re-rendering the thumbnail of a file that already has one, so the saves of an editing session collapse into a single render. Files without a thumbnail are rendered right away | `120` |
+| `WOPI_THUMBNAIL_MAX_FILE_SIZE` | Size in bytes above which a file gets no thumbnail | `104857600` |
+| `WOPI_THUMBNAIL_SIZE` | Maximum width and height in pixels of generated document thumbnails | `512` |
 | `WOPI_DISABLE_CHAT` | Disable chat in the WOPI client interface | `0` |
 | `WOPI_CONFIGURATION_CRONTAB_MINUTE` | Used to configure the celery beat crontab, See https://docs.celeryq.dev/en/main/reference/celery.schedules.html#celery.schedules.crontab | `0` |
 | `WOPI_CONFIGURATION_CRONTAB_HOUR` | Used to configure the celery beat crontab, See https://docs.celeryq.dev/en/main/reference/celery.schedules.html#celery.schedules.crontab | `3` |

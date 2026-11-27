@@ -14,6 +14,7 @@ type DroppableProps = {
   nodeTree?: NodeRendererProps<TreeDataItem<TreeViewDataType<Item>>>;
   children: React.ReactNode;
   onOver?: (isOver: boolean, fromItem: Item) => void;
+  as?: "div" | "li";
 };
 
 export const Droppable = (props: DroppableProps) => {
@@ -33,9 +34,10 @@ export const Droppable = (props: DroppableProps) => {
     }
   }, [isOver, props.item, active]);
 
+  const Tag = props.as ?? "div";
   return (
-    <div ref={setNodeRef} style={style} className="droppable">
+    <Tag ref={setNodeRef} style={style} className="droppable">
       {props.children}
-    </div>
+    </Tag>
   );
 };

@@ -2,6 +2,7 @@
 
 import uuid
 from io import BytesIO
+from unittest import mock
 
 from django.core.files.storage import default_storage
 
@@ -90,15 +91,18 @@ def test_duplicate_file():
 
     assert not default_storage.exists(duplicated_item.file_key)
 
-    duplicate_file(
-        item_to_duplicate_id=item_to_duplicate.id,
-        duplicated_item_id=duplicated_item.id,
-    )
+    with mock.patch("core.tasks.item.item_file_ready.send") as file_ready:
+        duplicate_file(
+            item_to_duplicate_id=item_to_duplicate.id,
+            duplicated_item_id=duplicated_item.id,
+        )
 
     duplicated_item.refresh_from_db()
 
     assert duplicated_item.upload_state == models.ItemUploadStateChoices.READY
     assert default_storage.exists(duplicated_item.file_key)
+    # The copy gets a thumbnail of its own.
+    file_ready.assert_called_once_with(sender=models.Item, item=duplicated_item)
 
 
 def test_duplicate_file_retry(caplog):

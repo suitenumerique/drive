@@ -10,6 +10,7 @@ from django.utils.translation import gettext as _
 from core import models
 from core.api.utils import detect_mimetype
 from core.models import Item
+from core.signals import item_file_ready
 from core.utils.item_title import manage_unique_title
 from wopi.conversion.backends.onlyoffice import OnlyOfficeConversionBackend
 from wopi.conversion.exceptions import (
@@ -152,6 +153,7 @@ def perform_conversion(source_item, placeholder, user):
         default_storage.delete(placeholder.file_key)
         raise
 
+    item_file_ready.send(sender=Item, item=placeholder)
     return placeholder
 
 

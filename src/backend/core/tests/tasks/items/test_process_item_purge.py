@@ -90,12 +90,32 @@ def test_process_item_purge_item_file_is_ready():
     item.soft_delete()
     item.hard_delete()
     default_storage.save(item.file_key, BytesIO(b"my prose"))
+    item.thumbnail_updated_at = timezone.now()
+    item.save(update_fields=["thumbnail_updated_at"])
+    default_storage.save(item.thumbnail_key, BytesIO(b"my thumbnail"))
     assert default_storage.exists(item.file_key)
 
     process_item_purge(item.id)
 
     assert not models.Item.objects.filter(id=item.id).exists()
     assert not default_storage.exists(item.file_key)
+    assert not default_storage.exists(item.thumbnail_key)
+
+
+def test_process_item_purge_deletes_every_thumbnail():
+    """Renders other than the current one, left by overlapping renders, are deleted too."""
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FILE, filename="foo.docx")
+    item.soft_delete()
+    item.hard_delete()
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+    item.thumbnail_updated_at = timezone.now()
+    item.save(update_fields=["thumbnail_updated_at"])
+    for name in (item.thumbnail_key.rsplit("/", 1)[1], "1.png", "9999999999999.png"):
+        default_storage.save(f"{item.thumbnail_folder}/{name}", BytesIO(b"my thumbnail"))
+
+    process_item_purge(item.id)
+
+    assert default_storage.listdir(item.thumbnail_folder) == ([], [])
 
 
 def test_process_item_purge_item_folder_hard_deleted():

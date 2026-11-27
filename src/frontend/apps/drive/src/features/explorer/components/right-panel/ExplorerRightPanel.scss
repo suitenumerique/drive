@@ -59,6 +59,18 @@
     align-items: center;
     justify-content: center;
     padding: 40px 0;
+
+    &--thumbnail {
+      padding: 0;
+      overflow: hidden;
+
+      img {
+        display: block;
+        max-width: 100%;
+        max-height: 240px;
+        object-fit: contain;
+      }
+    }
   }
 
   &__multiple-selection,

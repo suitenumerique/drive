@@ -13,6 +13,7 @@ import {
   ExplorerBreadcrumbsMobile,
 } from "@/features/explorer/components/app-view/AppExplorerBreadcrumbs";
 import { AppExplorerGrid } from "@/features/explorer/components/app-view/AppExplorerGrid";
+import { ExplorerViewModeToggle } from "@/features/explorer/components/app-view/ExplorerViewModeToggle";
 import { useCreateMenuItems } from "../../hooks/useCreateMenuItems";
 
 /**
@@ -156,7 +157,10 @@ export const AppExplorerInner = () => {
           })}
         >
           <div className="explorer__container">
-            <AppExplorerSelectionBarGate showFilters={showFilters} />
+            <div className="explorer__toolbar">
+              <AppExplorerSelectionBarGate showFilters={showFilters} />
+              <ExplorerViewModeToggle />
+            </div>
 
             <div className="explorer__content">
               {appExplorer.gridHeader ? (

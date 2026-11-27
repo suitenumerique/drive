@@ -251,6 +251,40 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
     }
   }
 
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    > :first-child {
+      flex: 1;
+      min-width: 0;
+    }
+
+    @media (max-width: $tablet) {
+      padding-right: 8px;
+      background-color: var(--c--contextuals--background--surface--secondary);
+    }
+  }
+
+  &__view-mode {
+    display: flex;
+    border: 1px solid var(--c--contextuals--border--surface--primary);
+    border-radius: 4px;
+    overflow: hidden;
+
+    .c__button {
+      border-radius: 0;
+    }
+
+    .c__button--active {
+      background-color: var(
+        --c--contextuals--background--semantic--brand--secondary
+      );
+      color: var(--c--contextuals--content--semantic--brand--primary);
+    }
+  }
+
   &__selection-bar {
     display: flex;
     justify-content: space-between;

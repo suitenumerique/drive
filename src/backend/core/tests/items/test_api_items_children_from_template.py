@@ -105,6 +105,23 @@ def test_api_items_children_from_template_authenticated_success(role):
     assert child.mimetype is not None
 
 
+def test_api_items_children_from_template_announces_ready_file():
+    """A file created from a template is announced ready, to get its thumbnail."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    parent = factories.ItemFactory(type=ItemTypeChoices.FOLDER, users=[(user, "owner")])
+
+    with mock.patch("core.api.viewsets.item_file_ready.send") as file_ready:
+        response = client.post(
+            f"/api/v1.0/items/{parent.id!s}/children/",
+            {"title": "my document", "extension": "odt", "type": "file"},
+        )
+
+    assert response.status_code == 201
+    file_ready.assert_called_once_with(sender=Item, item=Item.objects.get(id=response.json()["id"]))
+
+
 @pytest.mark.parametrize("extension", ["odt", "ods", "odp"])
 def test_api_items_children_from_template_valid_extensions(extension):
     """

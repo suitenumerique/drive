@@ -8,6 +8,7 @@ from django.db import DatabaseError
 import pytest
 
 from core import factories, models
+from core.signals import item_file_ready
 from wopi.conversion import exceptions, services
 from wopi.conversion.backends.onlyoffice import OnlyOfficeConversionBackend
 
@@ -79,6 +80,21 @@ def test_convert_item_creates_converted_file_copy(settings):
     assert converted.filename == "document (converted).docx"
     assert converted.parent().id == parent.id
     assert converted.upload_state == models.ItemUploadStateChoices.READY
+
+
+def test_convert_item_announces_the_converted_file_as_ready(settings):
+    """The converted file is announced as ready, like an uploaded one after its analysis."""
+    _configure_wopi(settings)
+    user = factories.UserFactory()
+    item = _file(user)
+    receiver = mock.Mock()
+    item_file_ready.connect(receiver)
+    try:
+        converted = services.convert_item(item, user)
+    finally:
+        item_file_ready.disconnect(receiver)
+
+    receiver.assert_called_once_with(signal=item_file_ready, sender=models.Item, item=converted)
 
 
 def test_convert_item_keeps_original_file_unchanged(settings):

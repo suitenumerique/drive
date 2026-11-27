@@ -95,10 +95,10 @@ WOPI_ONLYOFFICE_DISCOVERY_URL=http://onlyoffice/hosting/discovery
 WOPI_SRC_BASE_URL=http://app-dev:8000
 # Disable rename for Collabora by default because it does not post messages when renaming a file.
 # So the frontend cannot reflect renaming operations.
-WOPI_COLLABORA_OPTIONS={"SupportsRename": False}
+WOPI_COLLABORA_OPTIONS={"SupportsRename": False, "ThumbnailServiceUrl": "http://collabora:9980/cool/convert-to"}
 # Background conversion of legacy Office files (.doc, .xls, .ppt) is forced
 # server-side via the OnlyOffice /converter endpoint.
-WOPI_ONLYOFFICE_OPTIONS={"ForceConvertExtensions": ["doc", "xls", "ppt"], "ConvertServiceUrl": "http://onlyoffice/converter"}
+WOPI_ONLYOFFICE_OPTIONS={"ForceConvertExtensions": ["doc", "xls", "ppt"], "ConvertServiceUrl": "http://onlyoffice/converter", "ThumbnailServiceUrl": "http://onlyoffice/converter"}
 WOPI_ONLYOFFICE_CONVERT_JWT_SECRET=ThisIsNotASecretKeyDev
 
 # Indexer

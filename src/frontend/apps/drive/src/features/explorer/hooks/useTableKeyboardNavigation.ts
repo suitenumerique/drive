@@ -8,10 +8,13 @@ export const useTableKeyboardNavigation = ({
   table,
   tableRef,
   isDisabled = false,
+  isGrid = false,
 }: {
   table: Table<Item>;
-  tableRef: React.RefObject<HTMLTableElement | null>;
+  tableRef: React.RefObject<HTMLElement | null>;
   isDisabled?: boolean;
+  // The items are laid out in the columns of a CSS grid rather than table rows.
+  isGrid?: boolean;
 }) => {
   const { itemId } = useGlobalExplorer();
   const selectionStore = useSelectionStore();
@@ -31,7 +34,11 @@ export const useTableKeyboardNavigation = ({
     }
 
     const focusTable = () => {
-      if (tableRef.current) {
+      // Leave the focus on an item of the table, the arrows reach the table from there.
+      if (
+        tableRef.current &&
+        !tableRef.current.contains(document.activeElement)
+      ) {
         tableRef.current.focus({ preventScroll: true });
       }
     };
@@ -67,110 +74,117 @@ export const useTableKeyboardNavigation = ({
       // Use case: the page just displayed, you press "ArrowUp/Down", you expect to select the first item.
       setSelectedItems([table.getRowModel().rows[0].original]);
       setLastSelectedIndex(0);
+      focusItem(0);
     } else {
       // Use case example: you selected items, you delete them. You press "ArrowUp/Down", you expect to select the item that was
       // just below the last selected item, which is now deleted.
       const newSelectedIndex = cap();
       setSelectedItems([table.getRowModel().rows[newSelectedIndex].original]);
       setLastSelectedIndex(newSelectedIndex);
+      focusItem(newSelectedIndex);
     }
   };
 
-  const arrowUp = (event: KeyboardEvent<HTMLTableElement>) => {
-    // If no item is selected, select the first item
-    if (selectionStore.getSelectedItems().length === 0) {
-      firstPress();
-    } else {
-      // Find the current selected item index
-      const rows = table.getRowModel().rows;
-      const currentSelectedIndex = rows.findIndex((row) =>
-        selectionStore.isSelected(row.original.id),
-      );
-
-      // If we found the current selected item and there's a previous row
-      if (currentSelectedIndex !== -1 && currentSelectedIndex > 0) {
-        // Get the previous row's ID
-        const newSelectedIndex = currentSelectedIndex - 1;
-        const prevRow = rows[newSelectedIndex].original;
-
-        if (event.shiftKey) {
-          // When SHIFT is pressed, keep the previous selection and add the new one
-          setSelectedItems((prev) => {
-            if (!prev.includes(prevRow)) {
-              return [...prev, prevRow];
-            }
-            return prev;
-          });
-        } else {
-          // Select only the previous row
-          setSelectedItems([prevRow]);
-        }
-        setLastSelectedIndex(newSelectedIndex);
-      }
+  // In the grid, the focus follows the selection so that screen readers
+  // announce the item and it scrolls into view.
+  const focusItem = (index: number) => {
+    if (!isGrid) {
+      return;
     }
+    tableRef.current
+      ?.querySelector<HTMLElement>(
+        `[data-id="${table.getRowModel().rows[index].original.id}"]`,
+      )
+      ?.focus();
   };
 
-  const arrowDown = (event: KeyboardEvent<HTMLTableElement>) => {
+  // Number of items per row: one in the table, the rendered columns in the grid.
+  const getColumnCount = () => {
+    if (!isGrid || !tableRef.current) {
+      return 1;
+    }
+    const columns = getComputedStyle(tableRef.current).gridTemplateColumns;
+    return Math.max(1, columns.split(" ").filter(Boolean).length);
+  };
+
+  // Moves the selection by `delta` items: one for the previous or next item,
+  // a row's worth of items to go up or down in the grid.
+  const move = (event: KeyboardEvent<HTMLElement>, delta: number) => {
     // If no item is selected, select the first item
     if (selectionStore.getSelectedItems().length === 0) {
       firstPress();
-    } else {
-      // Find the current selected item index
-      const rows = table.getRowModel().rows;
+      return;
+    }
 
-      let currentSelectedIndex = -1;
-      if (event.shiftKey) {
-        // Get the last selected item index when using shift key
-        const selectedIndices = rows
-          .map((row, index) =>
-            selectionStore.isSelected(row.original.id) ? index : -1,
-          )
-          .filter((index) => index !== -1);
-        currentSelectedIndex =
-          selectedIndices.length > 0
-            ? selectedIndices[selectedIndices.length - 1]
-            : -1;
-      } else {
-        currentSelectedIndex = rows.findIndex((row) =>
-          selectionStore.isSelected(row.original.id),
-        );
+    const rows = table.getRowModel().rows;
+    const selectedIndices = rows
+      .map((row, index) =>
+        selectionStore.isSelected(row.original.id) ? index : -1,
+      )
+      .filter((index) => index !== -1);
+    if (selectedIndices.length === 0) {
+      return;
+    }
+    // Extending the selection downwards continues from its last item.
+    const currentSelectedIndex =
+      delta > 0 && event.shiftKey
+        ? selectedIndices[selectedIndices.length - 1]
+        : selectedIndices[0];
+
+    let newSelectedIndex = currentSelectedIndex + delta;
+    if (newSelectedIndex < 0) {
+      return;
+    }
+    if (newSelectedIndex > rows.length - 1) {
+      // Going down from the row above an incomplete last row lands on its last item.
+      if (delta <= 1 || currentSelectedIndex === rows.length - 1) {
+        return;
       }
+      newSelectedIndex = rows.length - 1;
+    }
 
-      // If we found the current selected item and there's a next row
-      if (
-        currentSelectedIndex !== -1 &&
-        currentSelectedIndex < rows.length - 1
+    if (event.shiftKey) {
+      // When SHIFT is pressed, keep the previous selection and add the items up to the new one
+      const step = newSelectedIndex > currentSelectedIndex ? 1 : -1;
+      const added: Item[] = [];
+      for (
+        let index = currentSelectedIndex + step;
+        step > 0 ? index <= newSelectedIndex : index >= newSelectedIndex;
+        index += step
       ) {
-        // Get the next row's ID
-        const newSelectedIndex = currentSelectedIndex + 1;
-        const nextRow = rows[newSelectedIndex].original;
-
-        if (event.shiftKey) {
-          // When SHIFT is pressed, keep the previous selection and add the new one
-          setSelectedItems((prev) => {
-            if (!prev.includes(nextRow)) {
-              return [...prev, nextRow];
-            }
-            return prev;
-          });
-        } else {
-          // Select only the next row
-          setSelectedItems([nextRow]);
-        }
-        setLastSelectedIndex(newSelectedIndex);
+        added.push(rows[index].original);
       }
+      setSelectedItems((prev) => [
+        ...prev,
+        ...added.filter((item) => !prev.includes(item)),
+      ]);
+    } else {
+      // Select only the new item
+      setSelectedItems([rows[newSelectedIndex].original]);
     }
+    setLastSelectedIndex(newSelectedIndex);
+    focusItem(newSelectedIndex);
   };
 
-  // Handle keyboard navigation via up/down arrows
-  const onKeyDown = (event: KeyboardEvent<HTMLTableElement>) => {
+  // Handle keyboard navigation via arrows: up/down in the table, all four in the grid
+  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (isDisabled) {
       return;
     }
     if (event.key === "ArrowDown") {
-      arrowDown(event);
+      move(event, getColumnCount());
     } else if (event.key === "ArrowUp") {
-      arrowUp(event);
+      move(event, -getColumnCount());
+    } else if (isGrid && event.key === "ArrowRight") {
+      move(event, 1);
+    } else if (isGrid && event.key === "ArrowLeft") {
+      move(event, -1);
+    } else {
+      return;
+    }
+    // The arrows move the selection, not the page.
+    if (isGrid) {
+      event.preventDefault();
     }
   };
 

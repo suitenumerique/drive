@@ -3,6 +3,7 @@ Test file uploads API endpoint for users in drive's core app.
 """
 
 import uuid
+from datetime import UTC, datetime
 from io import BytesIO
 from urllib.parse import quote, urlparse
 
@@ -481,3 +482,45 @@ def test_api_items_media_auth_security_headers_on_active_content_preview():
 
     assert response.status_code == 200
     assert response["Content-Disposition"] == "attachment"
+
+
+@pytest.mark.parametrize(
+    "key_suffix,status_code",
+    [
+        ("thumbnail/1791028800000.png", 200),
+        # A previous render, its object was deleted when the current one was stored.
+        ("thumbnail/1791025200000.png", 403),
+        ("report.docx", 403),
+    ],
+)
+def test_api_items_media_auth_preview_thumbnail(key_suffix, status_code):
+    """The current thumbnail of a non-previewable file can be previewed, not the file itself."""
+    item = factories.ItemFactory(
+        link_reach="public",
+        type=models.ItemTypeChoices.FILE,
+        filename="report.docx",
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        thumbnail_updated_at=datetime(2026, 10, 3, 12, tzinfo=UTC),
+    )
+
+    original_url = f"http://localhost/media/preview/item/{item.pk!s}/{key_suffix:s}"
+    response = APIClient().get("/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url)
+
+    assert response.status_code == status_code
+
+
+def test_api_items_media_auth_preview_thumbnail_none():
+    """A file without a thumbnail has no thumbnail key to preview."""
+    item = factories.ItemFactory(
+        link_reach="public",
+        type=models.ItemTypeChoices.FILE,
+        filename="report.docx",
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    original_url = f"http://localhost/media/preview/item/{item.pk!s}/thumbnail/1791028800000.png"
+    response = APIClient().get("/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url)
+
+    assert response.status_code == 403

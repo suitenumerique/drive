@@ -61,6 +61,10 @@ def test_configure_wopi_clients(settings):
         },
         "vendorA": {
             "proof_keys": {},
+            "renderable": {
+                "extensions": {"sxw", "odt"},
+                "mimetypes": {"application/vnd.oasis.opendocument.text"},
+            },
         },
     }
 
@@ -125,7 +129,51 @@ def test_configure_wopi_clients_with_proof_keys(settings):
                 "old_public_key": b"-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA04SCCYR0PEvAAVGxNyua\neYwNQ9gOsnbQaC4jQF0CEPSkW9Aj/y8y6rwEoHRBJmGeoiemd+0XEWi1LPFeCo+7\nC98VsPqWS4kPPx4mVJWTGSR8Do9/CMm4Ezs/bxj2Y/aNIuEwMOdVTSlR8woDt73D\nkwOTDbpSOrOk5ras63yCNu4tLk5xexW6I8vkykRXjJtU59BCzrQzBwwSAlHUTkiZ\nyXW8tqtELEkRoMWMSaOE5y89v+SsJbmNpKqI8uIKXKgaY6vtjYpS+TjcED5M40J6\nJDjy50uc8zXTAy0UqUI+G5hho70fKSTgs4D+oljG2T1amUoFNyKCnVW8q1O6IeLm\n+wIDAQAB\n-----END PUBLIC KEY-----\n",
                 "public_key": b"-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA04SCCYR0PEvAAVGxNyua\neYwNQ9gOsnbQaC4jQF0CEPSkW9Aj/y8y6rwEoHRBJmGeoiemd+0XEWi1LPFeCo+7\nC98VsPqWS4kPPx4mVJWTGSR8Do9/CMm4Ezs/bxj2Y/aNIuEwMOdVTSlR8woDt73D\nkwOTDbpSOrOk5ras63yCNu4tLk5xexW6I8vkykRXjJtU59BCzrQzBwwSAlHUTkiZ\nyXW8tqtELEkRoMWMSaOE5y89v+SsJbmNpKqI8uIKXKgaY6vtjYpS+TjcED5M40J6\nJDjy50uc8zXTAy0UqUI+G5hho70fKSTgs4D+oljG2T1amUoFNyKCnVW8q1O6IeLm\n+wIDAQAB\n-----END PUBLIC KEY-----\n",
             },
+            "renderable": {
+                "extensions": {"sxw", "odt"},
+                "mimetypes": {"application/vnd.oasis.opendocument.text"},
+            },
         },
+    }
+
+
+@responses.activate
+def test_configure_wopi_clients_renderable_formats(settings):
+    """Formats only viewed or excluded from editing are still renderable by the client."""
+
+    settings.WOPI_CLIENTS = ["vendorA"]
+    settings.WOPI_CLIENTS_CONFIGURATION = {
+        "vendorA": {
+            "discovery_url": "https://vendorA.com/hosting/discovery",
+        }
+    }
+
+    responses.add(
+        responses.GET,
+        "https://vendorA.com/hosting/discovery",
+        body="""
+<wopi-discovery>
+    <net-zone name="external-http">
+        <app name="draw">
+            <action ext="PDF" name="view" urlsrc="https://vendorA.com/view?"/>
+            <action ext="png" name="edit" urlsrc="https://vendorA.com/edit?"/>
+        </app>
+        <app name="application/pdf">
+            <action ext="" name="view" urlsrc="https://vendorA.com/view?"/>
+        </app>
+        <app name="image/png">
+            <action ext="" name="edit" urlsrc="https://vendorA.com/edit?"/>
+        </app>
+    </net-zone>
+</wopi-discovery>
+""",
+    )
+
+    configure_wopi_clients()
+
+    assert cache.get(WOPI_CONFIGURATION_CACHE_KEY)["vendorA"]["renderable"] == {
+        "extensions": {"pdf", "png"},
+        "mimetypes": {"application/pdf", "image/png"},
     }
 
 
