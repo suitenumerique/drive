@@ -9,6 +9,10 @@ import {
   isLinkExpired,
 } from "../explorer/utils/linkExpiration";
 
+// An expired public link is closed although its reach is still public.
+const isPublic = (item: Item) =>
+  item.link_reach === LinkReach.PUBLIC && !isLinkExpired(item);
+
 export const PickerFooter = ({
   token,
   selectedItems,
@@ -25,8 +29,7 @@ export const PickerFooter = ({
 
   const onChoose = async () => {
     const promises = selectedItems.map((item) => {
-      // An expired public link is closed although its reach is still public.
-      if (item.link_reach === LinkReach.PUBLIC && !isLinkExpired(item)) {
+      if (isPublic(item)) {
         return Promise.resolve();
       }
 
@@ -91,6 +94,11 @@ export const PickerFooter = ({
         {t("sdk.explorer.picker_label", {
           count: selectedItems.length,
         })}
+        {selectedItems.some((item) => !isPublic(item)) && (
+          <div className="sdk__explorer__footer__warning">
+            {t("sdk.explorer.public_warning")}
+          </div>
+        )}
       </div>
       <div className="sdk__explorer__footer__actions">
         <Button

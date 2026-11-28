@@ -10,6 +10,9 @@ const SDK_CONSUMER_URL = "http://localhost:5173/";
 
 const API_URL = "http://localhost:8071/api/v1.0";
 
+const PUBLIC_WARNING =
+  "The selected files will be accessible to anyone with the link.";
+
 // Replaces the expiration of the given item wherever it shows in a response.
 const withLinkExpiresAt = (
   value: unknown,
@@ -126,10 +129,12 @@ test.describe("SDK file picker", () => {
     const picker = await popupPromise;
     await picker.waitForLoadState("domcontentloaded");
 
-    // 4. Select the file in the picker and confirm.
+    // 4. Select the file in the picker, which warns that it becomes public,
+    // and confirm.
     const fileRow = picker.locator("tr", { hasText: "pv_cm" });
     await expect(fileRow).toBeVisible({ timeout: 15000 });
     await fileRow.click();
+    await expect(picker.getByText(PUBLIC_WARNING)).toBeVisible();
 
     const chooseButton = picker.getByRole("button", {
       name: "Choose",
@@ -238,8 +243,9 @@ test.describe("SDK file picker", () => {
     await expect(fileRow).toBeVisible({ timeout: 15000 });
     await fileRow.click();
 
-    // 4. Its reach is already public, but the picker must still update the
-    // link and clear the past date, otherwise the link stays closed.
+    // 4. Its reach is already public, but the picker must still warn, update
+    // the link and clear the past date, otherwise the link stays closed.
+    await expect(picker.getByText(PUBLIC_WARNING)).toBeVisible();
     const linkConfiguration = picker.waitForRequest(
       (request) =>
         request.url().includes(`/items/${fileId}/link-configuration/`) &&
